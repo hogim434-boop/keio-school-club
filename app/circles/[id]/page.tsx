@@ -1,12 +1,11 @@
 import { Suspense } from "react";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { Construction, ExternalLink } from "lucide-react";
+import { Construction } from "lucide-react";
 
 import { CircleActions } from "@/components/circles/circle-actions";
 import { CircleGallery } from "@/components/circles/circle-gallery";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ACTIVITY_FREQUENCY_LABELS } from "@/lib/constants/activity-frequency";
 import { CATEGORY_LABELS } from "@/lib/constants/category";
@@ -45,7 +44,6 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
         <SummaryGrid circle={circle} />
         <Description text={circle.description} />
         <CircleGallery images={circle.images} circleName={circle.name} />
-        <ContactSection circle={circle} />
       </div>
 
       {/* 모바일 하단 고정 액션 바 — md 이상에서 hidden */}
@@ -138,33 +136,6 @@ function Description({ text }: { text: string }) {
     <section className="space-y-2">
       <h2 className="text-lg font-semibold">概要</h2>
       <p className="text-muted-foreground text-sm whitespace-pre-line">{text}</p>
-    </section>
-  );
-}
-
-// 연락처 — Instagram/X/LINE inline 버튼 (T-014 이후 「参加する」 모달로 교체)
-function ContactSection({ circle }: { circle: CircleDetail }) {
-  const channels: { label: string; url: string }[] = [];
-  if (circle.contact_instagram)
-    channels.push({ label: "Instagram", url: circle.contact_instagram });
-  if (circle.contact_x) channels.push({ label: "X (Twitter)", url: circle.contact_x });
-  if (circle.contact_line) channels.push({ label: "LINE", url: circle.contact_line });
-
-  if (channels.length === 0) return null;
-
-  return (
-    <section className="space-y-2">
-      <h2 className="text-lg font-semibold">連絡先</h2>
-      <div className="flex flex-wrap gap-2">
-        {channels.map((c) => (
-          <Button key={c.label} asChild variant="outline" size="sm">
-            <a href={c.url} target="_blank" rel="noopener noreferrer">
-              {c.label}
-              <ExternalLink className="ml-1 size-3" />
-            </a>
-          </Button>
-        ))}
-      </div>
     </section>
   );
 }
