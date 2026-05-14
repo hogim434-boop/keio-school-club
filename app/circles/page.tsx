@@ -53,16 +53,15 @@ async function CirclesContent({ searchParams }: CirclesPageProps) {
       {/* 상단 sticky — 검색바 + 카테고리 탭 + 필터 트리거(결과 모드에서만) */}
       <section className="bg-background/80 supports-[backdrop-filter]:bg-background/60 sticky top-14 z-30 border-b backdrop-blur">
         <div className="container mx-auto max-w-6xl space-y-3 px-4 py-3">
-          <SearchForm params={params} />
+          {/* 검색바 + 필터 트리거 — 한 행, 두 모드 공통 노출 (「すべて」 추천 모드에서도 필터 가능) */}
           <div className="flex items-center gap-2">
-            <CategoryTabs
-              activeCategory={params.category}
-              baseSearchParams={params}
-              className="flex-1"
-            />
-            {/* 필터 트리거 — 결과 모드에서만 노출 */}
-            {!discover && <FilterTrigger initial={params} />}
+            <div className="flex-1">
+              <SearchForm params={params} />
+            </div>
+            <FilterTrigger initial={params} />
           </div>
+          {/* 카테고리 탭 — 단독 행, 풀-블리드 가로 스크롤 자유 */}
+          <CategoryTabs activeCategory={params.category} baseSearchParams={params} />
         </div>
       </section>
 
@@ -138,6 +137,20 @@ function SearchForm({ params }: { params: CirclesSearchParams }) {
       {params.feeMax !== undefined && (
         <input type="hidden" name="fee_max" value={String(params.feeMax)} />
       )}
+      {/* 신규 5필드 보존 */}
+      {params.activityDays.length > 0 && (
+        <input type="hidden" name="activity_days" value={params.activityDays.join(",")} />
+      )}
+      {params.memberSize !== undefined && (
+        <input type="hidden" name="member_size" value={params.memberSize} />
+      )}
+      {params.recruitmentStatus.length > 0 && (
+        <input type="hidden" name="recruit" value={params.recruitmentStatus.join(",")} />
+      )}
+      {params.activityTimeBand.length > 0 && (
+        <input type="hidden" name="time_band" value={params.activityTimeBand.join(",")} />
+      )}
+      {params.sort !== undefined && <input type="hidden" name="sort" value={params.sort} />}
     </form>
   );
 }
@@ -154,6 +167,12 @@ async function Results({ params }: { params: CirclesSearchParams }) {
     tags: params.tags,
     feeMax: params.feeMax,
     page: params.page,
+    // 신규 5필드 전달
+    activityDays: params.activityDays,
+    memberSize: params.memberSize,
+    recruitmentStatus: params.recruitmentStatus,
+    activityTimeBand: params.activityTimeBand,
+    sort: params.sort,
   });
 
   if (result.items.length === 0) {
