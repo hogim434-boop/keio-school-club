@@ -118,7 +118,7 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
 | **T-011** | 서클 목록 페이지 + 카테고리 탭 + 필터 ✅ | completed | 2d   | T-010        | F001, F002, F004 |
 | **T-012** | 서클 상세 페이지 + 갤러리 ✅             | completed | 2d   | T-010        | F003, F004       |
 | **T-013** | 하단 고정 액션 바 + 즐겨찾기 토글 UI ✅  | completed | 1d   | T-012        | F007             |
-| **T-014** | 「参加する」 채널 모달 UI                | pending   | 1d   | T-013        | F012             |
+| **T-014** | 「参加する」 채널 모달 UI ✅             | completed | 1d   | T-013        | F012             |
 
 - **T-010: 서클 카드 컴포넌트 + 상위 페이지** ✅ — 우선순위
   - `lib/dummy/circles.ts` 작성: PRD 「더미 데이터 정책」 카테고리 분포에 맞춰 30건의 정적 배열 (`CircleSummary` 타입 준수 — T-003).
@@ -164,6 +164,7 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
   - **본 단계 테스트** (Playwright):
     - 모달이 등록된 채널만 노출 (3개 / 1개 / 0개 케이스).
     - Instagram 선택 → 새 탭이 instagram.com 도메인으로 열림.
+  - **완료 (2026-05-14)**: (a) `components/circles/join-channel-modal.tsx` 신설 — Client, shadcn Sheet side="bottom" 단일 패턴, CHANNEL_META 외부 const, channels 배열에 입력된 채널만 push, 0개면 EmptyState + 「閉じる」, 1+개면 Button asChild + a target="\_blank" rel="noopener noreferrer" 풀폭. handleChannelClick 안 console.info '[T-009 anchor] incrementInquiryCount' + onOpenChange(false). JSDoc 에 T-009·T-015 anchor 명시. (b) `components/circles/circle-actions.tsx` 수정 — useState modalOpen + handleJoin 의 console.info → setModalOpen(true) + Fragment 끝에 JoinChannelModal 1회 렌더. (c) e2e 3 케이스 추가 (모달 열림·채널 가시성·target/rel 속성) mobile+desktop 양쪽 PASS = 6 신규. (d) lint+build+test(54)+test:e2e(40) 통과.
 
 ### Phase 1.2 — DB 기반 구축 + UI 와이어업 (T-005 ~ T-009)
 
