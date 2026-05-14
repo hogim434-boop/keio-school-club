@@ -76,3 +76,8 @@ Next.js App Router + Supabase Auth + shadcn/ui로 구성된 SSR-first 스타터 
 - **playwright** — 브라우저 자동화로 UI 변경 후 동작 검증.
 - **sequential-thinking** — 복잡한 다단계 문제 분해.
 - **shrimp-task-manager** — `shrimp_data/` 디렉터리에 작업 상태 저장.
+
+# 웹 설명
+
+- 해당 웹은 일본 대학생을 대상으로 만들어진 웹입니다.
+  따라서 해당 웹은 일본어를 기본으로 생성해주세요
