@@ -34,10 +34,11 @@ export function FilterTrigger({ initial }: FilterTriggerProps) {
         </Button>
       </SheetTrigger>
       <SheetContent side="bottom" className="h-[85vh] overflow-hidden">
+        {/* a11y 전용 타이틀 — FilterPanel 내부 헤더가 시각 헤더 역할을 담당 */}
         <SheetHeader>
-          <SheetTitle>フィルター</SheetTitle>
+          <SheetTitle className="sr-only">フィルター</SheetTitle>
         </SheetHeader>
-        <div className="mt-4 h-[calc(100%-3rem)] overflow-hidden px-1">
+        <div className="h-full overflow-hidden px-1">
           {/* key 로 리마운트하여 외부 URL 변경 시 draft state 동기화 */}
           <FilterPanel
             key={JSON.stringify(initial)}
