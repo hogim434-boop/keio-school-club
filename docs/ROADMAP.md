@@ -67,14 +67,14 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
 >
 > **디자인 원칙**: 모든 페이지는 **360px 너비에서 동작해야 하며**(모바일 퍼스트), `md`(768px) 이상은 progressive enhancement(다열 그리드·사이드바·인라인 CTA) 로만 처리한다. 각 작업의 「**모바일**:」 항목이 기본 동작, 그 외 분기는 보조.
 
-### Phase 1.0 — 기반 정비 (T-001 ~ T-004)
+### Phase 1.0 — 기반 정비 (T-001 ~ T-004) ✅
 
 | ID        | 작업                                     | 상태      | 공수 | 선행  | 관련 기능             |
 | --------- | ---------------------------------------- | --------- | ---- | ----- | --------------------- |
 | **T-001** | 디자인 토큰·shadcn 추가 컴포넌트 도입 ✅ | completed | 0.5d | —     | 전 페이지             |
 | **T-002** | 공통 레이아웃·헤더·내비게이션 골격 ✅    | completed | 1d   | T-001 | 메뉴 구조             |
 | **T-003** | TypeScript 도메인 타입 정의 ✅           | completed | 0.5d | —     | F001~F012             |
-| **T-004** | Vitest + Playwright 테스트 러너 도입     | pending   | 1d   | T-002 | 모든 작업의 검증 기반 |
+| **T-004** | Vitest + Playwright 테스트 러너 도입 ✅  | completed | 1d   | T-002 | 모든 작업의 검증 기반 |
 
 - **T-001: 디자인 토큰·shadcn 추가 컴포넌트 도입** ✅ — 우선순위
   - 慶應 濃紺(`#003366`) 액센트 컬러 토큰을 `tailwind.config.ts` + `app/globals.css` 에 추가.
@@ -89,6 +89,7 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
   - 관리자 메뉴(`/admin/*`)는 클라이언트에서 role 확인 후 조건부 노출, 실제 보호는 서버 측에서 (T-019).
   - 빈 셸 페이지 추가: `/circles`, `/circles/[id]`, `/favorites`, `/compare`, `/mypage`, `/mypage/circles`, `/circles/new`, `/admin/circles`. 각각 「coming soon」 플레이스홀더 + Suspense 경계 설정 (cacheComponents 대응).
   - **완료 (2026-05-14)**: (a) `components/layout/` 신설 + `header.tsx`(RSC, sticky + backdrop-blur) + `main-nav.tsx`(데스크탑, usePathname active) + `mobile-nav.tsx`(햄버거 + Sheet) + `user-menu.tsx`(Avatar + DropdownMenu) + `coming-soon.tsx` 5종 추가. (b) `components/auth-button.tsx` 일본어화(ログイン/新規登録) + Client UserMenu 분리 호출. (c) `components/logout-button.tsx` 라벨 ログアウト + variant ghost. (d) 빈 셸 페이지 8개(`/circles`, `/circles/[id]`, `/circles/new`, `/favorites`, `/compare`, `/mypage`, `/mypage/circles`, `/admin/circles`). (e) `app/layout.tsx` 가 `<Suspense fallback>` 으로 `<Header />` 래핑(cacheComponents 대응). (f) `app/page.tsx` 자체 nav 제거. (g) `lib/supabase/proxy.ts` `isPublicPath()` 함수 추출 + 미인증 리디렉션 시 `?next={pathname}` 파라미터 부여(PRD F012 패턴과 일관). `/circles`·`/circles/[id]` 미인증 통과, `/circles/new`·`/favorites`·`/mypage`·`/admin/*` 인증 강제. `npm run build` (23 페이지) + `npm run lint` 통과.
+  - **추가 완료 (2026-05-14, BottomNav 도입)**: 모바일 햄버거 → **하단 탭 바(당근앱 패턴)** 로 전환. `components/layout/bottom-nav.tsx` 신설 — 5탭(ホーム/探す/[⊕ 登録]/お気に入り/マイページ), 중앙 등록 CTA 는 `bg-keio-navy` 원형 + `-translate-y-2` 로 시각적 강조, safe-area-inset-bottom 패딩, `md:hidden`. `usePathname()` 기반 active 강조 + `/circles/{uuid}` 서클 상세 페이지에서는 T-013 액션 바가 자리를 차지하므로 자동 `null` 반환. `app/layout.tsx` 가 children 컨테이너에 `pb-16 md:pb-0` 추가 + `<Suspense fallback={null}>` 로 BottomNav 래핑(cacheComponents 대응). `header.tsx` 에서 `MobileNav` import·렌더 제거 (햄버거 자리 사라짐). `mobile-nav.tsx` 는 dead code 정리로 삭제 완료. E2E `home.spec.ts` 에 「BottomNav viewport 가시성」 + 「서클 상세에서 hidden」 test 2건 추가, 총 8 tests PASS (mobile+desktop).
 
 - **T-003: TypeScript 도메인 타입 정의** ✅
   - `lib/types/database.ts` 에 PRD 「데이터 모델」 7개 테이블 + RPC 함수의 인터페이스 정의 (수동, T-006 이후 Supabase 자동 생성 타입으로 교체).
@@ -96,12 +97,13 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
   - `lib/constants/category.ts`, `lib/constants/activity-frequency.ts` 에 일본어 라벨 매핑.
   - **완료 (2026-05-14)**: (a) `lib/constants/` 5개 파일 — `category`(8종), `activity-frequency`(3종), `official-type`(**5종 정책 변경 반영**: athletics/official/unofficial/intercollegiate/other → 体育会/公認/非公認/インカレ/その他), `circle-status`(3종), `tag-kind`(4종) 모두 `as const` + `Record<KEY, string>` + `ORDER` 패턴. (b) `lib/types/database.ts` — Supabase 공식 패턴(Database = { public: { Tables, Functions } }) 으로 9 Tables(profiles, circles, tags, circle_tags, circle_images, favorites, shinkan_events, inquiry_events, app_settings) Row/Insert/Update + 2 Functions(increment_inquiry_count, increment_view_count) Args/Returns. PRD 데이터 모델 컬럼 + 검증 보강 7개 컬럼(rejection_reason, updated_at, pledge_accepted_at, reviewed_by, reviewed_at, slug, submission_note) 모두 포함. `Tables<T>` / `TablesInsert<T>` / `TablesUpdate<T>` 헬퍼 export. (c) `lib/types/domain.ts` — `CircleSummary`(카드용, verified 필드 제거하고 official_type 라벨로 대체), `CircleDetail`(상세용 extends Summary), `CircleImage`, `ShinkanEvent`, `Tag`, `Favorite`. (d) `npm run build` (23 페이지 PPR) + `npm run lint` 통과.
 
-- **T-004: Vitest + Playwright 테스트 러너 도입**
+- **T-004: Vitest + Playwright 테스트 러너 도입** ✅
   - `vitest`, `@vitest/ui`, `@testing-library/react`, `@testing-library/jest-dom` devDependency 추가.
   - `@playwright/test` 추가 + `playwright.config.ts` 생성 (baseURL `http://localhost:3000`, `webServer` 자동 기동).
   - `npm run test`, `npm run test:e2e` 스크립트 추가.
   - 스모크 e2e: 홈 페이지 200 응답 확인.
   - **근거**: PRD에 없으나 검증 이슈에서 「테스트 러너 부재」를 다수의 핵심 작업(F012 RPC, RLS, 인증 플로우)이 의존하므로 Phase 1 초반에 도입.
+  - **완료 (2026-05-14)**: (a) Vitest 4.1.6 + jsdom + vite-tsconfig-paths + @testing-library/react + jest-dom 도입. `vitest.config.ts` + `vitest.setup.ts` + `tests/unit/constants.test.ts` — T-003 의 5개 상수 모듈(category 8/official-type 5(학생 단체 통합)/activity-frequency 3/circle-status 3/tag-kind 4) 매핑 정합성 10건 검증. (b) Playwright 1.60 + Chromium 도입. `playwright.config.ts` 의 projects 에 **Mobile Chrome (Pixel 5, 393px) + Desktop Chrome (1280px) 2종** 으로 ROADMAP 「🟦 모바일 퍼스트」 회귀 가드. webServer 자동 기동(npm run dev) + reuseExistingServer. `tests/e2e/smoke.spec.ts` — 홈 페이지 200 + 헤더 「KCircle」 로고 getByRole 검증. (c) `package.json` 에 `test/test:watch/test:ui/test:e2e/test:e2e:ui` 5개 스크립트, `.gitignore` 에 playwright-report/test-results/playwright/.cache 3개. (d) `npm run test` (1 file / 10 tests PASS, 443ms) + `npm run test:e2e` (mobile+desktop 양쪽 2 tests PASS, 4.5s) + lint/build 통과.
 
 ### Phase 1.1 — 핵심 UI (더미 데이터 기반) (T-010 ~ T-014)
 
@@ -110,22 +112,23 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
 > 실제 Supabase fetch / Server Action / RPC 와이어업은 Phase 1.2 의 **T-009** 에서 일괄 교체한다.
 > 더미 → 실제 데이터로의 전환 비용을 줄이기 위해 모든 컴포넌트는 **T-003 의 도메인 타입** (`CircleSummary` / `CircleDetail`) 을 인터페이스로 받도록 설계.
 
-| ID        | 작업                                  | 상태    | 공수 | 선행         | 관련 기능        |
-| --------- | ------------------------------------- | ------- | ---- | ------------ | ---------------- |
-| **T-010** | 서클 카드 컴포넌트 + 상위 페이지      | pending | 1d   | T-001, T-003 | F002             |
-| **T-011** | 서클 목록 페이지 + 카테고리 탭 + 필터 | pending | 2d   | T-010        | F001, F002, F004 |
-| **T-012** | 서클 상세 페이지 + 갤러리             | pending | 2d   | T-010        | F003, F004       |
-| **T-013** | 하단 고정 액션 바 + 즐겨찾기 토글 UI  | pending | 1d   | T-012        | F007             |
-| **T-014** | 「参加する」 채널 모달 UI             | pending | 1d   | T-013        | F012             |
+| ID        | 작업                                     | 상태      | 공수 | 선행         | 관련 기능        |
+| --------- | ---------------------------------------- | --------- | ---- | ------------ | ---------------- |
+| **T-010** | 서클 카드 컴포넌트 + 상위 페이지 ✅      | completed | 1d   | T-001, T-003 | F002             |
+| **T-011** | 서클 목록 페이지 + 카테고리 탭 + 필터 ✅ | completed | 2d   | T-010        | F001, F002, F004 |
+| **T-012** | 서클 상세 페이지 + 갤러리 ✅             | completed | 2d   | T-010        | F003, F004       |
+| **T-013** | 하단 고정 액션 바 + 즐겨찾기 토글 UI ✅  | completed | 1d   | T-012        | F007             |
+| **T-014** | 「参加する」 채널 모달 UI                | pending   | 1d   | T-013        | F012             |
 
-- **T-010: 서클 카드 컴포넌트 + 상위 페이지** — 우선순위
+- **T-010: 서클 카드 컴포넌트 + 상위 페이지** ✅ — 우선순위
   - `lib/dummy/circles.ts` 작성: PRD 「더미 데이터 정책」 카테고리 분포에 맞춰 30건의 정적 배열 (`CircleSummary` 타입 준수 — T-003).
   - `components/circles/circle-card.tsx`: 커버 16:9 + 이름 + 카테고리 뱃지 + 태그 칩 5개 + 활동빈도 + `verified` 뱃지 + 하트 토글 슬롯. props 는 `CircleSummary` 만 받음.
   - `app/page.tsx`: 검색바 + 카테고리 탭 8개 가로 스크롤 + 인기 서클 6개(더미 배열에서 임의 6개) + 「サークルを探す」 CTA. Suspense 경계는 미리 적용 (cacheComponents 환경 대비).
   - **모바일 (기본)**: 카드 그리드 1열 (`grid-cols-1 sm:grid-cols-2 md:grid-cols-3`). 검색바·카테고리 탭은 viewport 상단 sticky, 카테고리 탭은 가로 스크롤(`overflow-x-auto`) + 스냅. 카드 커버 16:9 는 풀폭.
   - **테스트**: 카드 30개 렌더 + 반응형 그리드 + 다크 모드 시각 회귀 (360px / 768px / 1280px 3종).
+  - **완료 (2026-05-14)**: (a) `lib/dummy/circles.ts` — DUMMY_CIRCLES 30건 `CircleDetail[]` (T-012/T-018 재사용) + DUMMY_CIRCLES_DISTRIBUTION 객체 + async helper 3종(getPopularCircles/getCircleById/getCirclesByCategory). 학생 단체 통합 정책 분포: athletics 3 / official 12 / unofficial 9 / intercollegiate 4 / other 2. picsum.photos seed 기반 결정론적 이미지. (b) `components/circles/circle-card.tsx` (RSC) — props=CircleSummary, Link 전체 감쌈, next/image 16:9 fill + sizes, 카테고리/official_type 뱃지 + 태그 5개 + 활동빈도, 하트 placeholder(T-013 button 교체 예정). (c) `next.config.ts` `images.remotePatterns` 에 picsum.photos 허용. (d) `app/page.tsx` 전체 교체 — sticky top-14 검색바 + 카테고리 탭 8종 가로 스크롤(snap-x) + 인기 6개 카드 그리드(Suspense + Skeleton fallback) + bg-keio-navy CTA. (e) 단위 테스트 +13건(분포 회귀 가드, 총 23건 PASS) + E2E `tests/e2e/home.spec.ts` (카테고리 8 / 카드 6 / CTA, mobile+desktop 양쪽 PASS, 총 4 tests). lint/build/test/test:e2e 모두 통과.
 
-- **T-011: 서클 목록 페이지 + 카테고리 탭 + 필터**
+- **T-011: 서클 목록 페이지 + 카테고리 탭 + 필터** ✅
   - `app/circles/page.tsx`: `searchParams` 사용 → Suspense 경계 필수.
   - 카테고리 탭 8종 (URL `?category=sports` 동기화), 필터: 활동빈도·연회비 범위·태그 다중·`official_type`.
   - **필터링은 더미 배열에 대한 클라이언트 측 `filter()` 로 모킹** (Phase 1.2 에서 Postgres `eq` / `overlap` / 범위 조건으로 교체).
@@ -133,13 +136,15 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
   - 페이지네이션은 단순 20개 단위 (MVP).
   - **모바일 (기본)**: 카드 그리드 1열 (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`). 필터 트리거 버튼은 검색바 옆 또는 상단 sticky 영역에 배치(휠 스크롤 없이 도달 가능). 적용 중인 필터 개수 뱃지 표시.
   - **테스트**: 필터 조합 5종에 대해 Playwright 로 결과 카드 수 검증 (모바일 360px viewport 포함).
+  - **완료 (2026-05-14)**: (a) `lib/circles/search-params.ts` 신설 — CirclesSearchParams 타입 + parseCirclesSearchParams(fail-safe enum allowlist) + buildCirclesUrl(빈값 생략, page=1 생략) + countAppliedFilters. (b) `lib/dummy/circles.ts` 에 filterCircles + FilterCirclesResult 추가 — 모든 필터 AND, 같은 필터 다중 OR, q case-insensitive 부분매칭, page clamp(1~totalPages). (c) `components/circles/category-tabs.tsx` 신설 — 「すべて」 + 8 카테고리 = 9 link, 활성 시 bg-keio-navy, 홈/목록 공통 사용. 홈 E2E count 8→9 갱신. (d) `components/circles/filter-panel.tsx` (Client) — 5섹션 필터(q/frequency/officialType/tags 10/fee_max select), draft useState + 「適用」 시 router.push(buildCirclesUrl({...draft, page:undefined})) + 「リセット」 → /circles. PRD 태그 시드 10종 컴포넌트 내부 정의(T-009 이후 교체). (e) `components/circles/filter-trigger.tsx` (Client, lg:hidden) — shadcn Sheet bottom + 적용 개수 Badge. (f) `app/circles/page.tsx` 본 디자인 — 본문 전체 Suspense 래핑(cacheComponents 모드의 searchParams 호환), sticky 검색 form(다른 필터 hidden input 보존) + CategoryTabs + FilterTrigger, lg:grid-cols-[260px_1fr] 사이드바 분기, CardGrid(grid-cols-1 sm:grid-cols-2 xl:grid-cols-3), Pagination(前へ/X/次へ), EmptyState. (g) 단위 테스트 +9건(filterCircles 5종 + 페이지네이션), E2E +3 spec × mobile+desktop = 6건 PASS, 총 32 unit + 14 E2E.
 
-- **T-012: 서클 상세 페이지 + 갤러리**
+- **T-012: 서클 상세 페이지 + 갤러리** ✅
   - `app/circles/[id]/page.tsx`: 동적 라우트, Suspense 경계 필수. 더미 배열에서 `id` 로 find.
   - 커버 + 서클명 + verified 뱃지 + 태그 칩 5개 / 개요 + 활동빈도·연회비·요일·회원수·신입생비율 요약 카드 / 갤러리 (Dialog 로 전체화면).
   - `not-found.tsx` 추가: 더미 배열에 없는 `id` 는 404.
   - **모바일 (기본)**: 본문 1열 스택. 갤러리는 가로 swipe 캐러셀 + 도트 인디케이터(`overflow-x-auto snap-x`). 요약 카드(활동빈도/연회비/요일/회원수/신입생비율) 는 모바일 1열, `md` 이상에서 2열 그리드. 본문 하단에는 T-013 액션 바가 가리지 않도록 `pb-20` 여유 확보.
   - `view_count` 증가 로직은 Phase 1.2 T-009 에서 RPC `increment_view_count` 와이어업.
+  - **완료 (2026-05-14)**: (a) `lib/types/domain.ts` CircleDetail 에 activity_days/member_count/freshmen_ratio 3 필수 필드 추가. (b) `lib/dummy/circles.ts` 의 buildGallery + assets helper 도입, 30건 모두 새 필드 + 갤러리 4장(picsum seed) 보강. 단위 테스트 +5건(총 37 PASS). (c) `components/circles/circle-gallery.tsx` (Client) — 모바일 가로 swipe(snap-x mandatory) / 데스크탑 3열 그리드 + shadcn Dialog 전체화면. (d) `app/circles/[id]/page.tsx` 본 디자인 — 본문 전체 Suspense + async CircleDetailContent + getCircleById + notFound. CoverImage(16:9 / 21:9 priority) + Header(카테고리·official_type 뱃지 + h1 + 태그 칩) + SummaryGrid(5종 dl) + Description(whitespace-pre-line) + CircleGallery + ContactSection(Instagram/X/LINE inline + ExternalLink). pb-24 md:pb-12. (e) `app/circles/[id]/not-found.tsx` 404 UI. (f) E2E `circle-detail.spec.ts` 3 test × mobile+desktop = 6 PASS. (g) lint/build/test(37)/test:e2e(전체) 통과.
 
 - **T-013: 하단 고정 액션 바 + 즐겨찾기 토글 UI**
   - PRD 「당근 모임 패턴」 하단 고정 액션 바 (모바일 safe-area inset 고려).
@@ -147,6 +152,7 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
   - 실제 favorites 테이블 insert / delete + `useOptimistic` + `revalidateTag('favorites')` 는 Phase 1.2 T-009 에서 교체 (검증 이슈 **M-1** 대응).
   - 미로그인 사용자의 하트 탭 시 `/auth/login?next=/circles/{id}` 리디렉션 동선은 미리 와이어업 (인증 자체는 T-015).
   - **모바일 (기본)**: 하단 고정 액션 바는 **모바일 전용**(`md:hidden`) — fixed bottom + `env(safe-area-inset-bottom)` 패딩, 좌측 하트 토글 + 우측 「参加する」 풀폭 CTA(터치 타깃 최소 48px). `md` 이상에서는 액션 바를 숨기고 본문 우측 칼럼 또는 본문 내 인라인 CTA 로 대체.
+  - **완료 (2026-05-14)**: (a) `lib/circles/use-favorites.ts` (Client hook) — sessionStorage 'kcircle:favorites' + 모듈 singleton authPromise + CustomEvent 'kcircle:favorites-changed' broadcast 로 다중 인스턴스 동기화. (b) `components/circles/favorite-toggle-button.tsx` variant 2종(card/action-bar) + e.preventDefault+stopPropagation 으로 카드 Link 충돌 회피. (c) `components/circles/circle-card.tsx` 의 placeholder span → FavoriteToggleButton 으로 교체. (d) `components/circles/circle-actions.tsx` layout='mobile'/'desktop' 분기 — 모바일 fixed bottom md:hidden + safe-area-inset-bottom, 데스크탑 hidden md:flex Header inline. handleJoin 은 T-014 anchor(console.info). (e) `app/circles/[id]/page.tsx` Header 안 데스크탑 + 본문 끝 모바일 액션 바 통합. (f) 단위 테스트 6건 PASS, E2E favorites 28건(mobile+desktop) PASS. lint+build+test+test:e2e 통과.
 
 - **T-014: 「参加する」 채널 모달 UI**
   - 우측 메인 CTA 버튼 (慶應 濃紺 `#003366`).
