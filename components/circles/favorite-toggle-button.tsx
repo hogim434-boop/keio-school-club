@@ -1,0 +1,59 @@
+"use client";
+
+/**
+ * FavoriteToggleButton — 즐겨찾기 토글 버튼 컴포넌트
+ * variant='card' 는 카드 우상단 오버레이용, variant='action-bar' 는 하단 고정 액션 바 / 데스크탑 inline 용.
+ * onClick 에서 e.preventDefault + stopPropagation 으로 카드 Link navigation 을 차단한다.
+ */
+
+import { Heart } from "lucide-react";
+
+import { useFavorites } from "@/lib/circles/use-favorites";
+import { cn } from "@/lib/utils";
+
+interface FavoriteToggleButtonProps {
+  /** 즐겨찾기 대상 서클 ID */
+  circleId: string;
+  /**
+   * 버튼 스타일 변형
+   * - 'card': 카드 우상단 오버레이 (h-9 w-9, bg-background/80, backdrop-blur)
+   * - 'action-bar': 하단 액션 바 / 데스크탑 inline (h-12 w-12, border, bg-background)
+   */
+  variant: "card" | "action-bar";
+}
+
+/**
+ * 즐겨찾기 하트 버튼 — useFavorites hook 을 사용하여 상태를 읽고 토글한다.
+ * 카드 전체가 Link 로 감싸진 경우에도 클릭이 페이지 이동으로 이어지지 않도록
+ * e.preventDefault() + e.stopPropagation() 을 호출한다.
+ */
+export function FavoriteToggleButton({ circleId, variant }: FavoriteToggleButtonProps) {
+  const { isFavorite, toggle } = useFavorites();
+  const active = isFavorite(circleId);
+
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        // 카드 Link 클릭 이벤트가 버블링되지 않도록 차단
+        e.preventDefault();
+        e.stopPropagation();
+        toggle(circleId);
+      }}
+      aria-pressed={active}
+      aria-label={active ? "お気に入りから削除" : "お気に入りに追加"}
+      className={cn(
+        // 공통 스타일
+        "inline-flex items-center justify-center rounded-full transition-colors",
+        "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+        // variant 별 스타일 분기
+        variant === "card" &&
+          "bg-background/80 text-muted-foreground hover:text-foreground h-9 w-9 backdrop-blur",
+        variant === "action-bar" && "bg-background hover:bg-accent h-12 w-12 border"
+      )}
+    >
+      {/* 하트 아이콘 — 즐겨찾기 시 빨간색으로 채움 */}
+      <Heart className={cn("size-5", active && "fill-current text-red-500")} aria-hidden="true" />
+    </button>
+  );
+}
