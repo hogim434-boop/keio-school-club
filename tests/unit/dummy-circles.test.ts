@@ -117,6 +117,67 @@ describe("DUMMY_CIRCLES 연락처·태그 정책", () => {
       expect(circle.tags.length, `circle ${circle.id} tags`).toBeLessThanOrEqual(5);
     }
   });
+
+  it("once_a_week 슬러그가 더미 데이터에 0회 등장 — 활動頻度 섹션과 의미 중복 제거 회귀 방지", () => {
+    // once_a_week 는 TAG_SEEDS 에서도 제거됨 (PR: FilterPanel 호흡 보강)
+    const hasOnceAWeek = DUMMY_CIRCLES.some((c) => c.tags.includes("once_a_week"));
+    expect(hasOnceAWeek).toBe(false);
+  });
+});
+
+describe("DUMMY_CIRCLES 신규 필드 분포 (recruitment_status · activity_time_band)", () => {
+  it("모든 단체에 recruitment_status 가 정의되어 있다", () => {
+    for (const circle of DUMMY_CIRCLES) {
+      expect(circle.recruitment_status, `circle ${circle.id}`).toBeDefined();
+    }
+  });
+
+  it("recruitment_status 분포: open 18 + newcomer_only 8 + year_round 4 = 30", () => {
+    const open = DUMMY_CIRCLES.filter((c) => c.recruitment_status === "open").length;
+    const newcomer = DUMMY_CIRCLES.filter((c) => c.recruitment_status === "newcomer_only").length;
+    const yearRound = DUMMY_CIRCLES.filter((c) => c.recruitment_status === "year_round").length;
+
+    expect(open).toBe(18);
+    expect(newcomer).toBe(8);
+    expect(yearRound).toBe(4);
+    expect(open + newcomer + yearRound).toBe(DUMMY_CIRCLES_DISTRIBUTION.total);
+  });
+
+  it("모든 단체에 activity_time_band 가 정의되어 있고 1개 이상이다", () => {
+    for (const circle of DUMMY_CIRCLES) {
+      expect(circle.activity_time_band, `circle ${circle.id}`).toBeDefined();
+      expect(circle.activity_time_band!.length, `circle ${circle.id}`).toBeGreaterThan(0);
+    }
+  });
+
+  it("activity_time_band 분포: 각 band 가 1건 이상 존재한다", () => {
+    const weekdayDay = DUMMY_CIRCLES.filter((c) =>
+      c.activity_time_band?.includes("weekday_day")
+    ).length;
+    const weekdayNight = DUMMY_CIRCLES.filter((c) =>
+      c.activity_time_band?.includes("weekday_night")
+    ).length;
+    const weekend = DUMMY_CIRCLES.filter((c) => c.activity_time_band?.includes("weekend")).length;
+
+    // 시드 분포 확인: weekday_night=20, weekend=20, weekday_day=10
+    expect(weekdayDay).toBeGreaterThanOrEqual(1);
+    expect(weekdayNight).toBeGreaterThanOrEqual(1);
+    expect(weekend).toBeGreaterThanOrEqual(1);
+  });
+
+  it("activity_time_band 시드 결과: weekday_day=10, weekday_night=20, weekend=20", () => {
+    const weekdayDay = DUMMY_CIRCLES.filter((c) =>
+      c.activity_time_band?.includes("weekday_day")
+    ).length;
+    const weekdayNight = DUMMY_CIRCLES.filter((c) =>
+      c.activity_time_band?.includes("weekday_night")
+    ).length;
+    const weekend = DUMMY_CIRCLES.filter((c) => c.activity_time_band?.includes("weekend")).length;
+
+    expect(weekdayDay).toBe(10);
+    expect(weekdayNight).toBe(20);
+    expect(weekend).toBe(20);
+  });
 });
 
 describe("helper 함수", () => {

@@ -63,3 +63,92 @@ describe("filterCircles — 복합 + 페이지네이션", () => {
     expect(r.totalPages).toBe(1);
   });
 });
+
+describe("filterCircles — 신규 5종 필터", () => {
+  it("activityDays=['火'] → activity_days 에 '火' 가 포함된 단체만 (AND substring)", async () => {
+    // 더미 데이터에서 직접 기대값 산출
+    const expectedCount = DUMMY_CIRCLES.filter((c) => c.activity_days.includes("火")).length;
+    expect(expectedCount).toBeGreaterThan(0); // 더미에 火 포함 단체 존재 확인
+
+    const r = await filterCircles({ activityDays: ["火"] });
+    expect(r.total).toBe(expectedCount);
+    // 모든 결과가 activity_days 에 '火' 를 포함하는지 확인
+    // (filterCircles 는 CircleSummary 반환이라 activity_days 없음 → DUMMY_CIRCLES 에서 검증)
+    const resultIds = new Set(r.items.map((c) => c.id));
+    for (const circle of DUMMY_CIRCLES) {
+      if (resultIds.has(circle.id)) {
+        expect(circle.activity_days, `circle ${circle.id}`).toContain("火");
+      }
+    }
+  });
+
+  it("memberSize='small' → member_count <= 30 인 단체만", async () => {
+    const expectedCount = DUMMY_CIRCLES.filter((c) => c.member_count <= 30).length;
+    expect(expectedCount).toBeGreaterThan(0);
+
+    const r = await filterCircles({ memberSize: "small" });
+    expect(r.total).toBe(expectedCount);
+
+    // 결과 단체의 member_count 가 모두 30 이하인지 확인
+    const resultIds = new Set(r.items.map((c) => c.id));
+    for (const circle of DUMMY_CIRCLES) {
+      if (resultIds.has(circle.id)) {
+        expect(circle.member_count, `circle ${circle.id}`).toBeLessThanOrEqual(30);
+      }
+    }
+  });
+
+  it("recruitmentStatus=['open'] → recruitment_status=open 인 단체만 (OR 매칭)", async () => {
+    // 시드 분포: seq 1~18 → open (18건)
+    const expectedCount = DUMMY_CIRCLES.filter((c) => c.recruitment_status === "open").length;
+    expect(expectedCount).toBe(18);
+
+    const r = await filterCircles({ recruitmentStatus: ["open"] });
+    expect(r.total).toBe(18);
+
+    // 결과 단체의 recruitment_status 가 모두 open 인지 확인
+    const resultIds = new Set(r.items.map((c) => c.id));
+    for (const circle of DUMMY_CIRCLES) {
+      if (resultIds.has(circle.id)) {
+        expect(circle.recruitment_status, `circle ${circle.id}`).toBe("open");
+      }
+    }
+  });
+
+  it("activityTimeBand=['weekend'] → activity_time_band 에 weekend 포함 단체만 (OR 매칭)", async () => {
+    // 시드: seq % 3 === 1 → [weekday_night, weekend], seq % 3 === 0 → [weekday_day, weekend]
+    // 즉 weekend 포함: 20건
+    const expectedCount = DUMMY_CIRCLES.filter((c) =>
+      c.activity_time_band?.includes("weekend")
+    ).length;
+    expect(expectedCount).toBe(20);
+
+    const r = await filterCircles({ activityTimeBand: ["weekend"] });
+    expect(r.total).toBe(20);
+
+    // 결과 단체의 activity_time_band 에 weekend 가 포함되는지 확인
+    const resultIds = new Set(r.items.map((c) => c.id));
+    for (const circle of DUMMY_CIRCLES) {
+      if (resultIds.has(circle.id)) {
+        expect(circle.activity_time_band, `circle ${circle.id}`).toContain("weekend");
+      }
+    }
+  });
+
+  it("sort='cheap' → 결과의 첫 항목 annual_fee_yen 이 마지막 항목보다 작거나 같다", async () => {
+    const r = await filterCircles({ sort: "cheap", pageSize: 30 });
+    expect(r.total).toBeGreaterThan(1); // 단일 결과면 비교 불가
+
+    // 결과 항목을 DUMMY_CIRCLES 에서 annual_fee_yen 로 매핑
+    const feeMap = new Map(DUMMY_CIRCLES.map((c) => [c.id, c.annual_fee_yen]));
+    const fees = r.items.map((item) => feeMap.get(item.id) ?? 0);
+
+    // 첫 항목이 마지막 항목보다 저렴하거나 같아야 함
+    expect(fees[0]).toBeLessThanOrEqual(fees[fees.length - 1]);
+
+    // 전체 배열이 오름차순인지 확인
+    for (let i = 0; i < fees.length - 1; i++) {
+      expect(fees[i], `index ${i}`).toBeLessThanOrEqual(fees[i + 1]);
+    }
+  });
+});
