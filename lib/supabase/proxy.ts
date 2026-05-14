@@ -2,6 +2,21 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasEnvVars } from "../utils";
 
+// 미인증 사용자도 열람 가능한 경로 판정
+// /circles 와 /circles/[id] 는 공개, 단 /circles/new 는 등록 폼이므로 인증 필수
+// /auth/* 와 /login 은 인증 플로우 자체이므로 항상 통과 (레거시 /login 호환 포함)
+function isPublicPath(pathname: string): boolean {
+  if (pathname === "/") return true;
+  if (pathname.startsWith("/auth")) return true;
+  if (pathname.startsWith("/login")) return true;
+  if (pathname === "/circles") return true;
+  if (pathname.startsWith("/circles/")) {
+    if (pathname === "/circles/new") return false;
+    return true;
+  }
+  return false;
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -45,15 +60,12 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
 
-  if (
-    request.nextUrl.pathname !== "/" &&
-    !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth")
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
+  if (!user && !isPublicPath(request.nextUrl.pathname)) {
+    // 미인증 사용자 — 로그인 페이지로 리디렉션하면서 원래 가려던 경로를 next 파라미터로 보존
+    // (PRD F012 「未로그인 → /auth/login?next=/circles/{id}」 패턴과 일관)
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
+    url.searchParams.set("next", request.nextUrl.pathname);
     return NextResponse.redirect(url);
   }
 
