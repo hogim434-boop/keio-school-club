@@ -3,7 +3,9 @@ import { Suspense } from "react";
 import { Geist, Noto_Sans_JP } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
+import { BottomNav } from "@/components/layout/bottom-nav";
 import { Header } from "@/components/layout/header";
+import { RegisterFloatingCTA } from "@/components/layout/register-floating-cta";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -54,7 +56,19 @@ export default function RootLayout({
           <Suspense fallback={<header className="bg-background h-14 border-b" />}>
             <Header />
           </Suspense>
-          {children}
+          {/* 모바일 하단 탭 바가 본문을 가리지 않도록 모바일에서만 pb-16 추가
+              (BottomNav 의 fixed 영역 ≈ 64px). 데스크탑은 BottomNav 미노출이라 패딩 불필요. */}
+          <div className="pb-16 md:pb-0">{children}</div>
+          {/* 모바일 전용 하단 탭 바 (md 미만, 당근앱 패턴) — 서클 상세에서는 자동 숨김.
+              usePathname() 사용 Client 컴포넌트라 cacheComponents 모드에서 Suspense 필수. */}
+          <Suspense fallback={null}>
+            <BottomNav />
+          </Suspense>
+          {/* 우하단 floating 등록 CTA (당근앱 「+ 모임 만들기」 패턴) — 서클 상세·등록 페이지에서 자동 숨김.
+              usePathname() 사용 Client 컴포넌트라 cacheComponents 모드에서 Suspense 필수. */}
+          <Suspense fallback={null}>
+            <RegisterFloatingCTA />
+          </Suspense>
           {/* 토스트 알림 Provider — ThemeProvider 내부에 두어 다크 모드 색상 자동 적용 */}
           <Toaster richColors closeButton />
         </ThemeProvider>

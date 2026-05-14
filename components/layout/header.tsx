@@ -5,7 +5,6 @@ import { ThemeSwitcher } from "@/components/theme-switcher";
 import { EnvVarWarning } from "@/components/env-var-warning";
 import { AuthButton } from "@/components/auth-button";
 import { MainNav } from "@/components/layout/main-nav";
-import { MobileNav } from "@/components/layout/mobile-nav";
 import { hasEnvVars } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 
@@ -26,10 +25,7 @@ export async function Header() {
   return (
     <header className="bg-background/80 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40 border-b backdrop-blur">
       <div className="container mx-auto flex h-14 items-center gap-2 px-4">
-        {/* 모바일 햄버거 (md 미만 노출) */}
-        <MobileNav role={role} />
-
-        {/* 로고 */}
+        {/* 로고 — 모바일에서는 햄버거가 사라지고 BottomNav 가 메뉴를 담당 */}
         <Link href="/" className="text-base font-bold tracking-tight">
           KCircle
         </Link>
