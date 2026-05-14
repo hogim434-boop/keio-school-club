@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist, Noto_Sans_JP } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
+import { Header } from "@/components/layout/header";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -46,6 +48,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          {/* 모든 페이지 공통 헤더 — sticky top-0, T-002 에서 도입.
+              Header 가 cookies() 의존(role 추출)이므로 cacheComponents 모드에서
+              Suspense 필수. fallback 은 동일 높이의 빈 헤더로 layout shift 방지. */}
+          <Suspense fallback={<header className="bg-background h-14 border-b" />}>
+            <Header />
+          </Suspense>
           {children}
           {/* 토스트 알림 Provider — ThemeProvider 내부에 두어 다크 모드 색상 자동 적용 */}
           <Toaster richColors closeButton />
