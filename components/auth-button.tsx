@@ -13,15 +13,11 @@ export async function AuthButton() {
   const claims = data?.claims;
 
   if (!claims) {
+    // 비로그인 — 「ログイン」 단일 버튼. 회원가입 진입은 로그인 화면 안 보조 링크가 담당.
     return (
-      <div className="flex gap-2">
-        <Button asChild size="sm" variant="outline">
-          <Link href="/auth/login">ログイン</Link>
-        </Button>
-        <Button asChild size="sm" variant="default">
-          <Link href="/auth/sign-up">新規登録</Link>
-        </Button>
-      </div>
+      <Button asChild size="sm" variant="default">
+        <Link href="/auth/login">ログイン</Link>
+      </Button>
     );
   }
 
