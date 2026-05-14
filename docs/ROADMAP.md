@@ -1,16 +1,21 @@
 # KCircle 개발 로드맵
 
-慶應義塾大学 公認サークル 전용 소개 웹앱 — 2026년 4월 新歓 시즌 출시 목표.
+慶應義塾大学 学生団体・サークル(公認・非公認・インカレ 통합) 검색 웹앱 — 2026년 4월 新歓 시즌 출시 목표.
 
 ## 개요
 
-KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 위한 公認サークル 탐색·비교 웹앱으로 다음 기능을 제공합니다.
+KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 위한 학생 단체(団体・サークル) 탐색·비교 웹앱으로 다음 기능을 제공합니다. **公認・非公認・インカレ 를 차별 없이 통합 검색**할 수 있으며, 공인 여부는 메타 정보(`official_type`) 로만 표시합니다.
 
-- **서클 탐색 (F001 / F002 / F004)**: 8종 카테고리 탭과 활동빈도·연회비·태그 다중 필터로 380개 이상의 公認サークル을 스크리닝.
-- **서클 상세 + 참여 의사 (F003 / F012)**: 갤러리·태그·요약 카드 + 당근 모임 패턴의 하단 고정 액션 바와 「参加する」 채널 모달.
-- **즐겨찾기 + 비교 (F007 / F008)**: 하트 토글로 저장한 서클을 최대 3개까지 횡열 비교.
-- **콘텐츠 공급 파이프라인 (F005 / F006)**: 대표자가 서클을 등록하면 관리자가 公式 公認団体名簿 와 대조하여 승인·거절.
-- **공인 신뢰도 (F010 / F011)**: @keio.jp 이메일 인증으로 `keio_verified` 자동 부여 + 관리자 수동 검증의 이중 게이트.
+- **단체 탐색 (F001 / F002 / F004)**: 8종 카테고리 탭과 활동빈도·연회비·태그 다중 필터로 학생 단체를 스크리닝.
+- **단체 상세 + 참여 의사 (F003 / F012)**: 갤러리·태그·요약 카드 + 당근 모임 패턴의 하단 고정 액션 바와 「参加する」 채널 모달.
+- **즐겨찾기 + 비교 (F007 / F008)**: 하트 토글로 저장한 단체를 최대 3개까지 횡열 비교.
+- **콘텐츠 공급 파이프라인 (F005 / F006)**: 대표자가 단체를 등록하면 관리자가 **실재 여부·학칙 준수 여부** 를 확인 후 승인·거절. official_type 자칭 정확성도 함께 검수.
+- **실재 신뢰도 (F010 / F011)**: @keio.jp 이메일 인증으로 `keio_verified` 자동 부여 + 관리자 수동 검증의 이중 게이트.
+
+> **⚠️ 慶應과의 관계 면책**: 본 서비스는 학생 운영의 단체 검색 도구이며, 慶應義塾大学 公式 인증·後援 과는 무관합니다. 「公認」 표기는 등록자 자기 신고 + 관리자 1차 검수 결과로, 慶應 측의 보증을 의미하지 않습니다. 자세한 면책 사항은 PRD 「면책 사항」 절 참조. 푸터·등록 폼·이용 약관 3곳에 면책 문구 노출 의무.
+
+> **🟦 모바일 퍼스트 (전 ROADMAP 의 최우선 설계 원칙)**
+> 본 서비스는 일본 대학생이 스마트폰으로 활용하는 것을 전제로 한다. 모든 UI 작업의 기본 viewport 는 **360–428px**(iPhone SE ~ iPhone Pro Max / Android 표준)이며, 데스크탑(`md:` 이상, 768px+) 은 보조 환경으로서 progressive enhancement 로만 다룬다. 모든 카드·폼·CTA 는 우선 모바일 1열 레이아웃·44px 이상 터치 타깃·safe-area inset 을 보장한 뒤, 가용 너비가 늘어남에 따라 다열 그리드·사이드바·인라인 CTA 로 확장한다.
 
 본 ROADMAP은 [`docs/PRD.md`](./PRD.md)의 단일 진실 공급원(SSOT)에 기반하며, PRD의 기능 ID(F001~F012)와 본 문서의 작업 ID(T-XXX)는 끝부분의 매핑 테이블을 통해 양방향으로 추적할 수 있습니다.
 
@@ -59,14 +64,16 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
 ## Phase 1 — MVP 골격 + 핵심 탐색 + 콘텐츠 파이프라인 (4–6주)
 
 > 목표: 신입생이 서클을 「찾고 → 보고 → 참여 의사 표시」 까지, 대표자가 「등록 → 승인 대기」 까지 완주할 수 있는 최소 기능을 운영 가능한 품질로 출시.
+>
+> **디자인 원칙**: 모든 페이지는 **360px 너비에서 동작해야 하며**(모바일 퍼스트), `md`(768px) 이상은 progressive enhancement(다열 그리드·사이드바·인라인 CTA) 로만 처리한다. 각 작업의 「**모바일**:」 항목이 기본 동작, 그 외 분기는 보조.
 
 ### Phase 1.0 — 기반 정비 (T-001 ~ T-004)
 
 | ID        | 작업                                     | 상태      | 공수 | 선행  | 관련 기능             |
 | --------- | ---------------------------------------- | --------- | ---- | ----- | --------------------- |
 | **T-001** | 디자인 토큰·shadcn 추가 컴포넌트 도입 ✅ | completed | 0.5d | —     | 전 페이지             |
-| **T-002** | 공통 레이아웃·헤더·내비게이션 골격       | pending   | 1d   | T-001 | 메뉴 구조             |
-| **T-003** | TypeScript 도메인 타입 정의              | pending   | 0.5d | —     | F001~F012             |
+| **T-002** | 공통 레이아웃·헤더·내비게이션 골격 ✅    | completed | 1d   | T-001 | 메뉴 구조             |
+| **T-003** | TypeScript 도메인 타입 정의 ✅           | completed | 0.5d | —     | F001~F012             |
 | **T-004** | Vitest + Playwright 테스트 러너 도입     | pending   | 1d   | T-002 | 모든 작업의 검증 기반 |
 
 - **T-001: 디자인 토큰·shadcn 추가 컴포넌트 도입** ✅ — 우선순위
@@ -76,16 +83,18 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
   - 「サークル」「公認」 같은 일본어 라벨 처리를 위한 폰트 가중치 검증 (현재 Geist Sans 기본).
   - **완료 (2026-05-14)**: Tailwind v4 마이그레이션 동시 진행으로 (a) `app/globals.css` 의 `@theme inline` 에 `--color-keio-navy` + `--color-keio-navy-foreground` 토큰 추가(OKLCH, 라이트·다크 모드 보정값 포함), (b) shadcn 누락 12종(form/dialog/sheet/tabs/table/select/textarea/avatar/skeleton/sonner/alert/radio-group) 추가 + `react-hook-form` / `@hookform/resolvers` / `sonner` 의존성 자동 도입, (c) `app/layout.tsx` 에 `Noto_Sans_JP`(weight 400/500/700) 보조 폰트 + `<Toaster>` Provider 배치 + `lang="ja"`, (d) `globals.css` 에 `--font-sans` 폴백 체인(Geist → Noto JP → Hiragino → Yu Gothic → Meiryo). Tailwind 자체는 v3.4.1 → **v4.3.0** 으로 업그레이드되어 `tailwind.config.ts` 삭제 + `postcss.config.mjs` 단순화 + `tailwindcss-animate` → `tw-animate-css` 교체. `npm run build` + `npm run lint` 모두 통과.
 
-- **T-002: 공통 레이아웃·헤더·내비게이션 골격**
+- **T-002: 공통 레이아웃·헤더·내비게이션 골격** ✅
   - `app/layout.tsx` 의 헤더를 PRD「메뉴 구조」기준으로 재구성: 로고 / サークルを探す / お気に入り / マイページ / 로그인 영역.
   - 모바일 하단 탭 바 또는 햄버거 메뉴 골격 (당근 모임 패턴 모바일 퍼스트).
   - 관리자 메뉴(`/admin/*`)는 클라이언트에서 role 확인 후 조건부 노출, 실제 보호는 서버 측에서 (T-019).
   - 빈 셸 페이지 추가: `/circles`, `/circles/[id]`, `/favorites`, `/compare`, `/mypage`, `/mypage/circles`, `/circles/new`, `/admin/circles`. 각각 「coming soon」 플레이스홀더 + Suspense 경계 설정 (cacheComponents 대응).
+  - **완료 (2026-05-14)**: (a) `components/layout/` 신설 + `header.tsx`(RSC, sticky + backdrop-blur) + `main-nav.tsx`(데스크탑, usePathname active) + `mobile-nav.tsx`(햄버거 + Sheet) + `user-menu.tsx`(Avatar + DropdownMenu) + `coming-soon.tsx` 5종 추가. (b) `components/auth-button.tsx` 일본어화(ログイン/新規登録) + Client UserMenu 분리 호출. (c) `components/logout-button.tsx` 라벨 ログアウト + variant ghost. (d) 빈 셸 페이지 8개(`/circles`, `/circles/[id]`, `/circles/new`, `/favorites`, `/compare`, `/mypage`, `/mypage/circles`, `/admin/circles`). (e) `app/layout.tsx` 가 `<Suspense fallback>` 으로 `<Header />` 래핑(cacheComponents 대응). (f) `app/page.tsx` 자체 nav 제거. (g) `lib/supabase/proxy.ts` `isPublicPath()` 함수 추출 + 미인증 리디렉션 시 `?next={pathname}` 파라미터 부여(PRD F012 패턴과 일관). `/circles`·`/circles/[id]` 미인증 통과, `/circles/new`·`/favorites`·`/mypage`·`/admin/*` 인증 강제. `npm run build` (23 페이지) + `npm run lint` 통과.
 
-- **T-003: TypeScript 도메인 타입 정의**
+- **T-003: TypeScript 도메인 타입 정의** ✅
   - `lib/types/database.ts` 에 PRD 「데이터 모델」 7개 테이블 + RPC 함수의 인터페이스 정의 (수동, T-006 이후 Supabase 자동 생성 타입으로 교체).
   - `lib/types/domain.ts` 에 `CircleSummary`(카드용) / `CircleDetail`(상세용) / `OfficialType` / `Category`(8종 리터럴) / `TagKind` 정의.
   - `lib/constants/category.ts`, `lib/constants/activity-frequency.ts` 에 일본어 라벨 매핑.
+  - **완료 (2026-05-14)**: (a) `lib/constants/` 5개 파일 — `category`(8종), `activity-frequency`(3종), `official-type`(**5종 정책 변경 반영**: athletics/official/unofficial/intercollegiate/other → 体育会/公認/非公認/インカレ/その他), `circle-status`(3종), `tag-kind`(4종) 모두 `as const` + `Record<KEY, string>` + `ORDER` 패턴. (b) `lib/types/database.ts` — Supabase 공식 패턴(Database = { public: { Tables, Functions } }) 으로 9 Tables(profiles, circles, tags, circle_tags, circle_images, favorites, shinkan_events, inquiry_events, app_settings) Row/Insert/Update + 2 Functions(increment_inquiry_count, increment_view_count) Args/Returns. PRD 데이터 모델 컬럼 + 검증 보강 7개 컬럼(rejection_reason, updated_at, pledge_accepted_at, reviewed_by, reviewed_at, slug, submission_note) 모두 포함. `Tables<T>` / `TablesInsert<T>` / `TablesUpdate<T>` 헬퍼 export. (c) `lib/types/domain.ts` — `CircleSummary`(카드용, verified 필드 제거하고 official_type 라벨로 대체), `CircleDetail`(상세용 extends Summary), `CircleImage`, `ShinkanEvent`, `Tag`, `Favorite`. (d) `npm run build` (23 페이지 PPR) + `npm run lint` 통과.
 
 - **T-004: Vitest + Playwright 테스트 러너 도입**
   - `vitest`, `@vitest/ui`, `@testing-library/react`, `@testing-library/jest-dom` devDependency 추가.
@@ -113,7 +122,8 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
   - `lib/dummy/circles.ts` 작성: PRD 「더미 데이터 정책」 카테고리 분포에 맞춰 30건의 정적 배열 (`CircleSummary` 타입 준수 — T-003).
   - `components/circles/circle-card.tsx`: 커버 16:9 + 이름 + 카테고리 뱃지 + 태그 칩 5개 + 활동빈도 + `verified` 뱃지 + 하트 토글 슬롯. props 는 `CircleSummary` 만 받음.
   - `app/page.tsx`: 검색바 + 카테고리 탭 8개 가로 스크롤 + 인기 서클 6개(더미 배열에서 임의 6개) + 「サークルを探す」 CTA. Suspense 경계는 미리 적용 (cacheComponents 환경 대비).
-  - **테스트**: 카드 30개 렌더 + 반응형 그리드 + 다크 모드 시각 회귀.
+  - **모바일 (기본)**: 카드 그리드 1열 (`grid-cols-1 sm:grid-cols-2 md:grid-cols-3`). 검색바·카테고리 탭은 viewport 상단 sticky, 카테고리 탭은 가로 스크롤(`overflow-x-auto`) + 스냅. 카드 커버 16:9 는 풀폭.
+  - **테스트**: 카드 30개 렌더 + 반응형 그리드 + 다크 모드 시각 회귀 (360px / 768px / 1280px 3종).
 
 - **T-011: 서클 목록 페이지 + 카테고리 탭 + 필터**
   - `app/circles/page.tsx`: `searchParams` 사용 → Suspense 경계 필수.
@@ -121,12 +131,14 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
   - **필터링은 더미 배열에 대한 클라이언트 측 `filter()` 로 모킹** (Phase 1.2 에서 Postgres `eq` / `overlap` / 범위 조건으로 교체).
   - 모바일: `Sheet` 컴포넌트로 bottom sheet 필터 / PC: 좌측 사이드바.
   - 페이지네이션은 단순 20개 단위 (MVP).
-  - **테스트**: 필터 조합 5종에 대해 Playwright 로 결과 카드 수 검증.
+  - **모바일 (기본)**: 카드 그리드 1열 (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`). 필터 트리거 버튼은 검색바 옆 또는 상단 sticky 영역에 배치(휠 스크롤 없이 도달 가능). 적용 중인 필터 개수 뱃지 표시.
+  - **테스트**: 필터 조합 5종에 대해 Playwright 로 결과 카드 수 검증 (모바일 360px viewport 포함).
 
 - **T-012: 서클 상세 페이지 + 갤러리**
   - `app/circles/[id]/page.tsx`: 동적 라우트, Suspense 경계 필수. 더미 배열에서 `id` 로 find.
   - 커버 + 서클명 + verified 뱃지 + 태그 칩 5개 / 개요 + 활동빈도·연회비·요일·회원수·신입생비율 요약 카드 / 갤러리 (Dialog 로 전체화면).
   - `not-found.tsx` 추가: 더미 배열에 없는 `id` 는 404.
+  - **모바일 (기본)**: 본문 1열 스택. 갤러리는 가로 swipe 캐러셀 + 도트 인디케이터(`overflow-x-auto snap-x`). 요약 카드(활동빈도/연회비/요일/회원수/신입생비율) 는 모바일 1열, `md` 이상에서 2열 그리드. 본문 하단에는 T-013 액션 바가 가리지 않도록 `pb-20` 여유 확보.
   - `view_count` 증가 로직은 Phase 1.2 T-009 에서 RPC `increment_view_count` 와이어업.
 
 - **T-013: 하단 고정 액션 바 + 즐겨찾기 토글 UI**
@@ -134,6 +146,7 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
   - 좌측 「お気に入りに追加」 하트 토글 — **이 단계에서는 로컬 `useState` + `sessionStorage` 로만 작동**.
   - 실제 favorites 테이블 insert / delete + `useOptimistic` + `revalidateTag('favorites')` 는 Phase 1.2 T-009 에서 교체 (검증 이슈 **M-1** 대응).
   - 미로그인 사용자의 하트 탭 시 `/auth/login?next=/circles/{id}` 리디렉션 동선은 미리 와이어업 (인증 자체는 T-015).
+  - **모바일 (기본)**: 하단 고정 액션 바는 **모바일 전용**(`md:hidden`) — fixed bottom + `env(safe-area-inset-bottom)` 패딩, 좌측 하트 토글 + 우측 「参加する」 풀폭 CTA(터치 타깃 최소 48px). `md` 이상에서는 액션 바를 숨기고 본문 우측 칼럼 또는 본문 내 인라인 CTA 로 대체.
 
 - **T-014: 「参加する」 채널 모달 UI**
   - 우측 메인 CTA 버튼 (慶應 濃紺 `#003366`).
@@ -141,6 +154,7 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
   - 채널 선택 시 → 새 탭으로 외부 URL 오픈 (`rel="noopener noreferrer"` + `target="_blank"` 의무).
   - **RPC `increment_inquiry_count` 호출 + Server Action + `revalidatePath` 는 Phase 1.2 T-009 에서 와이어업** (검증 이슈 **H-NEW-1** 대응).
   - 미로그인 동선만 미리 와이어업: 비로그인 사용자 클릭 → `/auth/login?next=/circles/{id}` 리디렉션.
+  - **모바일 (기본)**: `Sheet`(bottom sheet) — 화면 하단에서 슬라이드 업, 채널 버튼은 각각 풀폭·최소 48px. 「キャンセル」 닫기 버튼은 Sheet 우상단 (엄지 도달 가능 위치). `md` 이상에서는 `Dialog` 중앙 모달.
   - **본 단계 테스트** (Playwright):
     - 모달이 등록된 채널만 노출 (3개 / 1개 / 0개 케이스).
     - Instagram 선택 → 새 탭이 instagram.com 도메인으로 열림.
@@ -163,6 +177,7 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
     `profiles`, `circles`, `tags`, `circle_tags`, `circle_images`, `favorites`, `shinkan_events`.
   - PRD 「circles」 필드 + 검증 이슈 H-NEW-3 보강 컬럼 포함:
     - `rejection_reason text` / `updated_at timestamptz` / `pledge_accepted_at timestamptz` / `reviewed_by uuid` / `reviewed_at timestamptz` / `slug text unique` / `submission_note text`.
+  - **`circles.official_type` 은 Postgres enum 타입 `official_type_enum` 으로 정의** — 값: `'athletics' | 'official' | 'unofficial' | 'intercollegiate' | 'other'` (T-003 의 lib/constants/official-type.ts 와 single source of truth 일치). 일본어 라벨(`体育会` / `公認` / `非公認` / `インカレ` / `その他`)은 application 레이어 매핑.
   - `circles` CHECK 제약: `contact_instagram`, `contact_x`, `contact_line` 중 1개 이상 NOT NULL.
   - `updated_at` 트리거(`moddatetime`) 적용.
   - `profiles` 는 `auth.users` insert 트리거로 자동 생성.
@@ -216,21 +231,26 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
   - 기존 `components/sign-up-form.tsx` 의 이메일 인증 콜백에서 도메인 검사.
   - `auth.users` insert 트리거가 `profiles` 행 생성 시 이메일 도메인이 `keio.jp` 또는 `*.keio.jp` 면 `keio_verified=true` 설정.
   - 마이페이지에 「慶應生認証済み」 뱃지 노출.
+  - **모바일 (기본)**: 로그인·회원가입 폼은 1열 스택, 폼 너비 `max-w-sm mx-auto` + 풀폭 입력. 각 input 에 `inputmode="email"` / `autocomplete="email"` / `autocomplete="current-password"` 적용하여 모바일 키보드와 자동완성 최적화. 제출 버튼은 최소 48px, 풀폭.
   - **테스트**: `test@keio.jp` 로 가입 시 verified, `test@gmail.com` 으로 가입 시 unverified.
 
 - **T-016: 마이페이지 + 내 서클 관리 페이지**
   - `app/mypage/page.tsx`: 표시명·이메일·verified 뱃지·등록 서클 수 카드 + 「登録サークルを管理」 링크.
   - `app/mypage/circles/page.tsx`: 내 서클 목록 (status 뱃지 「審査中」/「公開中」/「却下」 + 거절 사유 표시).
   - 둘 다 `lib/supabase/server.ts` 사용 + Suspense 경계.
+  - **모바일 (기본)**: 프로필 카드와 등록 서클 카드 모두 1열 풀폭 스택. 「登録サークルを管理」 링크는 풀폭 버튼(터치 타깃 48px). 내 서클 목록은 1열 카드, 상태 뱃지는 카드 우상단.
 
 - **T-017: 즐겨찾기 페이지**
   - `app/favorites/page.tsx`: 로그인 필수 (미로그인 시 `/auth/login?next=/favorites` 리디렉션).
   - 카드 그리드 + 카드별 하트 해제 버튼 + 비교 체크박스 (최대 3개, 초과 시 `toast` 경고).
   - 「比較する」 버튼 → `/compare?ids=a,b,c` 로 이동 (Phase 1 후반 stretch goal — T-024 에서 실제 비교 페이지 구현).
+  - **모바일 (기본)**: 카드 그리드 1열 (`sm:grid-cols-2`). 비교 체크박스는 카드 좌상단 24×24px 이상 + 터치 타깃 영역 44px 확보. 「比較する」 버튼은 하단 sticky 바(`md:` 이상에서는 카드 그리드 상단 인라인 버튼).
 
-- **T-018: 서클 등록 폼 + URL 화이트리스트 검증** — 우선순위
+- **T-018: 단체 등록 폼 + URL 화이트리스트 검증** — 우선순위
   - `app/circles/new/page.tsx` (Client Component, RHF + Zod).
-  - 필드: 서클명·카테고리·`official_type`·활동빈도·연회비·태그(최대 5개)·커버 이미지·연락처(Instagram/X/LINE 중 1개 이상)·誓約 동의 체크.
+  - 필드: 단체명·카테고리·`official_type`(5종 select: 体育会/公認/非公認/インカレ/その他)·활동빈도·연회비·태그(최대 5개)·커버 이미지·연락처(Instagram/X/LINE 중 1개 이상)·**誓約 동의 체크 2종**:
+    1. **실재·학칙 동의**: 「本団体は実在し、慶應義塾大学の学則に違反しないことを誓約します」
+    2. **公式 인증 무관 동의**: 「本サービスは慶應義塾大学公式の認証とは無関係であり、登録内容の責任は本人に帰属することを理解しました」
   - **검증 이슈 C-NEW-2 대응**: Zod 스키마에 호스트 화이트리스트 적용
     - `contact_instagram`: `instagram.com`
     - `contact_x`: `x.com` / `twitter.com`
@@ -239,6 +259,7 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
   - 「個人アカウントではなく、サークル公式アカウントのURLを入力してください」 안내 문구 노출.
   - 誓約 체크 시 `pledge_accepted_at = now()` 저장.
   - 제출 후 status='pending' + 「審査中」 안내 페이지로 이동.
+  - **모바일 (기본)**: 폼은 1열 스택, 각 input 풀폭. 적절한 `inputmode` 적용(`email`/`url`/`numeric` — 연락처 URL은 `url`, 연회비는 `numeric`). 긴 폼 길이 대응으로 「登録申請する」 제출 버튼은 하단 sticky 영역에 배치하여 스크롤 없이 도달 가능. 커버 이미지 업로드는 카메라 직접 촬영도 가능하도록 `<input type="file" accept="image/*" capture="environment">`.
   - **테스트 체크리스트** (Playwright MCP):
     - 화이트리스트 외 URL (`evil.example.com/instagram`) 입력 시 폼 거부.
     - 誓約 체크 없이 제출 시 거부.
@@ -258,6 +279,7 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
   - pending 서클 목록 (신청일 순) + 인라인 미리보기 (이름·카테고리·`official_type`·대표자·대표자 이메일·`keio_verified`·제출일·`submission_note`).
   - 「承認」 / 「却下」 버튼 → Server Action 으로 status 갱신 + `reviewed_by` / `reviewed_at` 기록. 거절 시 `rejection_reason` 필수 입력.
   - 처리 후 `revalidatePath('/admin/circles')` + 오너에게 이메일 알림 트리거 (T-020).
+  - **모바일 (예외 — 데스크탑 우선)**: 본 페이지는 운영자 환경(데스크탑/태블릿)을 1차 타깃으로 한다. 모바일에서는 정보 밀도가 낮은 1열 카드 스택으로 fallback (각 신청 카드 = 인라인 미리보기 요약 + 「承認」/「却下」 버튼). 거절 사유 입력은 모바일에서 Sheet 로 표시.
   - **테스트**: 일반 사용자가 `/admin/circles` 접근 시 홈으로 리디렉션.
 
 - **T-020: 이메일 알림 인프라 (Resend)**
@@ -296,9 +318,11 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
     - [ ] Lighthouse 모바일 점수: Performance 80+ / SEO 90+ / Accessibility 90+.
     - [ ] 카드 이미지 `next/image` + 적절한 sizes 속성.
   - **콘텐츠 (Content)**
-    - [ ] 시드 30개 서클 + 태그 10종 모두 approved.
+    - [ ] 시드 30개 단체 + 태그 10종 모두 approved. 시드 분포에 公認·非公認·インカレ 가 모두 포함되도록 (公認 한정 인상 방지).
     - [ ] 일본어 UI 라벨 검수 (PRD 「일본어 UI 텍스트 예시」 표 기준).
     - [ ] 모든 페이지에 적절한 `<title>` / OG 메타 태그.
+    - [ ] **慶應 면책 문구 노출 확인** (PRD 「면책 사항」 절): 푸터 / 등록 폼 / 이용 약관 3곳. grep 으로 「公式の認証とは無関係」 텍스트 존재 검증.
+    - [ ] **신고 / お問い合わせ 채널 명시** — footer 에 운영진 연락 수단 (메일 또는 폼) 1개 이상.
   - **운영 (Operations)**
     - [ ] 관리자 다중 부여 + 신청 일시정지 토글 동작 확인.
     - [ ] 이메일 알림 송수신 테스트 (승인·거절 양쪽).
