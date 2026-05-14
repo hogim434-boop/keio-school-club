@@ -1,7 +1,9 @@
 import type { ActivityFrequency } from "@/lib/constants/activity-frequency";
+import type { ActivityTimeBand } from "@/lib/constants/activity-time-band";
 import type { Category } from "@/lib/constants/category";
 import type { CircleStatus } from "@/lib/constants/circle-status";
 import type { OfficialType } from "@/lib/constants/official-type";
+import type { RecruitmentStatus } from "@/lib/constants/recruitment-status";
 
 /**
  * UI 카드용 단체 요약 — F002 (서클 카드), F001 (검색 결과), F008 (비교 테이블) 에서 사용.
@@ -48,6 +50,10 @@ export interface CircleDetail extends CircleSummary {
   status: CircleStatus;
   /** 新歓 이벤트 — Phase 2 T-029 까지는 빈 배열 가능 */
   shinkan_events: ShinkanEvent[];
+  /** 모집 상태 — open / newcomer_only / year_round (optional, 기존 코드 호환) */
+  recruitment_status?: RecruitmentStatus;
+  /** 활동 시간대 — 복수 가능. weekday_day / weekday_night / weekend (optional) */
+  activity_time_band?: ActivityTimeBand[];
 }
 
 /**
