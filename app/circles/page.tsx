@@ -6,6 +6,7 @@ import { CircleCard } from "@/components/circles/circle-card";
 import { FilterPanel } from "@/components/circles/filter-panel";
 import { HorizontalCircleStrip } from "@/components/circles/horizontal-circle-strip";
 import { Button } from "@/components/ui/button";
+import { Emoji } from "@/components/ui/emoji";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   buildCirclesUrl,
@@ -60,6 +61,23 @@ async function DiscoverContent() {
 
   return (
     <div className="container mx-auto max-w-6xl space-y-8 px-4 py-6">
+      {/* 셔플 디스커버리 진입 카드 — 인기 강조 회피 + serendipity 강화 동선.
+          기존 strip 들과 독립된 큰 entry point 으로 노출 */}
+      <Link
+        href="/shuffle"
+        className="bg-keio-navy text-keio-navy-foreground hover:bg-keio-navy/90 focus-visible:ring-ring group flex items-center gap-4 rounded-2xl p-5 shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+      >
+        <Emoji name="party-popper" size={40} />
+        <div className="flex-1">
+          <h2 className="text-lg font-semibold">シャッフルで探す</h2>
+          <p className="text-sm opacity-80">気軽にサークルを発見</p>
+        </div>
+        <ChevronRight
+          className="size-5 transition-transform group-hover:translate-x-0.5"
+          aria-hidden="true"
+        />
+      </Link>
+
       <HorizontalCircleStrip title="人気のサークル" circles={popular} />
       <HorizontalCircleStrip title="新着のサークル" circles={recent} />
     </div>
