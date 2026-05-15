@@ -5,6 +5,7 @@ import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { Header } from "@/components/layout/header";
+import { HeaderClientGate } from "@/components/layout/header-client-gate";
 import { RegisterFloatingCTA } from "@/components/layout/register-floating-cta";
 import "./globals.css";
 
@@ -43,7 +44,9 @@ export default function RootLayout({
   return (
     // PRD 기준 본 서비스는 일본 학생 대상이므로 lang 을 ja 로 설정
     <html lang="ja" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${notoJp.variable} font-sans antialiased`}>
+      <body
+        className={`${geistSans.variable} ${notoJp.variable} overflow-x-hidden font-sans antialiased`}
+      >
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -51,10 +54,17 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {/* 모든 페이지 공통 헤더 — sticky top-0, T-002 에서 도입.
-              Header 가 cookies() 의존(role 추출)이므로 cacheComponents 모드에서
-              Suspense 필수. fallback 은 동일 높이의 빈 헤더로 layout shift 방지. */}
-          <Suspense fallback={<header className="bg-background h-14 border-b" />}>
-            <Header />
+              Header 가 cookies() 의존(role 추출)이므로 cacheComponents 모드에서 Suspense 필수.
+              fallback 은 동일 높이의 빈 헤더로 layout shift 방지.
+              상세 페이지(/circles/{uuid}) 에서는 두 단계로 hide:
+              1. Header(RSC) 가 x-pathname (middleware forward) 검사 후 null — 직접 진입 시 SSR-safe.
+              2. HeaderClientGate(Client) 가 usePathname 으로 client-side soft navigation 도 hide. */}
+          <Suspense fallback={null}>
+            <HeaderClientGate>
+              <Suspense fallback={<header className="bg-background h-14 border-b" />}>
+                <Header />
+              </Suspense>
+            </HeaderClientGate>
           </Suspense>
           {/* 모바일 하단 탭 바가 본문을 가리지 않도록 모바일에서만 pb-16 추가
               (BottomNav 의 fixed 영역 ≈ 64px). 데스크탑은 BottomNav 미노출이라 패딩 불필요. */}

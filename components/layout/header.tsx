@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { EnvVarWarning } from "@/components/env-var-warning";
@@ -11,7 +12,15 @@ import { createClient } from "@/lib/supabase/server";
 // KCircle 통합 헤더 (RSC)
 // PRD 메뉴 구조를 데스크탑 가로 nav + 모바일 햄버거 패턴으로 노출
 // 인증 영역은 Suspense 로 래핑하여 cacheComponents 모드에서 stale 회피
+// 서클 상세 페이지(/circles/{uuid}) 에서는 메루카리 풀-블리드 cover 패턴을 위해 hide.
+// pathname 은 middleware(proxy.ts) 가 설정한 x-pathname response header 에서 읽음.
 export async function Header() {
+  // server-side pathname 분기 — 상세 페이지에서 글로벌 헤더 hide (SSR-safe, 깜빡임 없음)
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") ?? "";
+  const isCircleDetail = /^\/circles\/[0-9a-f-]+$/i.test(pathname) && pathname !== "/circles/new";
+  if (isCircleDetail) return null;
+
   // role 추출 — profiles 테이블 도입(T-006) 전까지는 user.app_metadata?.role 임시 경로 사용
   // 환경 변수 부재 시 supabase 호출 skip
   let role: string | undefined;

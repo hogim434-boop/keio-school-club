@@ -18,8 +18,15 @@ function isPublicPath(pathname: string): boolean {
 }
 
 export async function updateSession(request: NextRequest) {
+  // RSC 가 server-side 에서 현재 pathname 을 읽을 수 있도록 **request headers** 에 forward.
+  // (response.headers.set 은 client 로 가는 응답에만 적용되어 RSC 의 next/headers headers() 가 못 읽음.
+  //  NextResponse.next({ request: { headers } }) 패턴이 Next.js 공식 권장 — downstream RSC 가
+  //  await headers().get("x-pathname") 으로 읽도록.)
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", request.nextUrl.pathname);
+
   let supabaseResponse = NextResponse.next({
-    request,
+    request: { headers: requestHeaders },
   });
 
   // If the env vars are not set, skip proxy check. You can remove this
@@ -40,8 +47,9 @@ export async function updateSession(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          // cookies 갱신 후 response 를 재생성할 때도 forward 한 requestHeaders 를 유지 — x-pathname 보존.
           supabaseResponse = NextResponse.next({
-            request,
+            request: { headers: requestHeaders },
           });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
