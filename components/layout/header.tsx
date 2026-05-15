@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { headers } from "next/headers";
-import { Bell, Search } from "lucide-react";
 
 import { KCircleLogo } from "@/components/layout/kcircle-logo";
+import { Emoji } from "@/components/ui/emoji";
 
 /**
  * KCircle 글로벌 헤더 (RSC) — 당근앱/메루카리 모바일 우선 슬림 패턴.
@@ -47,10 +47,10 @@ export async function Header() {
 
         <div className="ml-auto flex items-center gap-1">
           <Link href="/notifications" aria-label="お知らせ" className={iconButton}>
-            <Bell className="size-5" aria-hidden="true" />
+            <Emoji name="bell" size={22} />
           </Link>
           <Link href="/search" aria-label="検索" className={iconButton}>
-            <Search className="size-5" aria-hidden="true" />
+            <Emoji name="magnifying-glass" size={22} />
           </Link>
         </div>
       </div>

@@ -1,44 +1,34 @@
 "use client";
 
 import { useRef, useState, type Dispatch, type SetStateAction } from "react";
-import {
-  Trophy,
-  Palette,
-  Music,
-  BookOpen,
-  Globe,
-  Calendar,
-  HandHeart,
-  Newspaper,
-  Sparkles,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 
 import { CATEGORIES, CATEGORY_LABELS, type Category } from "@/lib/constants/category";
 import type { CirclesSearchParams } from "@/lib/circles/search-params";
+import { Emoji, type EmojiName } from "@/components/ui/emoji";
 import { cn } from "@/lib/utils";
 
 /**
- * 카테고리별 아이콘 매핑 — lucide-react 8종 + 「すべて」 (Sparkles).
+ * 카테고리별 Fluent 3D Emoji 매핑 — 8종 + 「すべて」 (sparkles).
  * 당근앱 패턴: 검색 페이지의 핵심 entry point. 한눈에 카테고리 식별 가능.
+ * Airbnb 풍 컬러풀 3D 아이콘으로 시각적 차별성 강화.
  */
-const CATEGORY_ICONS: Record<Category | "all", LucideIcon> = {
-  all: Sparkles,
-  sports: Trophy,
-  culture_art: Palette,
-  music: Music,
-  academic: BookOpen,
-  international: Globe,
-  event: Calendar,
-  volunteer: HandHeart,
-  media: Newspaper,
+const CATEGORY_EMOJIS: Record<Category | "all", EmojiName> = {
+  all: "sparkles",
+  sports: "trophy",
+  culture_art: "artist-palette",
+  music: "musical-notes",
+  academic: "books",
+  international: "globe",
+  event: "party-popper",
+  volunteer: "handshake",
+  media: "clapper-board",
 };
 
 interface CategoryItem {
   /** 「すべて」 일 때 undefined, 그 외에는 Category enum */
   value?: Category;
   label: string;
-  Icon: LucideIcon;
+  emoji: EmojiName;
 }
 
 /** 페이지당 항목 수 — 3 col × 2 row = 6 (당근앱 패턴 응용) */
@@ -72,11 +62,11 @@ export function SearchCategories({ draft, setDraft }: SearchCategoriesProps) {
   const [activePage, setActivePage] = useState(0);
 
   const items: CategoryItem[] = [
-    { label: "すべて", Icon: CATEGORY_ICONS.all },
+    { label: "すべて", emoji: CATEGORY_EMOJIS.all },
     ...CATEGORIES.map((category) => ({
       value: category,
       label: CATEGORY_LABELS[category],
-      Icon: CATEGORY_ICONS[category],
+      emoji: CATEGORY_EMOJIS[category],
     })),
   ];
 
@@ -141,15 +131,17 @@ export function SearchCategories({ draft, setDraft }: SearchCategoriesProps) {
                         aria-pressed={active}
                         className="group focus-visible:ring-ring flex w-full flex-col items-center gap-2 rounded-lg p-3 transition-colors focus-visible:ring-2 focus-visible:outline-none"
                       >
+                        {/* 컬러풀 3D 이모지는 자체 색상이 풍부하므로 active 시 배경만 살짝 보강.
+                            이전 lucide 패턴(active 시 검은 배경 + 흰 아이콘 반전)은 이모지에 부적합 — ring 강조로 대체. */}
                         <div
                           className={cn(
-                            "flex size-14 items-center justify-center rounded-full transition-colors",
+                            "flex size-14 items-center justify-center rounded-full transition-all",
                             active
-                              ? "bg-foreground text-background"
-                              : "bg-muted text-foreground group-hover:bg-muted/70"
+                              ? "bg-muted ring-foreground ring-2 ring-offset-2"
+                              : "bg-muted group-hover:bg-muted/70"
                           )}
                         >
-                          <item.Icon className="size-6" aria-hidden="true" />
+                          <Emoji name={item.emoji} size={32} />
                         </div>
                         <span
                           className={cn(

@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Heart, Home, User } from "lucide-react";
 
+import { Emoji, type EmojiName } from "@/components/ui/emoji";
 import { cn } from "@/lib/utils";
 
 interface BottomNavItem {
   href: string;
   label: string;
-  Icon: typeof Home;
+  emoji: EmojiName;
   /** 접근성: aria-label 용 설명 */
   aria: string;
 }
@@ -17,11 +17,12 @@ interface BottomNavItem {
 /**
  * 일반 3탭 — 등록 CTA(⊕)는 별도 절대위치 floating 으로 분리됨.
  * 첫 탭의 href 는 "/" — app/page.tsx 의 redirect 로 /circles 에 도착.
+ * Fluent 3D Emoji 로 컬러풀 통일.
  */
 const ITEMS: BottomNavItem[] = [
-  { href: "/", label: "ホーム", Icon: Home, aria: "ホーム" },
-  { href: "/favorites", label: "お気に入り", Icon: Heart, aria: "お気に入り" },
-  { href: "/mypage", label: "マイページ", Icon: User, aria: "マイページ" },
+  { href: "/", label: "ホーム", emoji: "house", aria: "ホーム" },
+  { href: "/favorites", label: "お気に入り", emoji: "red-heart", aria: "お気に入り" },
+  { href: "/mypage", label: "マイページ", emoji: "bust-in-silhouette", aria: "マイページ" },
 ];
 
 // 모바일 전용 하단 고정 탭 바 — md 미만에서만 노출
@@ -43,7 +44,6 @@ export function BottomNav() {
       <ul className="mx-auto grid max-w-md grid-cols-3 items-stretch px-2">
         {ITEMS.map((item) => {
           const isActive = isItemActive(pathname, item.href);
-          const Icon = item.Icon;
           return (
             <li key={item.href}>
               <Link
@@ -52,10 +52,11 @@ export function BottomNav() {
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
                   "focus-visible:ring-ring inline-flex h-14 w-full flex-col items-center justify-center gap-0.5 rounded-md text-[11px] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+                  // 컬러풀 이모지는 그대로 두고, 라벨 색만 active/inactive 분기 (이전 lucide currentColor 패턴과 동일한 시각적 무게)
                   isActive ? "text-foreground font-semibold" : "text-muted-foreground"
                 )}
               >
-                <Icon className="size-5" aria-hidden="true" />
+                <Emoji name={item.emoji} size={22} />
                 <span>{item.label}</span>
               </Link>
             </li>
