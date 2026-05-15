@@ -16,7 +16,7 @@ interface ComingSoonProps {
 
 export function ComingSoon({ title, description, plannedPhase }: ComingSoonProps) {
   return (
-    <main className="container mx-auto flex min-h-[calc(100vh-3.5rem)] items-center justify-center px-4 py-12">
+    <main className="container mx-auto flex min-h-[calc(100vh-5rem)] items-center justify-center px-4 py-12">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="bg-muted mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full">

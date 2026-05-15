@@ -67,7 +67,9 @@ export default function CircleDetailTemplate({ children }: { children: ReactNode
         key={animKey}
         initial={{ x: "100%", opacity: 0 }}
         animate={exiting ? { x: "100%", opacity: 0 } : { x: 0, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        // iOS UINavigationController push easing — cubic-bezier(0.32, 0.72, 0, 1).
+        // spring 의 underdamped 진동(떨림) 회피 + 애플 native navigation 과 동일한 감속 곡선.
+        transition={{ type: "tween", duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
         onAnimationComplete={() => {
           if (exiting && !backCalledRef.current) {
             backCalledRef.current = true;
