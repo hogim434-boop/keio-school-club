@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { headers } from "next/headers";
+import { Bell, Search } from "lucide-react";
 
 import { KCircleLogo } from "@/components/layout/kcircle-logo";
-import { Emoji } from "@/components/ui/emoji";
 
 /**
  * KCircle 글로벌 헤더 (RSC) — 당근앱/메루카리 모바일 우선 슬림 패턴.
@@ -25,7 +25,9 @@ export async function Header() {
   const pathname = headersList.get("x-pathname") ?? "";
   const isCircleDetail = /^\/circles\/[0-9a-f-]+$/i.test(pathname) && pathname !== "/circles/new";
   const isSearch = pathname === "/search";
-  if (isCircleDetail || isSearch) return null;
+  // /shuffle — Tinder 스타일 swipe deck 풀스크린 패턴, 글로벌 헤더 미노출
+  const isShuffle = pathname === "/shuffle";
+  if (isCircleDetail || isSearch || isShuffle) return null;
 
   // 우측 아이콘 공통 클래스 — 40×40 hit target + focus ring + hover 반응
   const iconButton =
@@ -47,10 +49,10 @@ export async function Header() {
 
         <div className="ml-auto flex items-center gap-1">
           <Link href="/notifications" aria-label="お知らせ" className={iconButton}>
-            <Emoji name="bell" size={22} />
+            <Bell className="size-5" aria-hidden="true" />
           </Link>
           <Link href="/search" aria-label="検索" className={iconButton}>
-            <Emoji name="magnifying-glass" size={22} />
+            <Search className="size-5" aria-hidden="true" />
           </Link>
         </div>
       </div>

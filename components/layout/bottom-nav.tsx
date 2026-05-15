@@ -33,7 +33,9 @@ export function BottomNav() {
 
   // 서클 상세 페이지(/circles/{uuid}) 에서는 hidden — /circles, /circles/new 는 제외
   const isCircleDetail = /^\/circles\/[0-9a-f-]+$/i.test(pathname) && pathname !== "/circles/new";
-  if (isCircleDetail) return null;
+  // /shuffle — swipe deck 풀스크린, 하단 좌우 버튼 위해 BottomNav 미노출
+  const isShuffle = pathname === "/shuffle";
+  if (isCircleDetail || isShuffle) return null;
 
   return (
     <nav

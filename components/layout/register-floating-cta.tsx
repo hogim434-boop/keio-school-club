@@ -36,8 +36,10 @@ export function RegisterFloatingCTA() {
   const isCircleDetail = /^\/circles\/[0-9a-f-]+$/i.test(pathname) && pathname !== "/circles/new";
   // 등록 페이지 자기 자신 — 중복 노출 회피
   const isRegisterPage = pathname === "/circles/new";
+  // /shuffle — 우측 「気になる」 버튼과 자리 충돌 회피
+  const isShuffle = pathname === "/shuffle";
 
-  if (isCircleDetail || isRegisterPage) return null;
+  if (isCircleDetail || isRegisterPage || isShuffle) return null;
 
   // collapsed(스크롤 내림) = 원형 56px, expanded(최상단) = 알약 형태
   const collapsed = isScrolled;
