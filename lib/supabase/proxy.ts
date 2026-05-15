@@ -14,6 +14,8 @@ function isPublicPath(pathname: string): boolean {
   if (pathname.startsWith("/login")) return true;
   if (pathname === "/search") return true;
   if (pathname === "/notifications") return true;
+  // TODO(임시): /shuffle 비로그인 미리보기 허용 — 추후 인증 필수 전환 시 이 줄 삭제
+  if (pathname === "/shuffle") return true;
   if (pathname === "/mypage") return false;
   if (pathname === "/circles") return true;
   if (pathname.startsWith("/circles/")) {
