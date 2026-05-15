@@ -23,7 +23,8 @@ import type { MemberSize } from "@/lib/types/domain";
  */
 export interface CirclesSearchParams {
   q?: string;
-  category?: Category;
+  /** 카테고리 다중 선택 — URL `?category=sports,music` 콤마 구분. 빈 배열이면 카테고리 필터 무효 */
+  category: Category[];
   frequency: ActivityFrequency[];
   officialType: OfficialType[];
   tags: string[];
@@ -39,6 +40,11 @@ export interface CirclesSearchParams {
   activityTimeBand: ActivityTimeBand[];
   /** 정렬 기준 */
   sort?: "popular" | "recent" | "cheap" | "large";
+  /**
+   * 「すべて」 명시 선택 marker — true 면 결과 모드 강제 (모든 서클 카드 노출).
+   * 필터링 자체에는 영향 없음. URL ?all=1 로 직렬화. 검색 페이지 진입 시 default false → 「すべて」 inactive.
+   */
+  all: boolean;
 }
 
 /** Next.js page props 의 awaited searchParams 형태 */
@@ -67,10 +73,11 @@ function splitCsv(value: string | undefined): string[] {
  * - page 는 양의 정수만, 그 외는 1
  */
 export function parseCirclesSearchParams(raw: RawSearchParams): CirclesSearchParams {
-  const categoryRaw = pickString(raw, "category");
-  const category = CATEGORIES.includes(categoryRaw as Category)
-    ? (categoryRaw as Category)
-    : undefined;
+  // 카테고리 다중 선택 — splitCsv + CATEGORIES allowlist (frequency / tags 와 동일 패턴)
+  const categoryAllow = new Set<string>(CATEGORIES);
+  const category = splitCsv(pickString(raw, "category")).filter((v) =>
+    categoryAllow.has(v)
+  ) as Category[];
 
   const frequencyAllow = new Set<string>(ACTIVITY_FREQUENCIES);
   const frequency = splitCsv(pickString(raw, "frequency")).filter((v) =>
@@ -122,6 +129,9 @@ export function parseCirclesSearchParams(raw: RawSearchParams): CirclesSearchPar
   type SortOption = (typeof SORT_OPTIONS)[number];
   const sort = SORT_OPTIONS.includes(sortRaw as SortOption) ? (sortRaw as SortOption) : undefined;
 
+  // 「すべて」 명시 선택 marker — ?all=1 일 때 true
+  const all = pickString(raw, "all") === "1";
+
   return {
     q,
     category,
@@ -135,6 +145,7 @@ export function parseCirclesSearchParams(raw: RawSearchParams): CirclesSearchPar
     recruitmentStatus,
     activityTimeBand,
     sort,
+    all,
   };
 }
 
@@ -147,7 +158,9 @@ export function buildCirclesUrl(params: Partial<CirclesSearchParams>): string {
   const search = new URLSearchParams();
 
   if (params.q && params.q.length > 0) search.set("q", params.q);
-  if (params.category) search.set("category", params.category);
+  if (params.category && params.category.length > 0) {
+    search.set("category", params.category.join(","));
+  }
   if (params.frequency && params.frequency.length > 0) {
     search.set("frequency", params.frequency.join(","));
   }
@@ -180,9 +193,23 @@ export function buildCirclesUrl(params: Partial<CirclesSearchParams>): string {
   if (params.sort !== undefined) {
     search.set("sort", params.sort);
   }
+  if (params.all) {
+    search.set("all", "1");
+  }
 
   const queryString = search.toString();
   return queryString ? `/circles?${queryString}` : "/circles";
+}
+
+/**
+ * 도메인 모델 → /search URL (예: `/search?category=sports&tags=a,b`)
+ * buildCirclesUrl 과 동일한 query string 규칙. 결과 페이지에서 「絞り込みを編集」 클릭 시
+ * 현재 필터 그대로 보존한 채 검색 페이지로 재진입하는 용도.
+ */
+export function buildSearchUrl(params: Partial<CirclesSearchParams>): string {
+  const circlesUrl = buildCirclesUrl(params);
+  const qIndex = circlesUrl.indexOf("?");
+  return qIndex === -1 ? "/search" : `/search${circlesUrl.slice(qIndex)}`;
 }
 
 /**
@@ -193,7 +220,8 @@ export function buildCirclesUrl(params: Partial<CirclesSearchParams>): string {
 export function isDiscoverMode(p: CirclesSearchParams): boolean {
   return (
     !p.q &&
-    !p.category &&
+    !p.all &&
+    p.category.length === 0 &&
     p.frequency.length === 0 &&
     p.officialType.length === 0 &&
     p.tags.length === 0 &&
@@ -210,11 +238,12 @@ export function isDiscoverMode(p: CirclesSearchParams): boolean {
 
 /**
  * 적용된 필터 개수 — 모바일 트리거의 「フィルター (N)」 뱃지에 사용.
- * category 는 카테고리 탭 자체에서 강조되므로 카운트에서 제외 (시각 중복 회피).
+ * 카테고리 다중 선택 도입 후 카테고리도 카운트에 포함 (검색 페이지에서 multi-select 라 의미 있음).
  */
 export function countAppliedFilters(params: CirclesSearchParams): number {
   let n = 0;
   if (params.q) n += 1;
+  if (params.category.length > 0) n += 1;
   if (params.frequency.length > 0) n += 1;
   if (params.officialType.length > 0) n += 1;
   if (params.tags.length > 0) n += 1;

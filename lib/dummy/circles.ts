@@ -922,7 +922,8 @@ export async function getCirclesByCategory(category: Category): Promise<CircleSu
 
 export interface FilterCirclesOptions {
   q?: string;
-  category?: Category;
+  /** 카테고리 다중 선택 — OR 매칭. 빈 배열이면 카테고리 필터 무효 */
+  category?: Category[];
   frequency?: ActivityFrequency[];
   officialType?: OfficialType[];
   tags?: string[];
@@ -954,7 +955,7 @@ export async function filterCircles(
 ): Promise<FilterCirclesResult> {
   const {
     q,
-    category,
+    category = [],
     frequency = [],
     officialType = [],
     tags = [],
@@ -970,7 +971,8 @@ export async function filterCircles(
 
   const qLower = q?.toLowerCase().trim();
   let matches = DUMMY_CIRCLES.filter((c) => {
-    if (category && c.category !== category) return false;
+    // 카테고리 다중 OR 매칭 — 빈 배열이면 통과
+    if (category.length > 0 && !category.includes(c.category)) return false;
     if (frequency.length > 0 && !frequency.includes(c.activity_frequency)) return false;
     if (officialType.length > 0 && !officialType.includes(c.official_type)) return false;
     if (tags.length > 0 && !tags.some((t) => c.tags.includes(t))) return false;

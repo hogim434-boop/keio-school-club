@@ -4,7 +4,7 @@ import { DUMMY_CIRCLES, filterCircles } from "@/lib/dummy/circles";
 
 describe("filterCircles — 단일 필터", () => {
   it("category=sports → 5건", async () => {
-    const r = await filterCircles({ category: "sports" });
+    const r = await filterCircles({ category: ["sports"] });
     expect(r.total).toBe(5);
     expect(r.items.every((c) => c.category === "sports")).toBe(true);
   });
@@ -31,7 +31,7 @@ describe("filterCircles — 단일 필터", () => {
 
 describe("filterCircles — 복합 + 페이지네이션", () => {
   it("category=sports + officialType=[athletics] → 3건 (sports 내 athletics)", async () => {
-    const r = await filterCircles({ category: "sports", officialType: ["athletics"] });
+    const r = await filterCircles({ category: ["sports"], officialType: ["athletics"] });
     expect(r.total).toBe(3);
     expect(r.items.every((c) => c.category === "sports" && c.official_type === "athletics")).toBe(
       true
