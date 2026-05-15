@@ -61,11 +61,12 @@ export function RegisterFloatingCTA() {
       <m.div
         initial={false}
         animate={{
+          height: collapsed ? 56 : 48,
           paddingLeft: collapsed ? 18 : 20,
           paddingRight: collapsed ? 18 : 20,
         }}
         transition={transition}
-        className="bg-keio-navy text-keio-navy-foreground fixed right-4 z-40 flex h-14 items-center overflow-hidden rounded-full shadow-lg transition-shadow hover:shadow-xl md:hidden"
+        className="bg-keio-navy text-keio-navy-foreground fixed right-4 z-40 flex h-12 items-center overflow-hidden rounded-full shadow-lg transition-shadow hover:shadow-xl md:hidden"
         style={{ bottom: "calc(env(safe-area-inset-bottom) + 4.5rem)" }}
       >
         <Link
