@@ -5,10 +5,16 @@ import { hasEnvVars } from "../utils";
 // 미인증 사용자도 열람 가능한 경로 판정
 // /circles 와 /circles/[id] 는 공개, 단 /circles/new 는 등록 폼이므로 인증 필수
 // /auth/* 와 /login 은 인증 플로우 자체이므로 항상 통과 (레거시 /login 호환 포함)
+// /search 는 검색 페이지 (당근앱 패턴) — 결과 페이지 /circles 가 공개이므로 검색도 공개.
+// /notifications 는 ComingSoon placeholder — Phase 2 에서 인증 필수로 전환 예정.
+// /mypage 는 인증 필수 — fallthrough false 로도 동작하지만 가독성 위해 명시.
 function isPublicPath(pathname: string): boolean {
   if (pathname === "/") return true;
   if (pathname.startsWith("/auth")) return true;
   if (pathname.startsWith("/login")) return true;
+  if (pathname === "/search") return true;
+  if (pathname === "/notifications") return true;
+  if (pathname === "/mypage") return false;
   if (pathname === "/circles") return true;
   if (pathname.startsWith("/circles/")) {
     if (pathname === "/circles/new") return false;
