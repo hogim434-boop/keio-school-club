@@ -26,52 +26,28 @@ import {
   type RecruitmentStatus,
 } from "@/lib/constants/recruitment-status";
 import { buildCirclesUrl, type CirclesSearchParams } from "@/lib/circles/search-params";
+import {
+  MEMBER_SIZE_OPTIONS,
+  SORT_OPTIONS,
+  TAG_SEEDS,
+  WEEKDAYS,
+  type SortOption,
+  type Weekday,
+} from "@/lib/circles/filter-labels";
 import type { MemberSize } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
-
-/**
- * PRD 「태그 마스터」 시드 7종 — Phase 1.2 T-009 이후 tags 테이블 fetch 로 교체 예정.
- * 사용자 정책: 성별·술·연회비 관련 태그는 제외. 연회비는 별도 필터 섹션과 중복 회피.
- * 「活動頻度」 섹션과 의미 중복인 週1回(once_a_week) 는 제거.
- * slug 는 DB 키, label_ja 는 UI 라벨.
- */
-const TAG_SEEDS: { slug: string; label_ja: string }[] = [
-  { slug: "beginner_ok", label_ja: "初心者歓迎" },
-  { slug: "kenser_ok", label_ja: "兼サー可" },
-  { slug: "yurui", label_ja: "ゆるい" },
-  { slug: "gachi", label_ja: "ガチ" },
-  { slug: "has_camp", label_ja: "合宿あり" },
-  { slug: "foreign_welcome", label_ja: "留学生歓迎" },
-  { slug: "intl_activity", label_ja: "海外活動あり" },
-];
-
-/** 회원수 범위 옵션 */
-const MEMBER_SIZE_OPTIONS: { value: MemberSize; label: string }[] = [
-  { value: "small", label: "〜30名" },
-  { value: "mid", label: "31〜100" },
-  { value: "large", label: "101〜200" },
-  { value: "huge", label: "200名+" },
-];
-
-/** 정렬 옵션 */
-const SORT_OPTIONS: { value: "popular" | "recent" | "cheap" | "large"; label: string }[] = [
-  { value: "popular", label: "人気順" },
-  { value: "recent", label: "新着順" },
-  { value: "cheap", label: "会費安い" },
-  { value: "large", label: "会員数多" },
-];
-
-/** 활동 요일 7종 — 일본 한자 1자 */
-const WEEKDAYS = ["月", "火", "水", "木", "金", "土", "日"] as const;
-type Weekday = (typeof WEEKDAYS)[number];
 
 interface FilterPanelProps {
   /** 호출 시점의 URL 파라미터 — useState 초기값. 호출처 key 로 리마운트하여 동기화 */
   initial: CirclesSearchParams;
   /** sheet: 모바일 Sheet 안. sidebar: 데스크탑 좌측 사이드바. 레이아웃만 분기 */
   mode: "sheet" | "sidebar";
-  /** Sheet 닫기 등 후처리 콜백 — 「適用」 클릭 후 호출 */
-  onApply?: () => void;
+  /**
+   * 「適用」 클릭 시 콜백 — draft 를 인자로 받음.
+   * - 제공된 경우: 호출처가 navigate / state merge 등을 처리 (검색 페이지 통합 패턴)
+   * - 생략된 경우: 본 컴포넌트가 router.push(buildCirclesUrl(draft)) fallback (lg+ 사이드바)
+   */
+  onApply?: (draft: CirclesSearchParams) => void;
 }
 
 /**
@@ -152,38 +128,46 @@ export function FilterPanel({ initial, mode, onApply }: FilterPanelProps) {
   }
 
   // 並び替え 단일 선택 토글
-  function toggleSort(val: "popular" | "recent" | "cheap" | "large") {
+  function toggleSort(val: SortOption) {
     setDraft((prev) => ({
       ...prev,
       sort: toggleSingle(prev.sort, val),
     }));
   }
 
-  // 필터 적용 — URL 갱신 후 Sheet 닫기
+  // 필터 적용 — onApply 제공 시 호출처가 처리, 아니면 router.push fallback (lg+ 사이드바)
   function handleApply() {
-    router.push(
-      buildCirclesUrl({
-        q: draft.q,
-        category: draft.category,
-        frequency: draft.frequency,
-        officialType: draft.officialType,
-        tags: draft.tags,
-        activityDays: draft.activityDays,
-        memberSize: draft.memberSize,
-        recruitmentStatus: draft.recruitmentStatus,
-        activityTimeBand: draft.activityTimeBand,
-        sort: draft.sort,
-        // 필터 변경 시 1페이지로 리셋 (page=undefined → URL 에서 생략)
-        page: undefined,
-      })
-    );
-    onApply?.();
+    const finalDraft: CirclesSearchParams = { ...draft, page: 1 };
+    if (onApply) {
+      onApply(finalDraft);
+    } else {
+      router.push(buildCirclesUrl({ ...finalDraft, page: undefined }));
+    }
   }
 
-  // 전체 리셋 — /circles 로 이동 후 Sheet 닫기
+  // 전체 리셋 — onApply 제공 시 빈 params 로 호출, 아니면 /circles 로 직접 이동
   function handleReset() {
-    router.push("/circles");
-    onApply?.();
+    const emptyDraft: CirclesSearchParams = {
+      q: undefined,
+      category: [],
+      frequency: [],
+      officialType: [],
+      tags: [],
+      feeMax: undefined,
+      page: 1,
+      activityDays: [],
+      memberSize: undefined,
+      recruitmentStatus: [],
+      activityTimeBand: [],
+      sort: undefined,
+      all: false,
+    };
+    setDraft(emptyDraft);
+    if (onApply) {
+      onApply(emptyDraft);
+    } else {
+      router.push("/circles");
+    }
   }
 
   return (
@@ -200,7 +184,9 @@ export function FilterPanel({ initial, mode, onApply }: FilterPanelProps) {
         </button>
       </header>
 
-      {/* ── 스크롤 영역 ── */}
+      {/* ── 스크롤 영역 ──
+          카테고리는 검색 페이지의 SearchCategories 그리드가 담당하므로 본 패널에서 제거.
+          lg+ /circles 사이드바에서는 헤더 🔍 → /search 진입으로 카테고리 변경. */}
       <div className={cn("flex-1 space-y-6", mode === "sheet" ? "overflow-y-auto" : "")}>
         {/* §1 募集状態 — 다중 선택, 풀-블리드 가로 스크롤 */}
         <section className="space-y-2">
@@ -331,8 +317,11 @@ export function FilterPanel({ initial, mode, onApply }: FilterPanelProps) {
         </section>
       </div>
 
-      {/* ── 풋터: 풀-width 검은 「適用」 버튼 ── */}
-      <div className="bg-background sticky bottom-0 border-t pt-3 pb-2">
+      {/* ── 풋터: 풀-width 검은 「適用」 버튼 ──
+          sheet 모드만 sticky bottom — Sheet 가 자체 스크롤 컨테이너이기 때문. sidebar 는 일반 흐름. */}
+      <div
+        className={cn("border-t pt-3 pb-2", mode === "sheet" && "bg-background sticky bottom-0")}
+      >
         <Button
           onClick={handleApply}
           className="bg-foreground text-background hover:bg-foreground/90 h-12 w-full text-base font-semibold"
