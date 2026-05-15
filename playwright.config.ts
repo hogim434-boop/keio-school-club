@@ -19,9 +19,16 @@ export default defineConfig({
   projects: [
     {
       name: "mobile",
-      use: { ...devices["Pixel 5"] },
+      // 모바일에서는 채널 모달 click 이 슬라이드 인 (motion/react) mid-animation race
+      // 를 만들지 않도록 reducedMotion 강제 활성화. template.tsx 의 matchMedia 가
+      // 이를 감지해 m.div 자체를 안 렌더 → 즉시 노출.
+      use: {
+        ...devices["Pixel 5"],
+        contextOptions: { reducedMotion: "reduce" },
+      },
     },
     {
+      // desktop 은 실제 슬라이드 인 애니메이션 동작을 검증 — entry stuck 회귀 가드용
       name: "desktop",
       use: { ...devices["Desktop Chrome"] },
     },
