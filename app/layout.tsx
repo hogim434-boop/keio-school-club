@@ -61,7 +61,7 @@ export default function RootLayout({
               2. HeaderClientGate(Client) 가 usePathname 으로 client-side soft navigation 도 hide. */}
           <Suspense fallback={null}>
             <HeaderClientGate>
-              <Suspense fallback={<header className="bg-background h-14 border-b" />}>
+              <Suspense fallback={<header className="bg-background h-20" />}>
                 <Header />
               </Suspense>
             </HeaderClientGate>
