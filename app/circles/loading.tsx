@@ -22,7 +22,7 @@ export default function CirclesLoading() {
             <Skeleton className="h-6 w-32" />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
               {Array.from({ length: 3 }).map((_, j) => (
-                <Skeleton key={j} className="aspect-[16/9] w-full rounded-xl" />
+                <Skeleton key={j} className="aspect-video w-full rounded-xl" />
               ))}
             </div>
           </div>

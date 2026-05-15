@@ -8,7 +8,7 @@ export default function CircleDetailLoading() {
   return (
     <main className="pb-24">
       {/* 풀-블리드 cover 영역 (16:9) */}
-      <Skeleton className="aspect-[16/9] w-full rounded-none" />
+      <Skeleton className="aspect-video w-full rounded-none" />
 
       <div className="container mx-auto max-w-3xl space-y-6 px-4 py-6">
         {/* 카테고리 + 공인유형 배지 */}
