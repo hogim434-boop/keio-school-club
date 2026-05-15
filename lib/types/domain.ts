@@ -96,3 +96,13 @@ export interface Favorite {
   circle_id: string;
   created_at: string;
 }
+
+/**
+ * 회원 수 범위 — FilterPanel 의 「会員数」 단일 선택, search-params 의 `memberSize`,
+ * filterCircles 매칭에서 사용.
+ * - small: ~30명
+ * - mid: 31-100명
+ * - large: 101-200명
+ * - huge: 200명 초과
+ */
+export type MemberSize = "small" | "mid" | "large" | "huge";

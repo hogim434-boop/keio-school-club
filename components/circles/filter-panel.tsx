@@ -26,7 +26,7 @@ import {
   type RecruitmentStatus,
 } from "@/lib/constants/recruitment-status";
 import { buildCirclesUrl, type CirclesSearchParams } from "@/lib/circles/search-params";
-import type { MemberSize } from "@/lib/dummy/circles";
+import type { MemberSize } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
 
 /**

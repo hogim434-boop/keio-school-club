@@ -3,7 +3,7 @@ import type { ActivityTimeBand } from "@/lib/constants/activity-time-band";
 import type { Category } from "@/lib/constants/category";
 import type { OfficialType } from "@/lib/constants/official-type";
 import type { RecruitmentStatus } from "@/lib/constants/recruitment-status";
-import type { CircleDetail, CircleImage, CircleSummary } from "@/lib/types/domain";
+import type { CircleDetail, CircleImage, CircleSummary, MemberSize } from "@/lib/types/domain";
 
 /**
  * Phase 1.1 의 더미 데이터 30건 — UI 가 먼저 동작하도록 정적 배열로 제공.
@@ -918,7 +918,7 @@ export async function getCirclesByCategory(category: Category): Promise<CircleSu
  */
 
 /** 회원수 범위 구분 */
-export type MemberSize = "small" | "mid" | "large" | "huge";
+// MemberSize 는 lib/types/domain.ts 에 정의되어 있어 import 만 함 (의존 방향 정상화)
 
 export interface FilterCirclesOptions {
   q?: string;

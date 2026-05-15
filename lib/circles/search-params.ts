@@ -3,7 +3,7 @@ import { ACTIVITY_TIME_BANDS, type ActivityTimeBand } from "@/lib/constants/acti
 import { CATEGORIES, type Category } from "@/lib/constants/category";
 import { OFFICIAL_TYPES, type OfficialType } from "@/lib/constants/official-type";
 import { RECRUITMENT_STATUSES, type RecruitmentStatus } from "@/lib/constants/recruitment-status";
-import type { MemberSize } from "@/lib/dummy/circles";
+import type { MemberSize } from "@/lib/types/domain";
 
 /**
  * /circles 페이지가 URL 에서 파싱하는 검색·필터 파라미터 타입.
