@@ -23,7 +23,10 @@ interface SearchPageProps {
  */
 export default function SearchPage({ searchParams }: SearchPageProps) {
   return (
-    <main className="pb-20 md:pb-12">
+    // overflow-x-clip — SearchCategories 의 음수 마진 가로 캐러셀이 페이지 자체 가로 스크롤로
+    // 전파되는 걸 차단. clip 은 scroll container 를 만들지 않아 stacking context 영향 X.
+    // 자식 캐러셀(overflow-x-auto)의 자체 가로 스크롤은 그대로 동작.
+    <main className="overflow-x-clip pb-20 md:pb-12">
       <Suspense fallback={<SearchPageFallback />}>
         <SearchContent searchParams={searchParams} />
       </Suspense>
