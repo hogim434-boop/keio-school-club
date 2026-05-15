@@ -32,14 +32,11 @@ export function RegisterFloatingCTA() {
   const isScrolled = useIsScrolled(80);
   const reducedMotion = useReducedMotion();
 
-  // 서클 상세 페이지 — 「参加する」 액션 바와 자리 충돌 회피
-  const isCircleDetail = /^\/circles\/[0-9a-f-]+$/i.test(pathname) && pathname !== "/circles/new";
-  // 등록 페이지 자기 자신 — 중복 노출 회피
-  const isRegisterPage = pathname === "/circles/new";
-  // /shuffle — 우측 「気になる」 버튼과 자리 충돌 회피
-  const isShuffle = pathname === "/shuffle";
-
-  if (isCircleDetail || isRegisterPage || isShuffle) return null;
+  // 화이트리스트: 서클 일람(/circles) 에서만 노출.
+  // query string (?q=, ?category=, ?page= 등 필터 결과) 은 pathname 에 포함되지 않으므로
+  // /circles · /circles?q=... · /circles?category=sports 모두 동일하게 매칭.
+  // 다른 모든 경로 (/circles/new, /circles/{uuid}, /shuffle, /search, /favorites, /mypage 등) 는 자동 제외.
+  if (pathname !== "/circles") return null;
 
   // collapsed(스크롤 내림) = 원형 56px, expanded(최상단) = 알약 형태
   const collapsed = isScrolled;
