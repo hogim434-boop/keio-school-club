@@ -5,6 +5,7 @@ import { Construction } from "lucide-react";
 
 import { CircleActions } from "@/components/circles/circle-actions";
 import { CircleGallery } from "@/components/circles/circle-gallery";
+import { DetailPageHeader } from "@/components/circles/detail-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ACTIVITY_FREQUENCY_LABELS } from "@/lib/constants/activity-frequency";
@@ -53,6 +54,8 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
 }
 
 // 커버 이미지 — 모바일 16:9, 데스크탑 21:9 와이드. priority 로 LCP 개선
+// 메루카리 패턴: 글로벌 헤더 hide + cover 가 viewport 최상단부터 풀-블리드.
+// cover 위 absolute overlay 로 DetailPageHeader (뒤로가기·홈·공유) 노출.
 function CoverImage({ circle }: { circle: CircleDetail }) {
   return (
     <div className="bg-muted relative aspect-[16/9] w-full md:aspect-[21/9]">
@@ -70,6 +73,8 @@ function CoverImage({ circle }: { circle: CircleDetail }) {
           <Construction className="h-12 w-12" />
         </div>
       )}
+      {/* 메루카리 패턴 absolute overlay 헤더 — 뒤로가기 슬라이드 아웃 / 홈 / 공유 */}
+      <DetailPageHeader circleName={circle.name} />
     </div>
   );
 }

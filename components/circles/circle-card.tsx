@@ -1,9 +1,9 @@
 import Image from "next/image";
-import Link from "next/link";
 import { Construction } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { CircleCardLink } from "@/components/circles/circle-card-link";
 import { FavoriteToggleButton } from "@/components/circles/favorite-toggle-button";
 import { ACTIVITY_FREQUENCY_LABELS } from "@/lib/constants/activity-frequency";
 import { CATEGORY_LABELS } from "@/lib/constants/category";
@@ -22,7 +22,7 @@ export function CircleCard({ circle }: CircleCardProps) {
   const { id, name, category, official_type, activity_frequency, cover_image_url, tags } = circle;
 
   return (
-    <Link
+    <CircleCardLink
       href={`/circles/${id}`}
       className="group focus-visible:ring-ring block rounded-lg focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
     >
@@ -80,6 +80,6 @@ export function CircleCard({ circle }: CircleCardProps) {
           </p>
         </CardContent>
       </Card>
-    </Link>
+    </CircleCardLink>
   );
 }
