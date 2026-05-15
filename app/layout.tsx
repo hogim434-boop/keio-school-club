@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Geist, Noto_Sans_JP } from "next/font/google";
-import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { Header } from "@/components/layout/header";
@@ -42,46 +41,40 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // PRD 기준 본 서비스는 일본 학생 대상이므로 lang 을 ja 로 설정
-    <html lang="ja" suppressHydrationWarning>
+    // PRD 기준 본 서비스는 일본 학생 대상이므로 lang 을 ja 로 설정.
+    // 다크모드는 제거됨 — 라이트 톤 전용 (next-themes / ThemeProvider 미사용).
+    <html lang="ja">
       <body
         className={`${geistSans.variable} ${notoJp.variable} overflow-x-hidden font-sans antialiased`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {/* 모든 페이지 공통 헤더 — sticky top-0, T-002 에서 도입.
-              Header 가 cookies() 의존(role 추출)이므로 cacheComponents 모드에서 Suspense 필수.
-              fallback 은 동일 높이의 빈 헤더로 layout shift 방지.
-              상세 페이지(/circles/{uuid}) 에서는 두 단계로 hide:
-              1. Header(RSC) 가 x-pathname (middleware forward) 검사 후 null — 직접 진입 시 SSR-safe.
-              2. HeaderClientGate(Client) 가 usePathname 으로 client-side soft navigation 도 hide. */}
-          <Suspense fallback={null}>
-            <HeaderClientGate>
-              <Suspense fallback={<header className="bg-background h-20" />}>
-                <Header />
-              </Suspense>
-            </HeaderClientGate>
-          </Suspense>
-          {/* 모바일 하단 탭 바가 본문을 가리지 않도록 모바일에서만 pb-16 추가
-              (BottomNav 의 fixed 영역 ≈ 64px). 데스크탑은 BottomNav 미노출이라 패딩 불필요. */}
-          <div className="pb-16 md:pb-0">{children}</div>
-          {/* 모바일 전용 하단 탭 바 (md 미만, 당근앱 패턴) — 서클 상세에서는 자동 숨김.
-              usePathname() 사용 Client 컴포넌트라 cacheComponents 모드에서 Suspense 필수. */}
-          <Suspense fallback={null}>
-            <BottomNav />
-          </Suspense>
-          {/* 우하단 floating 등록 CTA (당근앱 「+ 모임 만들기」 패턴) — 서클 상세·등록 페이지에서 자동 숨김.
-              usePathname() 사용 Client 컴포넌트라 cacheComponents 모드에서 Suspense 필수. */}
-          <Suspense fallback={null}>
-            <RegisterFloatingCTA />
-          </Suspense>
-          {/* 토스트 알림 Provider — ThemeProvider 내부에 두어 다크 모드 색상 자동 적용 */}
-          <Toaster richColors closeButton />
-        </ThemeProvider>
+        {/* 모든 페이지 공통 헤더 — sticky top-0, T-002 에서 도입.
+            Header 가 cookies() 의존(role 추출)이므로 cacheComponents 모드에서 Suspense 필수.
+            fallback 은 동일 높이의 빈 헤더로 layout shift 방지.
+            상세 페이지(/circles/{uuid}) 에서는 두 단계로 hide:
+            1. Header(RSC) 가 x-pathname (middleware forward) 검사 후 null — 직접 진입 시 SSR-safe.
+            2. HeaderClientGate(Client) 가 usePathname 으로 client-side soft navigation 도 hide. */}
+        <Suspense fallback={null}>
+          <HeaderClientGate>
+            <Suspense fallback={<header className="bg-background h-20" />}>
+              <Header />
+            </Suspense>
+          </HeaderClientGate>
+        </Suspense>
+        {/* 모바일 하단 탭 바가 본문을 가리지 않도록 모바일에서만 pb-16 추가
+            (BottomNav 의 fixed 영역 ≈ 64px). 데스크탑은 BottomNav 미노출이라 패딩 불필요. */}
+        <div className="pb-16 md:pb-0">{children}</div>
+        {/* 모바일 전용 하단 탭 바 (md 미만, 당근앱 패턴) — 서클 상세에서는 자동 숨김.
+            usePathname() 사용 Client 컴포넌트라 cacheComponents 모드에서 Suspense 필수. */}
+        <Suspense fallback={null}>
+          <BottomNav />
+        </Suspense>
+        {/* 우하단 floating 등록 CTA (당근앱 「+ 모임 만들기」 패턴) — 서클 상세·등록 페이지에서 자동 숨김.
+            usePathname() 사용 Client 컴포넌트라 cacheComponents 모드에서 Suspense 필수. */}
+        <Suspense fallback={null}>
+          <RegisterFloatingCTA />
+        </Suspense>
+        {/* 토스트 알림 — 라이트 톤 고정 */}
+        <Toaster richColors closeButton />
       </body>
     </html>
   );
