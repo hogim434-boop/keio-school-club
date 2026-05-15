@@ -8,7 +8,7 @@ import { LazyMotion, domAnimation, m } from "motion/react";
  * 검색 페이지 exit action — 「戻る」(history.back) 와 「適用」(forward navigate) 두 종류.
  *
  * - `{ kind: "back" }`: SearchPageHeader 의 「戻る」 버튼 → 우측으로 슬라이드 아웃 + history.back()
- * - `{ kind: "navigate", url }`: ApplyButton 의 「適用」 → 아래로 슬라이드 다운 (iOS modal dismiss) + router.push(url)
+ * - `{ kind: "navigate", url }`: ApplyButton 의 「適用」 → 좌측으로 슬라이드 아웃 (iOS push 진행) + router.push(url)
  */
 export type SearchExitAction = { kind: "back" } | { kind: "navigate"; url: string };
 
@@ -22,8 +22,9 @@ export const SearchSlideOutContext = createContext<(action: SearchExitAction) =>
  * 검색 페이지 전환 애니메이션 — iOS Push 패턴 (entry) + 두 종류 exit.
  *
  * Entry: 우측에서 슬라이드 인 + opacity fade (상세 페이지와 동일, iOS Push)
- * Exit (back): 우측으로 슬라이드 아웃 → history.back() (페이지 되돌리기)
- * Exit (navigate / 適用): 아래로 슬라이드 다운 + fade → router.push(결과 URL) (메루카리/Airbnb modal dismiss 패턴)
+ * Exit (back): 우측으로 슬라이드 아웃 → history.back() (페이지 되돌리기, 진입 방향 반대)
+ * Exit (navigate / 適用): 좌측으로 슬라이드 아웃 + fade → router.push(결과 URL)
+ *                          (iOS push 의 진행 방향 — back 의 반대로 의미 명확)
  *
  * STALE STATE 회피:
  * - mount 시 exitAction = null reset + calledRef = false
@@ -60,10 +61,10 @@ export default function SearchTemplate({ children }: { children: ReactNode }) {
     );
   }
 
-  // exit 방향 분기 — back: 우측 (x), navigate: 아래 (y)
+  // exit 방향 분기 — back: 우측(x:100%) / navigate: 좌측(x:-100%). iOS push·pop 의 짝.
   const animateTarget = (() => {
     if (exitAction?.kind === "back") return { x: "100%", y: 0, opacity: 0 };
-    if (exitAction?.kind === "navigate") return { x: 0, y: "100%", opacity: 0 };
+    if (exitAction?.kind === "navigate") return { x: "-100%", y: 0, opacity: 0 };
     return { x: 0, y: 0, opacity: 1 };
   })();
 

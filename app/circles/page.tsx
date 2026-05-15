@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
 
 import { CircleCard } from "@/components/circles/circle-card";
+import { CirclesPageShell } from "@/components/circles/circles-page-shell";
 import { FilterPanel } from "@/components/circles/filter-panel";
 import { HorizontalCircleStrip } from "@/components/circles/horizontal-circle-strip";
 import { Button } from "@/components/ui/button";
@@ -36,9 +37,12 @@ interface CirclesPageProps {
 export default function CirclesPage({ searchParams }: CirclesPageProps) {
   return (
     <main className="pb-20 md:pb-12">
-      <Suspense fallback={<CirclesPageFallback />}>
-        <CirclesContent searchParams={searchParams} />
-      </Suspense>
+      {/* iOS Push entry — search 의 좌측 슬라이드 아웃과 짝맞춤. 자세한 톤은 shell 주석 참조. */}
+      <CirclesPageShell>
+        <Suspense fallback={<CirclesPageFallback />}>
+          <CirclesContent searchParams={searchParams} />
+        </Suspense>
+      </CirclesPageShell>
     </main>
   );
 }
