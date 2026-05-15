@@ -27,7 +27,13 @@ interface SearchPageBodyProps {
  * 리마운트되어 draft 가 새 initial 로 동기화.
  */
 export function SearchPageBody({ initial }: SearchPageBodyProps) {
-  const [draft, setDraft] = useState<CirclesSearchParams>(initial);
+  // 진입 시 카테고리 0개면 「すべて」 marker(all=true) 자동 부여.
+  // 이유: 「適用」 클릭 시 buildCirclesUrl 이 ?all=1 을 붙여야 /circles 가 결과 모드(N件 표시)로 진입함.
+  // 마커 없으면 isDiscoverMode === true 가 되어 「人気·新着」 strip(홈 화면)으로 fallback.
+  const [draft, setDraft] = useState<CirclesSearchParams>(() => ({
+    ...initial,
+    all: initial.category.length === 0 ? true : initial.all,
+  }));
 
   return (
     <>

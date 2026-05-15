@@ -72,9 +72,11 @@ export function SearchCategories({ draft, setDraft }: SearchCategoriesProps) {
 
   const pages = chunk(items, ITEMS_PER_PAGE);
 
-  // 「すべて」 active = draft.all marker 가 명시 true 일 때만.
-  // 검색 페이지 진입 시 default false → 「すべて」 inactive (사용자 미선택 상태 표시).
-  const allActive = draft.all === true;
+  // 「すべて」 active 조건:
+  // 1) 명시적으로 「すべて」 클릭 (draft.all === true) OR
+  // 2) 카테고리 선택 0개 (default 상태) — 「현재 필터 없음 = 전체」 시그널.
+  // 진입 직후·전부 해제 시 자동 active → 하단 「N件のサークルを見る」 카운트와 일관됨.
+  const allActive = draft.all === true || draft.category.length === 0;
 
   function handleClick(item: CategoryItem) {
     if (item.value === undefined) {
@@ -82,14 +84,20 @@ export function SearchCategories({ draft, setDraft }: SearchCategoriesProps) {
       setDraft((prev) => ({ ...prev, category: [], all: true }));
       return;
     }
-    // 일반 카테고리 토글 — all marker 는 자동 해제 (개별 카테고리 선택 시 「すべて」 mutually exclusive)
-    setDraft((prev) => ({
-      ...prev,
-      all: false,
-      category: prev.category.includes(item.value!)
+    // 일반 카테고리 토글.
+    // - 추가 시: 「すべて」 mutually exclusive → all=false
+    // - 전부 해제되어 0개로 돌아오면: 「すべて」 marker 자동 복귀 (all=true)
+    //   → 「適用」 시 URL ?all=1 로 결과 모드 진입 보장 (홈 화면 fallback 회피)
+    setDraft((prev) => {
+      const nextCategory = prev.category.includes(item.value!)
         ? prev.category.filter((c) => c !== item.value)
-        : [...prev.category, item.value!],
-    }));
+        : [...prev.category, item.value!];
+      return {
+        ...prev,
+        category: nextCategory,
+        all: nextCategory.length === 0,
+      };
+    });
   }
 
   function handleScroll() {
