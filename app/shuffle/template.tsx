@@ -54,6 +54,7 @@ export default function ShuffleTemplate({ children }: { children: ReactNode }) {
   return (
     <LazyMotion features={domAnimation}>
       <m.div
+        // 셔플 페이지는 「셔플 모드 진입」 액션 톤이라 외부 진입·새로고침 시에도 항상 슬라이드 유지
         initial={{ x: "100%", opacity: 0 }}
         animate={exiting ? { x: "100%", opacity: 0 } : { x: 0, opacity: 1 }}
         // iOS UINavigationController push easing — cubic-bezier(0.32, 0.72, 0, 1).

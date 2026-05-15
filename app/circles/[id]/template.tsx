@@ -65,6 +65,7 @@ export default function CircleDetailTemplate({ children }: { children: ReactNode
       <m.div
         // animKey 변경 시 motion node 강제 re-mount → initial→animate transition 자동 발화
         key={animKey}
+        // 상세 페이지는 카드 클릭으로 진입하는 액션 톤이라 외부 진입·새로고침 시에도 항상 슬라이드 유지
         initial={{ x: "100%", opacity: 0 }}
         animate={exiting ? { x: "100%", opacity: 0 } : { x: 0, opacity: 1 }}
         // iOS UINavigationController push easing — cubic-bezier(0.32, 0.72, 0, 1).
