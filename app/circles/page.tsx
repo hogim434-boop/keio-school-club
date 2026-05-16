@@ -7,6 +7,7 @@ import { CirclesPageShell } from "@/components/circles/circles-page-shell";
 import { FilterPanel } from "@/components/circles/filter-panel";
 import { HomeCategoryGrid } from "@/components/circles/home-category-grid";
 import { HorizontalCircleStrip } from "@/components/circles/horizontal-circle-strip";
+import { HourlyCategoryStrip } from "@/components/circles/hourly-category-strip";
 import { Button } from "@/components/ui/button";
 import { Emoji } from "@/components/ui/emoji";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -62,7 +63,8 @@ async function CirclesContent({ searchParams }: CirclesPageProps) {
  * 카테고리 탭은 /search 페이지로 이양. 사용자가 카테고리별 탐색을 원하면 헤더 🔍 → 카테고리 그리드.
  */
 async function DiscoverContent() {
-  const [popular, recent] = await Promise.all([getPopularCircles(6), getRecentCircles(6)]);
+  // 2열 × 4행 = 8 개 (HorizontalCircleStrip 가 자체 slice(0, 8) 방어, 여기서도 정확히 8 요청)
+  const [popular, recent] = await Promise.all([getPopularCircles(8), getRecentCircles(8)]);
 
   return (
     <div className="container mx-auto max-w-6xl space-y-8 px-4 py-6">
@@ -87,6 +89,10 @@ async function DiscoverContent() {
       </Link>
 
       <HorizontalCircleStrip title="人気のサークル" circles={popular} />
+
+      {/* 1시간마다 회전하는 카테고리 가로 스크롤 섹션 — serendipity 강화 + 8 카테고리 균등 노출 */}
+      <HourlyCategoryStrip />
+
       <HorizontalCircleStrip title="新着のサークル" circles={recent} />
     </div>
   );
@@ -202,7 +208,7 @@ function CirclesPageFallback() {
       <section className="space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="aspect-[16/9] w-full" />
+            <Skeleton key={i} className="aspect-video w-full" />
           ))}
         </div>
       </section>
