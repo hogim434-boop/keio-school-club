@@ -1,6 +1,5 @@
-import Link from "next/link";
-
 import { CircleAvatarCard } from "@/components/circles/circle-avatar-card";
+import { SlideOutLink } from "@/components/circles/slide-out-link";
 import { CATEGORIES, CATEGORY_LABELS } from "@/lib/constants/category";
 import { getCirclesByCategory } from "@/lib/dummy/circles";
 
@@ -37,12 +36,13 @@ export async function HourlyCategoryStrip() {
           今おすすめ <span className="text-muted-foreground font-normal">·</span>{" "}
           <span className="text-primary">{CATEGORY_LABELS[currentCategory]}</span>
         </h2>
-        <Link
+        {/* SlideOutLink — 카테고리 칩 클릭과 동일한 「슬라이드 아웃 → 페이드 인」 트랜지션 발화 */}
+        <SlideOutLink
           href={`/circles?category=${currentCategory}`}
           className="text-muted-foreground hover:text-foreground text-sm"
         >
           もっと見る
-        </Link>
+        </SlideOutLink>
       </header>
 
       {/* 모바일/데스크탑 공통 가로 스크롤 — snap-x 로 카드 단위 정렬 */}
