@@ -7,7 +7,7 @@ import { CircleCardLink } from "@/components/circles/circle-card-link";
 import { FavoriteToggleButton } from "@/components/circles/favorite-toggle-button";
 import { ACTIVITY_FREQUENCY_LABELS } from "@/lib/constants/activity-frequency";
 import { CATEGORY_LABELS } from "@/lib/constants/category";
-import { OFFICIAL_TYPE_LABELS } from "@/lib/constants/official-type";
+import { getOfficialTypeDisplayLabel } from "@/lib/constants/official-type";
 import type { CircleSummary } from "@/lib/types/domain";
 
 interface CircleCardProps {
@@ -20,6 +20,8 @@ interface CircleCardProps {
 // 카드 전체를 Link 로 감싸 카드 어디를 눌러도 상세 페이지로 이동.
 export function CircleCard({ circle }: CircleCardProps) {
   const { id, name, category, official_type, activity_frequency, cover_image_url, tags } = circle;
+  // athletics / intercollegiate 만 노출. 그 외는 배지 비표시.
+  const officialLabel = getOfficialTypeDisplayLabel(official_type);
 
   return (
     <CircleCardLink
@@ -50,14 +52,16 @@ export function CircleCard({ circle }: CircleCardProps) {
         </div>
 
         <CardContent className="space-y-2 p-3">
-          {/* 카테고리 + official_type 뱃지 */}
+          {/* 카테고리 + (体育会/インカレ 인 경우만) 배지 */}
           <div className="flex flex-wrap gap-1">
             <Badge variant="secondary" className="text-xs">
               {CATEGORY_LABELS[category]}
             </Badge>
-            <Badge variant="outline" className="text-xs">
-              {OFFICIAL_TYPE_LABELS[official_type]}
-            </Badge>
+            {officialLabel && (
+              <Badge variant="outline" className="text-xs">
+                {officialLabel}
+              </Badge>
+            )}
           </div>
 
           {/* 서클명 — 1줄 자름 */}

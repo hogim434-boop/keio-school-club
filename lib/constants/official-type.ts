@@ -28,3 +28,29 @@ export const OFFICIAL_TYPE_LABELS: Record<OfficialType, string> = {
 
 /** 필터·뱃지 UI 의 노출 순서 (公式 정도 높은 → 낮은) */
 export const OFFICIAL_TYPE_ORDER: readonly OfficialType[] = OFFICIAL_TYPES;
+
+/**
+ * UI 에 표시되는 official_type — 体育会 / インカレ 둘만.
+ * 정책 변경 (사용자 결정): 「公認 / 非公認 / その他」 구분을 사용자 화면에 노출하지 않음.
+ * - 데이터 모델 / DB enum 은 5종 그대로 유지 (변경 비용 큼 + 관리 메타 정보로 보존)
+ * - 표시·필터링 UI 에서만 이 2종으로 한정
+ */
+export const VISIBLE_OFFICIAL_TYPES = ["athletics", "intercollegiate"] as const;
+export type VisibleOfficialType = (typeof VISIBLE_OFFICIAL_TYPES)[number];
+
+/**
+ * UI 에 노출할 official_type 라벨을 반환.
+ * `athletics` / `intercollegiate` 만 라벨 반환, 그 외 (`official` / `unofficial` / `other`) 는 `null`.
+ *
+ * 사용 패턴:
+ * ```tsx
+ * const label = getOfficialTypeDisplayLabel(circle.official_type);
+ * {label && <Badge>{label}</Badge>}
+ * ```
+ */
+export function getOfficialTypeDisplayLabel(type: OfficialType): string | null {
+  if (type === "athletics" || type === "intercollegiate") {
+    return OFFICIAL_TYPE_LABELS[type];
+  }
+  return null;
+}

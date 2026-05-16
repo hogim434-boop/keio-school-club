@@ -16,8 +16,8 @@ import {
   type ActivityTimeBand,
 } from "@/lib/constants/activity-time-band";
 import {
-  OFFICIAL_TYPES,
   OFFICIAL_TYPE_LABELS,
+  VISIBLE_OFFICIAL_TYPES,
   type OfficialType,
 } from "@/lib/constants/official-type";
 import {
@@ -252,17 +252,16 @@ export function FilterPanel({ initial, mode, onApply }: FilterPanelProps) {
           </div>
         </section>
 
-        {/* §5 団体区分 — 다중 선택, 풀-블리드 가로 스크롤 (5옵션) */}
+        {/* §5 団体区分 — 体育会 / インカレ 둘만 노출 (정책: 公認/非公認 구분 UI 비표시) */}
         <section className="space-y-2">
           <h3 className="text-sm font-semibold">団体区分</h3>
-          <div className="-mx-4 flex snap-x snap-mandatory [scroll-padding-inline:1.25rem] gap-3 overflow-x-auto [overscroll-behavior-x:contain] px-5 pb-1">
-            {OFFICIAL_TYPES.map((type) => (
+          <div className="flex gap-3">
+            {VISIBLE_OFFICIAL_TYPES.map((type) => (
               <SegmentedOption
                 key={type}
                 label={OFFICIAL_TYPE_LABELS[type]}
                 active={draft.officialType.includes(type)}
                 onClick={() => toggleOfficialType(type)}
-                className="snap-start"
               />
             ))}
           </div>

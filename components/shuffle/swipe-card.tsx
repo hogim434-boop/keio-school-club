@@ -11,7 +11,7 @@ import { Construction } from "lucide-react";
 import type { CircleSummary } from "@/lib/types/domain";
 import type { Category } from "@/lib/constants/category";
 import { CATEGORY_LABELS } from "@/lib/constants/category";
-import { OFFICIAL_TYPE_LABELS } from "@/lib/constants/official-type";
+import { getOfficialTypeDisplayLabel } from "@/lib/constants/official-type";
 import { ACTIVITY_FREQUENCY_LABELS } from "@/lib/constants/activity-frequency";
 import { Emoji, type EmojiName } from "@/components/ui/emoji";
 import { cn } from "@/lib/utils";
@@ -200,10 +200,16 @@ export const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function Sw
             {CATEGORY_LABELS[circle.category]}
           </span>
 
-          {/* 공인유형 배지 */}
-          <span className="bg-background/80 text-muted-foreground rounded-full px-2.5 py-1 text-xs backdrop-blur-sm">
-            {OFFICIAL_TYPE_LABELS[circle.official_type]}
-          </span>
+          {/* 体育会 / インカレ 인 경우만 배지 표시 (그 외는 비표시) */}
+          {(() => {
+            const officialLabel = getOfficialTypeDisplayLabel(circle.official_type);
+            if (!officialLabel) return null;
+            return (
+              <span className="bg-background/80 text-muted-foreground rounded-full px-2.5 py-1 text-xs backdrop-blur-sm">
+                {officialLabel}
+              </span>
+            );
+          })()}
         </div>
       </div>
 

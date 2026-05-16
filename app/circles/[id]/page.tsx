@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ACTIVITY_FREQUENCY_LABELS } from "@/lib/constants/activity-frequency";
 import { CATEGORY_LABELS } from "@/lib/constants/category";
-import { OFFICIAL_TYPE_LABELS } from "@/lib/constants/official-type";
+import { getOfficialTypeDisplayLabel } from "@/lib/constants/official-type";
 import { getCircleById } from "@/lib/dummy/circles";
 import type { CircleDetail } from "@/lib/types/domain";
 
@@ -87,7 +87,11 @@ function Header({ circle }: { circle: CircleDetail }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="secondary">{CATEGORY_LABELS[circle.category]}</Badge>
-          <Badge variant="outline">{OFFICIAL_TYPE_LABELS[circle.official_type]}</Badge>
+          {(() => {
+            // 体育会 / インカレ 만 표시. 그 외 (公認/非公認/その他) 는 배지 비표시.
+            const officialLabel = getOfficialTypeDisplayLabel(circle.official_type);
+            return officialLabel ? <Badge variant="outline">{officialLabel}</Badge> : null;
+          })()}
         </div>
         {/* 데스크탑 전용 inline 액션 바 — 모바일에서는 hidden */}
         <CircleActions circle={circle} layout="desktop" />

@@ -6,7 +6,7 @@ import { X } from "lucide-react";
 import { ACTIVITY_FREQUENCY_LABELS } from "@/lib/constants/activity-frequency";
 import { ACTIVITY_TIME_BAND_LABELS } from "@/lib/constants/activity-time-band";
 import { CATEGORY_LABELS } from "@/lib/constants/category";
-import { OFFICIAL_TYPE_LABELS } from "@/lib/constants/official-type";
+import { getOfficialTypeDisplayLabel } from "@/lib/constants/official-type";
 import { RECRUITMENT_STATUS_LABELS } from "@/lib/constants/recruitment-status";
 import { MEMBER_SIZE_LABELS, TAG_LABELS } from "@/lib/circles/filter-labels";
 import type { CirclesSearchParams } from "@/lib/circles/search-params";
@@ -170,11 +170,13 @@ function extractChips(
     });
   });
 
-  // 団体区分 — 값만 (「公認」)
+  // 団体区分 — 体育会 / インカレ 만 chip 표시. 그 외 (公認/非公認/その他) 는 helper 가 null 반환 → chip 자체 숨김.
   draft.officialType.forEach((o) => {
+    const label = getOfficialTypeDisplayLabel(o);
+    if (!label) return;
     chips.push({
       id: `official:${o}`,
-      label: OFFICIAL_TYPE_LABELS[o],
+      label,
       remove: () =>
         setDraft((prev) => ({
           ...prev,
