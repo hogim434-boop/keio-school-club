@@ -8,8 +8,8 @@ import { FilterPanel } from "@/components/circles/filter-panel";
 import { HomeCategoryGrid } from "@/components/circles/home-category-grid";
 import { HorizontalCircleStrip } from "@/components/circles/horizontal-circle-strip";
 import { HourlyCategoryStrip } from "@/components/circles/hourly-category-strip";
+import { PromoTileCarousel } from "@/components/circles/promo-tile-carousel";
 import { Button } from "@/components/ui/button";
-import { Emoji } from "@/components/ui/emoji";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   buildCirclesUrl,
@@ -71,22 +71,9 @@ async function DiscoverContent() {
       {/* 카테고리 그리드 — 헤더 직하 entry point. 8개 카테고리 4×2 표시, 칩 클릭 시 결과 모드 즉시 진입 */}
       <HomeCategoryGrid />
 
-      {/* 셔플 디스커버리 진입 카드 — 인기 강조 회피 + serendipity 강화 동선.
-          기존 strip 들과 독립된 큰 entry point 으로 노출 */}
-      <Link
-        href="/shuffle"
-        className="bg-keio-navy text-keio-navy-foreground hover:bg-keio-navy/90 focus-visible:ring-ring group flex items-center gap-4 rounded-2xl p-5 shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-      >
-        <Emoji name="party-popper" size={40} />
-        <div className="flex-1">
-          <h2 className="text-lg font-semibold">シャッフルで探す</h2>
-          <p className="text-sm opacity-80">気軽にサークルを発見</p>
-        </div>
-        <ChevronRight
-          className="size-5 transition-transform group-hover:translate-x-0.5"
-          aria-hidden="true"
-        />
-      </Link>
+      {/* Promotional 타일 자동 회전 캐러셀 — 셔플 / お気に入り / 검색 안내 7 초 회전.
+          기존 「셔플 단일 Link」 를 캐러셀로 확장. 자세한 톤은 PromoTileCarousel 주석 참조. */}
+      <PromoTileCarousel />
 
       <HorizontalCircleStrip title="人気のサークル" circles={popular} />
 
