@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
 import { CircleCard } from "@/components/circles/circle-card";
 import { CirclesPageShell } from "@/components/circles/circles-page-shell";
 import { FilterPanel } from "@/components/circles/filter-panel";
+import { HomeCategoryGrid } from "@/components/circles/home-category-grid";
 import { HorizontalCircleStrip } from "@/components/circles/horizontal-circle-strip";
 import { Button } from "@/components/ui/button";
 import { Emoji } from "@/components/ui/emoji";
@@ -65,6 +66,9 @@ async function DiscoverContent() {
 
   return (
     <div className="container mx-auto max-w-6xl space-y-8 px-4 py-6">
+      {/* 카테고리 그리드 — 헤더 직하 entry point. 8개 카테고리 4×2 표시, 칩 클릭 시 결과 모드 즉시 진입 */}
+      <HomeCategoryGrid />
+
       {/* 셔플 디스커버리 진입 카드 — 인기 강조 회피 + serendipity 강화 동선.
           기존 strip 들과 독립된 큰 entry point 으로 노출 */}
       <Link
