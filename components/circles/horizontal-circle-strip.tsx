@@ -14,6 +14,8 @@ interface HorizontalCircleStripProps {
    * - `"stack"`: 1열 세로 stack (모든 카드 아래로 펼침) — 신착 strip 등 「전체 목록」 톤
    */
   layout?: "carousel" | "stack";
+  /** true 면 각 자식 `CircleListCard` 에 `isNew` 를 전파 — 신착 strip 전용 */
+  markNew?: boolean;
 }
 
 /**
@@ -34,6 +36,7 @@ export function HorizontalCircleStrip({
   circles,
   seeMoreHref,
   layout = "carousel",
+  markNew = false,
 }: HorizontalCircleStripProps) {
   return (
     <section className="space-y-3">
@@ -52,7 +55,7 @@ export function HorizontalCircleStrip({
         <ul className="divide-border divide-y">
           {circles.slice(0, 10).map((circle) => (
             <li key={circle.id}>
-              <CircleListCard circle={circle} />
+              <CircleListCard circle={circle} isNew={markNew} />
             </li>
           ))}
         </ul>

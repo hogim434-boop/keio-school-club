@@ -11,6 +11,8 @@ import type { CircleSummary } from "@/lib/types/domain";
 
 interface CircleListCardProps {
   circle: CircleSummary;
+  /** 신착 섹션 내 카드 여부 — true 면 1행 우측 끝에 NEW outline 배지 표시 */
+  isNew?: boolean;
 }
 
 /**
@@ -26,7 +28,7 @@ interface CircleListCardProps {
  * truncate 동작 — flex item 기본 `min-width: auto` 가 자식 truncate 를 깨므로
  * 텍스트 영역 div 와 1행 inner div 둘 다 `min-w-0` 필수.
  */
-export function CircleListCard({ circle }: CircleListCardProps) {
+export function CircleListCard({ circle, isNew = false }: CircleListCardProps) {
   const { id, name, category, official_type, activity_frequency, cover_image_url, tags } = circle;
   // athletics / intercollegiate 만 라벨 표시. 그 외 (公認/非公認/その他) 는 배지 자체 비표시.
   const officialLabel = getOfficialTypeDisplayLabel(official_type);
@@ -58,7 +60,7 @@ export function CircleListCard({ circle }: CircleListCardProps) {
 
         {/* 오른쪽: 텍스트 영역 — min-w-0 필수 (truncate 동작 보장) */}
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          {/* 1행: (体育会/インカレ 인 경우만) 배지 + 서클명 (inline) */}
+          {/* 1행: (体育会/インカレ 인 경우만) 배지 + 서클명 + (isNew 면) NEW outline 우측 끝 */}
           <div className="flex min-w-0 items-center gap-1.5">
             {officialLabel && (
               <Badge variant="secondary" className="shrink-0 px-1.5 py-0 text-[10px]">
@@ -66,6 +68,14 @@ export function CircleListCard({ circle }: CircleListCardProps) {
               </Badge>
             )}
             <span className="truncate text-sm font-semibold">{name}</span>
+            {isNew && (
+              <span
+                className="ml-auto shrink-0 rounded border border-rose-400 px-1.5 py-0.5 text-[9px] leading-none font-medium text-rose-500 motion-safe:animate-pulse"
+                aria-label="新着のサークル"
+              >
+                NEW
+              </span>
+            )}
           </div>
 
           {/* 2행: 태그 한 줄 — 0 개일 땐 행 자체 생략 */}

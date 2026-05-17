@@ -80,7 +80,7 @@ async function DiscoverContent() {
       {/* 1시간마다 회전하는 카테고리 가로 스크롤 섹션 — serendipity 강화 + 8 카테고리 균등 노출 */}
       <HourlyCategoryStrip />
 
-      <HorizontalCircleStrip title="新着のサークル" circles={recent} layout="stack" />
+      <HorizontalCircleStrip title="新着のサークル" circles={recent} layout="stack" markNew />
     </div>
   );
 }
