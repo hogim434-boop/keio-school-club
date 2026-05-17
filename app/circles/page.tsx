@@ -64,7 +64,7 @@ async function CirclesContent({ searchParams }: CirclesPageProps) {
  */
 async function DiscoverContent() {
   // 2열 × 4행 = 8 개 (HorizontalCircleStrip 가 자체 slice(0, 8) 방어, 여기서도 정확히 8 요청)
-  const [popular, recent] = await Promise.all([getPopularCircles(8), getRecentCircles(8)]);
+  const [popular, recent] = await Promise.all([getPopularCircles(8), getRecentCircles(10)]);
 
   return (
     <div className="container mx-auto max-w-6xl space-y-8 px-4 py-6">
@@ -80,7 +80,7 @@ async function DiscoverContent() {
       {/* 1시간마다 회전하는 카테고리 가로 스크롤 섹션 — serendipity 강화 + 8 카테고리 균등 노출 */}
       <HourlyCategoryStrip />
 
-      <HorizontalCircleStrip title="新着のサークル" circles={recent} />
+      <HorizontalCircleStrip title="新着のサークル" circles={recent} layout="stack" />
     </div>
   );
 }
