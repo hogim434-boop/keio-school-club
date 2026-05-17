@@ -17,10 +17,11 @@ test("홈에서 카드 클릭 시 상세 페이지 진입 + h1 서클명 노출"
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 });
 
-test("요약 카드 5종 라벨이 모두 노출된다", async ({ page }) => {
+test("요약 카드 라벨이 모두 노출된다", async ({ page }) => {
   await page.goto("/circles/00000000-0000-4000-8000-000000000001");
 
-  const labels = ["活動頻度", "年会費", "活動曜日", "会員数", "新入生比率"];
+  // 「年会費」「新入生比率」 는 2026-05 정책으로 제거됨
+  const labels = ["募集状況", "活動頻度", "活動日", "活動時間", "会員数"];
   for (const label of labels) {
     await expect(page.getByText(label).first()).toBeVisible();
   }
