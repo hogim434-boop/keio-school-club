@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { LazyMotion, domAnimation, m } from "motion/react";
 
 import { CIRCLE_REENTER_EVENT } from "@/components/circles/circle-card-link";
+import { DETAIL_FADE_UP_FLAG } from "@/app/circles/[id]/reports/[reportId]/template";
 
 /**
  * 슬라이드 아웃 액션 타입 — back (뒤로가기) 또는 navigate (새 URL 로 push 이동).
@@ -39,6 +40,12 @@ export default function CircleDetailTemplate({ children }: { children: ReactNode
   const [animationEnabled, setAnimationEnabled] = useState(true);
   const [exiting, setExiting] = useState(false);
   const [animKey, setAnimKey] = useState(0);
+  /**
+   * 활동 상세 페이지에서 「뒤로가기」 로 진입했을 때만 true.
+   * sessionStorage flag (DETAIL_FADE_UP_FLAG) 기반으로 mount useEffect 에서 1회 set.
+   * true 면 m.div 가 페이드 업 (opacity + y) 으로 진입, 아니면 기본 우측 슬라이드 인.
+   */
+  const [fadeUpEntry, setFadeUpEntry] = useState(false);
   // router.back() 중복 호출 방지 — onAnimationComplete 가 cleanup 시점에 한 번 더 발화하는 케이스
   const backCalledRef = useRef(false);
 
@@ -46,10 +53,22 @@ export default function CircleDetailTemplate({ children }: { children: ReactNode
   const exitActionRef = useRef<DetailExitAction | null>(null);
 
   // mount 시점 stale state reset — 인스턴스가 재사용되어 exiting=true 가 보존된 케이스 회피
+  // + 활동 상세에서 뒤로가기로 들어왔는지 sessionStorage flag 확인 → fade-up 진입 분기
   useEffect(() => {
     setExiting(false);
     backCalledRef.current = false;
     exitActionRef.current = null;
+
+    try {
+      if (sessionStorage.getItem(DETAIL_FADE_UP_FLAG) === "1") {
+        sessionStorage.removeItem(DETAIL_FADE_UP_FLAG);
+        setFadeUpEntry(true);
+        // m.div 강제 재마운트 → 새 initial (opacity 0 + y:20) 로 시작
+        setAnimKey((k) => k + 1);
+      }
+    } catch {
+      // sessionStorage 접근 차단 환경 (private mode 등) — 기본 슬라이드 인 사용
+    }
   }, []);
 
   useEffect(() => {
@@ -83,9 +102,17 @@ export default function CircleDetailTemplate({ children }: { children: ReactNode
       <m.div
         // animKey 변경 시 motion node 강제 re-mount → initial→animate transition 자동 발화
         key={animKey}
-        // 상세 페이지는 카드 클릭으로 진입하는 액션 톤이라 외부 진입·새로고침 시에도 항상 슬라이드 유지
-        initial={{ x: "100%", opacity: 0 }}
-        animate={exiting ? { x: "100%", opacity: 0 } : { x: 0, opacity: 1 }}
+        // fadeUpEntry: 활동 상세 뒤로가기 진입 → 페이드 업 / 그 외: 우측 슬라이드 인
+        initial={fadeUpEntry ? { opacity: 0, y: 20 } : { x: "100%", opacity: 0 }}
+        animate={
+          exiting
+            ? exitActionRef.current?.kind === "navigate"
+              ? { x: "-100%", opacity: 0 } // navigate (활동 상세 등): 좌측으로 빠짐
+              : { x: "100%", opacity: 0 } // back (뒤로가기): 우측으로 빠짐 (기존 유지)
+            : fadeUpEntry
+              ? { opacity: 1, y: 0 } // 페이드 업 진입 — 위치 유지하며 y 만 0 으로
+              : { x: 0, opacity: 1 } // 기본 우측 슬라이드 인
+        }
         // iOS UINavigationController push easing — cubic-bezier(0.32, 0.72, 0, 1).
         // spring 의 underdamped 진동(떨림) 회피 + 애플 native navigation 과 동일한 감속 곡선.
         transition={{ type: "tween", duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
