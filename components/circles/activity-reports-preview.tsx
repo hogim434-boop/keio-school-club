@@ -10,22 +10,34 @@
  *
  * 가로 스크롤은 모바일/데스크탑 공통 (snap-x mandatory + overflow-x-auto).
  * 풀-블리드 가로 스크롤 패턴 — `-mx-4 px-4` 으로 좌우 padding 안에서 자연스럽게.
+ *
+ * 카드 클릭:
+ * - useContext(SlideOutContext) 로 navigate 트리거 — 게시판 row 와 동일한 트랜지션 발화.
+ * - 서클 페이지 좌측 슬라이드 아웃 + 활동 상세 페이드 인.
  */
 
+import { useContext } from "react";
 import Image from "next/image";
 import { ChevronRight, Construction } from "lucide-react";
 
+import { SlideOutContext } from "@/app/circles/[id]/template";
 import type { ActivityReport } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
 
 interface ActivityReportsPreviewProps {
+  /** 소속 서클 ID — 카드 클릭 시 상세 페이지 URL 생성 */
+  circleId: string;
   /** 미리보기로 노출할 리포트 (보통 5건) */
   reports: ActivityReport[];
   /** 「もっと見る」 클릭 콜백 — 부모가 탭 전환 처리 */
   onMoreClick: () => void;
 }
 
-export function ActivityReportsPreview({ reports, onMoreClick }: ActivityReportsPreviewProps) {
+export function ActivityReportsPreview({
+  circleId,
+  reports,
+  onMoreClick,
+}: ActivityReportsPreviewProps) {
   // 리포트 0건이면 섹션 자체 미렌더 (Phase 1.1 더미는 채워져 있어 실제로는 항상 노출)
   if (reports.length === 0) return null;
 
@@ -58,7 +70,7 @@ export function ActivityReportsPreview({ reports, onMoreClick }: ActivityReports
         )}
       >
         {reports.map((report) => (
-          <ReportPreviewCard key={report.id} report={report} />
+          <ReportPreviewCard key={report.id} circleId={circleId} report={report} />
         ))}
       </div>
     </section>
@@ -67,11 +79,26 @@ export function ActivityReportsPreview({ reports, onMoreClick }: ActivityReports
 
 /**
  * 미리보기 카드 — 정사각 썸네일 + 제목 1줄 + 본문 1줄.
- * 클릭 인터랙션은 Phase 2 (상세 보기 모달 또는 페이지) 에서 추가 예정.
+ * button 으로 감싸 클릭 시 SlideOutContext.navigate 발화 → 게시판 row 와 동일한 트랜지션.
  */
-function ReportPreviewCard({ report }: { report: ActivityReport }) {
+function ReportPreviewCard({ circleId, report }: { circleId: string; report: ActivityReport }) {
+  const slideOut = useContext(SlideOutContext);
+
+  function handleClick() {
+    slideOut({ kind: "navigate", url: `/circles/${circleId}/reports/${report.id}` });
+  }
+
   return (
-    <div className="w-36 shrink-0 snap-start space-y-2 md:w-44">
+    <button
+      type="button"
+      onClick={handleClick}
+      className={cn(
+        "w-36 shrink-0 snap-start space-y-2 text-left md:w-44",
+        "rounded-lg transition-opacity",
+        "hover:opacity-90 active:opacity-80",
+        "focus-visible:ring-ring focus-visible:rounded-lg focus-visible:ring-2 focus-visible:outline-none"
+      )}
+    >
       {/* 정사각 썸네일 — image_url null 시 Construction 아이콘 placeholder */}
       <div className="bg-muted relative aspect-square overflow-hidden rounded-lg">
         {report.image_url ? (
@@ -94,6 +121,6 @@ function ReportPreviewCard({ report }: { report: ActivityReport }) {
         <p className="line-clamp-1 text-sm font-medium">{report.title}</p>
         <p className="text-muted-foreground line-clamp-1 text-xs">{report.content}</p>
       </div>
-    </div>
+    </button>
   );
 }
