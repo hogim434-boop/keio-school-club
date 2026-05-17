@@ -3,6 +3,7 @@
 /**
  * FavoriteToggleButton — 즐겨찾기 토글 버튼 컴포넌트
  * variant='card' 는 카드 우상단 오버레이용, variant='action-bar' 는 하단 고정 액션 바 / 데스크탑 inline 용.
+ * variant='action-bar-card' 는 하단 sticky 바 이미지 패턴용 정사각 카드 버튼 (56×56px, keio-navy 하트).
  * onClick 에서 e.preventDefault + stopPropagation 으로 카드 Link navigation 을 차단한다.
  */
 
@@ -18,8 +19,9 @@ interface FavoriteToggleButtonProps {
    * 버튼 스타일 변형
    * - 'card': 카드 우상단 오버레이 (h-9 w-9, bg-background/80, backdrop-blur)
    * - 'action-bar': 하단 액션 바 / 데스크탑 inline (h-12 w-12, border, bg-background)
+   * - 'action-bar-card': 하단 sticky 바 이미지 패턴 (56×56px 정사각, rounded-xl, keio-navy 하트)
    */
-  variant: "card" | "action-bar";
+  variant: "card" | "action-bar" | "action-bar-card";
 }
 
 /**
@@ -49,11 +51,24 @@ export function FavoriteToggleButton({ circleId, variant }: FavoriteToggleButton
         // variant 별 스타일 분기
         variant === "card" &&
           "bg-background/80 text-muted-foreground hover:text-foreground h-9 w-9 backdrop-blur",
-        variant === "action-bar" && "bg-background hover:bg-accent h-12 w-12 border"
+        variant === "action-bar" && "bg-background hover:bg-accent h-12 w-12 border",
+        // 신규: 이미지 패턴 정사각 카드 (56×56px, rounded-xl)
+        variant === "action-bar-card" &&
+          "border-border bg-background hover:bg-accent size-14 rounded-xl border transition-transform active:scale-95 motion-reduce:transform-none"
       )}
     >
-      {/* 하트 아이콘 — 즐겨찾기 시 빨간색으로 채움 */}
-      <Heart className={cn("size-5", active && "fill-current text-red-500")} aria-hidden="true" />
+      {/* 하트 아이콘 — variant에 따라 크기·색상 분기 */}
+      <Heart
+        className={cn(
+          "size-5",
+          // action-bar-card 는 아이콘을 size-6 으로 약간 크게 표시
+          variant === "action-bar-card" && "size-6",
+          // active 상태 색상: action-bar-card → keio-navy, 나머지 → red-500
+          active && variant === "action-bar-card" && "text-keio-navy fill-current",
+          active && variant !== "action-bar-card" && "fill-current text-red-500"
+        )}
+        aria-hidden="true"
+      />
     </button>
   );
 }
