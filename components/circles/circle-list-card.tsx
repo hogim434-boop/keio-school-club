@@ -4,6 +4,7 @@ import { Construction } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { CircleCardLink } from "@/components/circles/circle-card-link";
 import { FavoriteToggleButton } from "@/components/circles/favorite-toggle-button";
+import { TAG_LABELS } from "@/lib/circles/filter-labels";
 import { ACTIVITY_FREQUENCY_LABELS } from "@/lib/constants/activity-frequency";
 import { CATEGORY_LABELS } from "@/lib/constants/category";
 import { getOfficialTypeDisplayLabel } from "@/lib/constants/official-type";
@@ -78,9 +79,19 @@ export function CircleListCard({ circle, isNew = false }: CircleListCardProps) {
             )}
           </div>
 
-          {/* 2행: 태그 한 줄 — 0 개일 땐 행 자체 생략 */}
+          {/* 2행: 태그 칩 — 0 개일 땐 행 자체 생략. flex-nowrap + overflow-hidden 으로 1행 고정 */}
           {tags.length > 0 && (
-            <p className="text-muted-foreground truncate text-xs">{tags.slice(0, 4).join(" · ")}</p>
+            <div className="flex flex-nowrap items-center gap-1 overflow-hidden">
+              {tags.slice(0, 3).map((tag) => (
+                <Badge
+                  key={tag}
+                  variant="outline"
+                  className="shrink-0 px-1.5 py-0 text-[10px] leading-4 font-normal"
+                >
+                  {TAG_LABELS[tag] ?? tag}
+                </Badge>
+              ))}
+            </div>
           )}
 
           {/* 3행: 카테고리 · 활동빈도 메타 */}

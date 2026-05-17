@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { CircleCardLink } from "@/components/circles/circle-card-link";
 import { FavoriteToggleButton } from "@/components/circles/favorite-toggle-button";
+import { TAG_LABELS } from "@/lib/circles/filter-labels";
 import { ACTIVITY_FREQUENCY_LABELS } from "@/lib/constants/activity-frequency";
 import { CATEGORY_LABELS } from "@/lib/constants/category";
 import { getOfficialTypeDisplayLabel } from "@/lib/constants/official-type";
@@ -72,7 +73,7 @@ export function CircleCard({ circle }: CircleCardProps) {
             <div className="flex flex-wrap gap-1">
               {tags.slice(0, 5).map((tag) => (
                 <Badge key={tag} variant="outline" className="text-xs font-normal">
-                  {tag}
+                  {TAG_LABELS[tag] ?? tag}
                 </Badge>
               ))}
             </div>
