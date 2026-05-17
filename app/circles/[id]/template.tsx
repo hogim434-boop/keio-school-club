@@ -7,9 +7,15 @@ import { LazyMotion, domAnimation, m } from "motion/react";
 import { CIRCLE_REENTER_EVENT } from "@/components/circles/circle-card-link";
 
 /**
- * 뒤로가기 슬라이드 아웃 트리거 — DetailPageHeader 의 「戻る」 버튼이 useContext 로 호출.
+ * 슬라이드 아웃 액션 타입 — back (뒤로가기) 또는 navigate (새 URL 로 push 이동).
+ * navigate 는 활동 리포트 상세 등 내부 페이지로 트랜지션할 때 사용.
  */
-export const SlideOutContext = createContext<() => void>(() => {});
+export type DetailExitAction = { kind: "back" } | { kind: "navigate"; url: string };
+
+/**
+ * 슬라이드 아웃 트리거 — DetailPageHeader 의 「戻る」 버튼 + ActivityReportsList row 가 useContext 로 호출.
+ */
+export const SlideOutContext = createContext<(action: DetailExitAction) => void>(() => {});
 
 /**
  * 서클 상세 페이지 전환 애니메이션 — iOS Push 패턴 (우측 슬라이드 인 + opacity fade) + 슬라이드 아웃.
@@ -36,10 +42,14 @@ export default function CircleDetailTemplate({ children }: { children: ReactNode
   // router.back() 중복 호출 방지 — onAnimationComplete 가 cleanup 시점에 한 번 더 발화하는 케이스
   const backCalledRef = useRef(false);
 
+  // 마지막으로 요청된 액션 저장 — onAnimationComplete 에서 back/navigate 분기에 사용
+  const exitActionRef = useRef<DetailExitAction | null>(null);
+
   // mount 시점 stale state reset — 인스턴스가 재사용되어 exiting=true 가 보존된 케이스 회피
   useEffect(() => {
     setExiting(false);
     backCalledRef.current = false;
+    exitActionRef.current = null;
   }, []);
 
   useEffect(() => {
@@ -56,7 +66,15 @@ export default function CircleDetailTemplate({ children }: { children: ReactNode
 
   if (!animationEnabled) {
     return (
-      <SlideOutContext.Provider value={() => router.back()}>{children}</SlideOutContext.Provider>
+      <SlideOutContext.Provider
+        value={(action: DetailExitAction) => {
+          // reduced-motion — 트랜지션 없이 즉시 이동
+          if (action.kind === "navigate") router.push(action.url);
+          else router.back();
+        }}
+      >
+        {children}
+      </SlideOutContext.Provider>
     );
   }
 
@@ -74,12 +92,23 @@ export default function CircleDetailTemplate({ children }: { children: ReactNode
         onAnimationComplete={() => {
           if (exiting && !backCalledRef.current) {
             backCalledRef.current = true;
-            router.back();
+            const action = exitActionRef.current;
+            // navigate 액션이면 새 URL 로 push, 그 외 (back 또는 null) 는 router.back()
+            if (action?.kind === "navigate") {
+              router.push(action.url);
+            } else {
+              router.back();
+            }
           }
         }}
         className="will-change-transform"
       >
-        <SlideOutContext.Provider value={() => setExiting(true)}>
+        <SlideOutContext.Provider
+          value={(action: DetailExitAction) => {
+            exitActionRef.current = action;
+            setExiting(true);
+          }}
+        >
           {children}
         </SlideOutContext.Provider>
       </m.div>

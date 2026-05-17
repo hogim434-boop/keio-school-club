@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Construction } from "lucide-react";
 
 import { CircleActions } from "@/components/circles/circle-actions";
-import { CircleGallery } from "@/components/circles/circle-gallery";
+import { CircleDetailTabs } from "@/components/circles/circle-detail-tabs";
 import { DetailPageHeader } from "@/components/circles/detail-page-header";
 import { ShinkanBanner } from "@/components/circles/shinkan-banner";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ import { ACTIVITY_TIME_BAND_LABELS } from "@/lib/constants/activity-time-band";
 import { CATEGORY_LABELS } from "@/lib/constants/category";
 import { getOfficialTypeDisplayLabel } from "@/lib/constants/official-type";
 import { RECRUITMENT_STATUS_LABELS } from "@/lib/constants/recruitment-status";
+import { getActivityReportsByCircleId } from "@/lib/dummy/activity-reports";
 import { getCircleById } from "@/lib/dummy/circles";
 import type { CircleDetail } from "@/lib/types/domain";
 
@@ -24,7 +25,7 @@ interface CircleDetailPageProps {
 
 // 서클 상세 페이지 (RSC) — Phase 1.1 T-012 본 디자인
 // dynamic params Promise → cacheComponents 모드 호환을 위해 본문 전체 Suspense 래핑 (T-011 패턴)
-// pb-24: 모바일 하단 sticky 바 자리 확보 / md:pb-28: 데스크탑 floating pill 자리 확보
+// pb-24 / md:pb-28: viewport sticky CTA 자리 확보 (콘텐츠가 CTA 뒤로 가리지 않도록)
 // BottomNav 는 정규식으로 자동 hidden.
 export default function CircleDetailPage({ params }: CircleDetailPageProps) {
   return (
@@ -41,6 +42,12 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
   const circle = await getCircleById(id);
   if (!circle) notFound();
 
+  /**
+   * 활동 리포트 — 최신순 정렬된 전체 목록.
+   * 「ホーム」 탭 미리보기 (slice 5건) + 「掲示板」 탭 전체 리스트 둘 다 같은 데이터 source.
+   */
+  const reports = await getActivityReportsByCircleId(circle.id);
+
   return (
     <article className="space-y-6">
       {/* 1. 커버 이미지 — 모바일 16:9 / 데스크탑 21:9 */}
@@ -53,17 +60,28 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
         {/* 3. 新歓 배너 — 오늘 이후 이벤트가 있을 때만 조건부 렌더 */}
         <ShinkanBanner events={circle.shinkan_events} />
 
-        {/* 4. 요약 카드 5종 — 모집상황/활동빈도/활동일/활동시간/회원수 */}
-        <SummaryGrid circle={circle} />
-
-        {/* 5. 개요 설명 — 갤러리보다 위에 위치 */}
-        <Description text={circle.description} />
-
-        {/* 6. 갤러리 — 개요 아래 */}
-        <CircleGallery images={circle.images} circleName={circle.name} />
+        {/*
+         * 4. 탭 구조 — Client wrapper (state 관리) + Server Component children (homeContent).
+         * 「ホーム」 = SummaryGrid + Description + 活動レポート 미리보기 캐러셀
+         * 「掲示板」 = 活動レポート 전체 세로 리스트
+         * 「もっと見る」 클릭 시 내부 setTab("board") 으로 자동 전환.
+         */}
+        <CircleDetailTabs
+          circleId={circle.id}
+          reports={reports}
+          homeContent={
+            <>
+              <SummaryGrid circle={circle} />
+              <Description text={circle.description} />
+            </>
+          }
+        />
       </div>
 
-      {/* 7. 하단 sticky 액션 바 — 모바일/데스크탑 모두 fixed bottom */}
+      {/*
+       * 5. lagging spring sticky 액션 — viewport 하단 고정 + 스크롤 velocity 반응.
+       * fixed positioning 이라 부모 영향 없음 → 시맨틱상 container 밖, article 의 마지막 자식.
+       */}
       <CircleActions circle={circle} />
     </article>
   );
@@ -218,19 +236,31 @@ function DetailFallback() {
           <Skeleton className="h-8 w-2/3" />
           <Skeleton className="h-5 w-1/3" />
         </div>
+        {/* 탭 네비게이션 skeleton */}
+        <div className="flex gap-4 border-b pb-0">
+          <Skeleton className="h-8 w-16" />
+          <Skeleton className="h-8 w-16" />
+        </div>
         {/* 요약 카드 5종 skeleton — 신규 그리드 (md:grid-cols-3) 와 일치 */}
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 pt-6 md:grid-cols-3">
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-16 w-full" />
           ))}
         </div>
         {/* 개요 skeleton */}
         <Skeleton className="h-20 w-full" />
-        {/* 갤러리 skeleton (데스크탑만) */}
-        <div className="hidden gap-2 md:grid md:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="aspect-[16/9] w-full" />
-          ))}
+        {/* 活動レポート 미리보기 캐러셀 skeleton — 정사각 카드 4개 */}
+        <div className="space-y-3">
+          <Skeleton className="h-6 w-32" />
+          <div className="flex gap-3 overflow-hidden">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="w-36 shrink-0 space-y-2 md:w-44">
+                <Skeleton className="aspect-square w-full rounded-lg" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-full" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </article>

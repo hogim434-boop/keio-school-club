@@ -56,7 +56,12 @@ export function DetailPageHeader({ circleName }: DetailPageHeaderProps) {
       style={{ paddingTop: "max(env(safe-area-inset-top), 1rem)" }}
     >
       <div className="flex gap-2">
-        <button type="button" onClick={slideOut} aria-label="戻る" className={iconButton}>
+        <button
+          type="button"
+          onClick={() => slideOut({ kind: "back" })}
+          aria-label="戻る"
+          className={iconButton}
+        >
           <ChevronLeft className="size-5" aria-hidden="true" />
         </button>
         <Link href="/" aria-label="ホームに移動" className={iconButton}>

@@ -4,6 +4,7 @@ import type { Category } from "@/lib/constants/category";
 import type { CircleStatus } from "@/lib/constants/circle-status";
 import type { OfficialType } from "@/lib/constants/official-type";
 import type { RecruitmentStatus } from "@/lib/constants/recruitment-status";
+import type { ActivityReportType } from "@/lib/constants/activity-report-type";
 
 /**
  * UI 카드용 단체 요약 — F002 (서클 카드), F001 (검색 결과), F008 (비교 테이블) 에서 사용.
@@ -72,6 +73,34 @@ export interface ShinkanEvent {
   title: string;
   event_date: string;
   is_online: boolean;
+}
+
+/**
+ * 活動レポート — 서클 멤버가 작성하는 활동 후기/공지.
+ * Phase 1.2 시드 SQL 에서 activity_reports 테이블로 매핑 예정.
+ *
+ * 정책 (2026-05): 미니멀 노출 — 작성자명 / 좋아요 수 표시 안 함.
+ * 필요 시 Phase 2 에서 author / like_count 등 필드 추가.
+ */
+export interface ActivityReport {
+  id: string;
+  circle_id: string;
+  /** 글 제목 (예: 「先週の合宿、最高でした！」) */
+  title: string;
+  /** 본문 미리보기 (1-2 줄, 리스트/카드용) */
+  content: string;
+  /** 본문 전체 (상세 페이지 노출, whitespace-pre-line) */
+  body: string;
+  /** 카드 thumbnail (images[0]?.image_url 와 동일하지만 검색·정렬 편의성 위해 유지) */
+  image_url: string | null;
+  /** 상세 페이지 갤러리 — 3-5장 (carousel 또는 grid) */
+  images: { id: string; image_url: string; sort_order: number }[];
+  /** 활동 장소 — 「日吉キャンパス 第2体育館」 같은 구체적 장소명. optional */
+  location?: string;
+  /** 활동 종류 — practice / camp / event / meeting / other. optional */
+  activity_type?: ActivityReportType;
+  /** 작성일 ISO 문자열 (YYYY-MM-DD) — 리스트 정렬 + 메타 표시 */
+  created_at: string;
 }
 
 /**
