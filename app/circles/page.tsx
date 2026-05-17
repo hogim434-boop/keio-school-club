@@ -148,7 +148,6 @@ async function Results({ params }: { params: CirclesSearchParams }) {
     frequency: params.frequency,
     officialType: params.officialType,
     tags: params.tags,
-    feeMax: params.feeMax,
     page: params.page,
     activityDays: params.activityDays,
     memberSize: params.memberSize,

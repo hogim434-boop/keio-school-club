@@ -219,11 +219,9 @@ export const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function Sw
           {/* 단체명 */}
           <h2 className="text-2xl leading-tight font-bold">{circle.name}</h2>
 
-          {/* 활동 빈도 + 年会費 */}
+          {/* 활동 빈도 */}
           <p className="text-muted-foreground text-sm">
             {ACTIVITY_FREQUENCY_LABELS[circle.activity_frequency]}
-            {" · "}
-            年会費 ¥{circle.annual_fee_yen.toLocaleString()}
           </p>
 
           {/* 태그 칩 — 최대 3개 */}

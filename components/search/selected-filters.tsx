@@ -56,7 +56,7 @@ export function SelectedFilters({ draft, setDraft }: SelectedFiltersProps) {
       recruitmentStatus: [],
       activityTimeBand: [],
       sort: undefined,
-      // q, feeMax, page 는 별도 영역이라 유지
+      // q, page 는 별도 영역이라 유지
     }));
   }
 

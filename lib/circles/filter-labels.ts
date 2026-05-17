@@ -23,7 +23,7 @@ export const MEMBER_SIZE_LABELS: Record<MemberSize, string> = Object.fromEntries
 
 /**
  * PRD 「태그 마스터」 시드 7종 — Phase 1.2 T-009 이후 tags 테이블 fetch 로 교체 예정.
- * 사용자 정책: 성별·술·연회비 관련 태그는 제외. 「活動頻度」 섹션과 의미 중복인 週1回(once_a_week) 는 제거.
+ * 사용자 정책: 성별·술 관련 태그는 제외. 「活動頻度」 섹션과 의미 중복인 週1回(once_a_week) 는 제거.
  * slug 는 DB 키, label_ja 는 UI 라벨.
  */
 export const TAG_SEEDS: { slug: string; label_ja: string }[] = [
@@ -42,13 +42,12 @@ export const TAG_LABELS: Record<string, string> = Object.fromEntries(
 );
 
 /** 정렬 옵션 enum */
-export type SortOption = "popular" | "recent" | "cheap" | "large";
+export type SortOption = "popular" | "recent" | "large";
 
 /** 정렬 옵션 — FilterPanel 의 「並び替え」 섹션 + chip 영역의 라벨 매핑에 사용 */
 export const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: "popular", label: "人気順" },
   { value: "recent", label: "新着順" },
-  { value: "cheap", label: "会費安い" },
   { value: "large", label: "会員数多" },
 ];
 

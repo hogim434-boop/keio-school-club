@@ -72,13 +72,6 @@ describe("DUMMY_CIRCLES 상세 필드 (T-012 보강)", () => {
     }
   });
 
-  it("모든 단체의 freshmen_ratio 가 0~100 범위", () => {
-    for (const circle of DUMMY_CIRCLES) {
-      expect(circle.freshmen_ratio, `circle ${circle.id}`).toBeGreaterThanOrEqual(0);
-      expect(circle.freshmen_ratio).toBeLessThanOrEqual(100);
-    }
-  });
-
   it("모든 단체의 갤러리는 4장이며 sort_order 가 0..3 오름차순", () => {
     for (const circle of DUMMY_CIRCLES) {
       expect(circle.images, `circle ${circle.id}`).toHaveLength(4);

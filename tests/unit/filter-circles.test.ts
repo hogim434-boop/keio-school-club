@@ -21,12 +21,6 @@ describe("filterCircles — 단일 필터", () => {
     expect(r.total).toBe(expectedCount);
     expect(r.items.every((c) => c.tags.includes("beginner_ok"))).toBe(true);
   });
-
-  it("feeMax=5000 → annual_fee_yen <= 5000 인 단체만", async () => {
-    const expectedCount = DUMMY_CIRCLES.filter((c) => c.annual_fee_yen <= 5000).length;
-    const r = await filterCircles({ feeMax: 5000 });
-    expect(r.total).toBe(expectedCount);
-  });
 });
 
 describe("filterCircles — 복합 + 페이지네이션", () => {
@@ -132,23 +126,6 @@ describe("filterCircles — 신규 5종 필터", () => {
       if (resultIds.has(circle.id)) {
         expect(circle.activity_time_band, `circle ${circle.id}`).toContain("weekend");
       }
-    }
-  });
-
-  it("sort='cheap' → 결과의 첫 항목 annual_fee_yen 이 마지막 항목보다 작거나 같다", async () => {
-    const r = await filterCircles({ sort: "cheap", pageSize: 30 });
-    expect(r.total).toBeGreaterThan(1); // 단일 결과면 비교 불가
-
-    // 결과 항목을 DUMMY_CIRCLES 에서 annual_fee_yen 로 매핑
-    const feeMap = new Map(DUMMY_CIRCLES.map((c) => [c.id, c.annual_fee_yen]));
-    const fees = r.items.map((item) => feeMap.get(item.id) ?? 0);
-
-    // 첫 항목이 마지막 항목보다 저렴하거나 같아야 함
-    expect(fees[0]).toBeLessThanOrEqual(fees[fees.length - 1]);
-
-    // 전체 배열이 오름차순인지 확인
-    for (let i = 0; i < fees.length - 1; i++) {
-      expect(fees[i], `index ${i}`).toBeLessThanOrEqual(fees[i + 1]);
     }
   });
 });

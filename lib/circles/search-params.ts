@@ -28,7 +28,6 @@ export interface CirclesSearchParams {
   frequency: ActivityFrequency[];
   officialType: OfficialType[];
   tags: string[];
-  feeMax?: number;
   page: number;
   /** 활동 요일 — 일본 한자 1자 토큰 배열 (月/火/水/木/金/土/日) */
   activityDays: string[];
@@ -39,7 +38,7 @@ export interface CirclesSearchParams {
   /** 활동 시간대 다중 선택 */
   activityTimeBand: ActivityTimeBand[];
   /** 정렬 기준 */
-  sort?: "popular" | "recent" | "cheap" | "large";
+  sort?: "popular" | "recent" | "large";
   /**
    * 「すべて」 명시 선택 marker — true 면 결과 모드 강제 (모든 서클 카드 노출).
    * 필터링 자체에는 영향 없음. URL ?all=1 로 직렬화. 검색 페이지 진입 시 default false → 「すべて」 inactive.
@@ -91,9 +90,6 @@ export function parseCirclesSearchParams(raw: RawSearchParams): CirclesSearchPar
 
   const tags = splitCsv(pickString(raw, "tags"));
 
-  const feeMaxRaw = pickString(raw, "fee_max");
-  const feeMax = feeMaxRaw && /^\d+$/.test(feeMaxRaw) ? Number(feeMaxRaw) : undefined;
-
   const q = pickString(raw, "q")?.trim() || undefined;
 
   const pageRaw = pickString(raw, "page");
@@ -123,9 +119,9 @@ export function parseCirclesSearchParams(raw: RawSearchParams): CirclesSearchPar
     timeBandAllow.has(v)
   ) as ActivityTimeBand[];
 
-  // 정렬: sort=popular|recent|cheap|large
+  // 정렬: sort=popular|recent|large
   const sortRaw = pickString(raw, "sort");
-  const SORT_OPTIONS = ["popular", "recent", "cheap", "large"] as const;
+  const SORT_OPTIONS = ["popular", "recent", "large"] as const;
   type SortOption = (typeof SORT_OPTIONS)[number];
   const sort = SORT_OPTIONS.includes(sortRaw as SortOption) ? (sortRaw as SortOption) : undefined;
 
@@ -138,7 +134,6 @@ export function parseCirclesSearchParams(raw: RawSearchParams): CirclesSearchPar
     frequency,
     officialType,
     tags,
-    feeMax,
     page,
     activityDays,
     memberSize,
@@ -169,9 +164,6 @@ export function buildCirclesUrl(params: Partial<CirclesSearchParams>): string {
   }
   if (params.tags && params.tags.length > 0) {
     search.set("tags", params.tags.join(","));
-  }
-  if (params.feeMax !== undefined && params.feeMax > 0) {
-    search.set("fee_max", String(params.feeMax));
   }
   if (params.page !== undefined && params.page > 1) {
     search.set("page", String(params.page));
@@ -213,7 +205,7 @@ export function buildSearchUrl(params: Partial<CirclesSearchParams>): string {
 }
 
 /**
- * 추천 모드 판정 — 검색어/카테고리/활동빈도/공인구분/태그/회비/페이지 + 신규 5필드 중
+ * 추천 모드 판정 — 검색어/카테고리/활동빈도/공인구분/태그/페이지 + 신규 5필드 중
  * 하나라도 활성이면 false(결과 모드), 모두 기본값이면 true(추천 모드).
  * countAppliedFilters 와 달리 category 와 page 도 포함하는 독립 함수.
  */
@@ -225,7 +217,6 @@ export function isDiscoverMode(p: CirclesSearchParams): boolean {
     p.frequency.length === 0 &&
     p.officialType.length === 0 &&
     p.tags.length === 0 &&
-    p.feeMax === undefined &&
     p.page === 1 &&
     // 신규 5필드 — 모두 기본값이어야 추천 모드
     p.activityDays.length === 0 &&
@@ -247,7 +238,6 @@ export function countAppliedFilters(params: CirclesSearchParams): number {
   if (params.frequency.length > 0) n += 1;
   if (params.officialType.length > 0) n += 1;
   if (params.tags.length > 0) n += 1;
-  if (params.feeMax !== undefined) n += 1;
   // 신규 5필드 카운트
   if (params.activityDays.length > 0) n += 1;
   if (params.memberSize !== undefined) n += 1;

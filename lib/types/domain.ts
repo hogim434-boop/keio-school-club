@@ -18,7 +18,6 @@ export interface CircleSummary {
   category: Category;
   official_type: OfficialType;
   activity_frequency: ActivityFrequency;
-  annual_fee_yen: number;
   cover_image_url: string | null;
   view_count: number;
   inquiry_count: number;
@@ -28,7 +27,9 @@ export interface CircleSummary {
 
 /**
  * UI 상세용 단체 정보 — F003 (서클 상세 페이지) 에서 사용.
- * CircleSummary 를 확장하여 개요·요약 카드 5종·연락처·갤러리·신환 일정·상태·작성자를 추가.
+ * CircleSummary 를 확장하여 개요·요약 카드·연락처·갤러리·신환 일정·상태·작성자를 추가.
+ *
+ * 정책: annual_fee_yen / freshmen_ratio 는 표시·등록 모두 폐기 (2026-05 결정).
  */
 export interface CircleDetail extends CircleSummary {
   /** 단체 개요·활동 설명 (free text, 줄바꿈 보존) */
@@ -37,8 +38,6 @@ export interface CircleDetail extends CircleSummary {
   activity_days: string;
   /** 회원 수 — 「30名」 같이 표시. T-018 등록 폼에서 입력 받음 */
   member_count: number;
-  /** 신입생 비율 — 0~100 (% 단위). 카드에 「40%」 로 표시 */
-  freshmen_ratio: number;
   contact_instagram: string | null;
   contact_x: string | null;
   contact_line: string | null;

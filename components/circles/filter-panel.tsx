@@ -153,7 +153,6 @@ export function FilterPanel({ initial, mode, onApply }: FilterPanelProps) {
       frequency: [],
       officialType: [],
       tags: [],
-      feeMax: undefined,
       page: 1,
       activityDays: [],
       memberSize: undefined,
@@ -283,7 +282,7 @@ export function FilterPanel({ initial, mode, onApply }: FilterPanelProps) {
           </div>
         </section>
 
-        {/* §7 タグ — 다중 선택, 풀-블리드 가로 스크롤 (7옵션). 年会費 섹션 제거됨 */}
+        {/* §7 タグ — 다중 선택, 풀-블리드 가로 스크롤 (7옵션) */}
         <section className="space-y-2">
           <h3 className="text-sm font-semibold">タグ</h3>
           <div className="-mx-4 flex snap-x snap-mandatory [scroll-padding-inline:1.25rem] gap-3 overflow-x-auto [overscroll-behavior-x:contain] px-5 pb-1">
