@@ -317,12 +317,10 @@ export function FilterPanel({ initial, mode, onApply }: FilterPanelProps) {
 
       {/* ── 풋터: 풀-width 검은 「適用」 버튼 ──
           sheet 모드만 sticky bottom — Sheet 가 자체 스크롤 컨테이너이기 때문. sidebar 는 일반 흐름. */}
-      <div
-        className={cn("border-t pt-3 pb-2", mode === "sheet" && "bg-background sticky bottom-0")}
-      >
+      <div className={cn("pt-3 pb-2", mode === "sheet" && "bg-background sticky bottom-0")}>
         <Button
           onClick={handleApply}
-          className="bg-foreground text-background hover:bg-foreground/90 h-12 w-full text-base font-semibold"
+          className="bg-foreground text-background hover:bg-foreground/90 h-12 w-full rounded-full text-base font-semibold"
         >
           適用
         </Button>
