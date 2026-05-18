@@ -211,7 +211,7 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
 | **T-005** | DB 스키마 마이그레이션 1차 (10 테이블 + 8 enum) ✅           | completed | 1d   | T-003                       | 전 기능                |
 | **T-006** | RLS 정책 분리·`is_admin()` 헬퍼 ✅                           | completed | 1d   | T-005                       | F005, F006, F007, F010 |
 | **T-007** | RPC `increment_inquiry_count` + `inquiry_events` 디바운스 ✅ | completed | 0.5d | T-005, T-006                | F012                   |
-| **T-008** | Storage 버킷·정책·EXIF 제거                                  | pending   | 0.5d | T-005                       | F003, F005             |
+| **T-008** | Storage 버킷·정책·EXIF 제거 ✅                               | completed | 0.5d | T-005                       | F003, F005             |
 | **T-009** | 시드 30개 + 태그 10종 + **UI 와이어업 (더미 → 실제 fetch)**  | pending   | 1.5d | T-005, T-008, T-010 ~ T-014 | F002, F004, F007, F012 |
 
 - **T-005: DB 스키마 마이그레이션 1차** ✅
@@ -280,10 +280,32 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
     - **`npm run lint` / `npm run build` / `npm run test` 모두 통과**.
     - **잔여 advisor**: (1) `inquiry_events` RLS no policy INFO — 의도된 deny 설계 유지. (2) `increment_view_count` anon EXECUTE WARN — /shuffle 비로그인 정책 의도 (T-015 anchor). (3) `increment_inquiry_count` / `increment_view_count` / `is_admin` authenticated EXECUTE WARN — RPC 공개 API 설계 의도. (4) Auth Leaked Password Protection WARN — T-015 범위.
 
-- **T-008: Storage 버킷·정책·EXIF 제거**
+- **T-008: Storage 버킷·정책·EXIF 제거** ✅
   - 검증 이슈 **M-3** 대응: `circles-public` 퍼블릭 버킷 생성, path prefix `circles/{circle_id}/...` 로 RLS 적용 (owner / admin 만 write).
-  - 업로드 시 EXIF 제거 (Sharp 또는 클라이언트 측 Canvas) — 위치 정보 노출 방지.
-  - 이미지 최대 크기 4MB, 형식 `image/jpeg`, `image/png`, `image/webp` 만 허용.
+  - **버킷 설정**: 이름 `circles-public`, public=true, file_size_limit=4MB, allowed_mime_types=[image/jpeg, image/png, image/webp].
+  - **path 구조**:
+    - 커버 이미지: `circles/{circle_id}/cover.jpg` (upsert)
+    - 갤러리: `circles/{circle_id}/gallery/{uuid}.jpg`
+    - 리포트: `circles/{circle_id}/reports/{report_id}/{uuid}.jpg`
+  - **RLS 정책 4개** (`storage.objects`):
+    - `circles_public_select_all` — SELECT, anon + authenticated 허용 (퍼블릭 조회)
+    - `circles_public_insert_owner_or_admin` — INSERT, authenticated, prefix='circles/' + owner/admin 검증
+    - `circles_public_update_owner_or_admin` — UPDATE, authenticated, owner/admin 검증
+    - `circles_public_delete_owner_or_admin` — DELETE, authenticated, owner/admin 검증
+    - **구현 주의**: EXISTS 서브쿼리 내 `name` 컬럼이 `circles.name` 으로 바인딩되는 PostgreSQL 파서 동작 확인 → `public.storage_circles_public_check_prefix` / `check_owner` 헬퍼 함수(SECURITY INVOKER, SET search_path='')로 모호성 해소 (M-008b/c/d).
+  - **EXIF strip**: 클라이언트 Canvas API (`lib/storage/strip-exif.ts`). 브라우저에서 drawImage → toBlob('image/jpeg', 0.9) 로 EXIF 제거, 모든 출력 image/jpeg 표준화.
+  - **upload 헬퍼 3종** (`lib/storage/strip-exif.ts`):
+    - `uploadCoverImage(supabase, circleId, file)` — cover.jpg upsert
+    - `uploadGalleryImage(supabase, circleId, file)` — gallery/{uuid}.jpg
+    - `uploadReportImage(supabase, circleId, reportId, file)` — reports/{reportId}/{uuid}.jpg
+  - **`next.config.ts` remotePatterns**: `wmiaxjgitpahribjrdyh.supabase.co/storage/v1/object/public/circles-public/**` 추가 (picsum.photos 기존 유지, T-009 시점 제거).
+  - **단위 테스트** (`tests/unit/strip-exif.test.ts`): `validateUpload` 4케이스 PASS (ok/oversize/unsupported-MIME/null). `stripImageExif` Canvas 는 jsdom 한계로 T-018 Playwright 통합 테스트 예정.
+  - **T-018 anchor**: 동아리 등록 폼에서 `uploadCoverImage` / `uploadGalleryImage` 헬퍼 호출 연결 예정.
+  - **완료 (2026-05-18)**:
+    - **마이그레이션 4건 적용**: `008_storage_bucket_and_policies` (버킷 + RLS 4정책), `008b_fix_storage_rls_name_ambiguity` (정책 재설계 1차), `008c_fix_storage_rls_with_helper_fn` (헬퍼 함수 도입), `008d_fix_helper_fn_search_path` (search_path 고정).
+    - **SQL 시나리오 테스트 5건 PASS**: S1(anon SELECT 0행 허용) / S2(anon INSERT 42501) / S3(user-B INSERT to user-A circle 42501) / S4(owner INSERT 성공) / S5(wrong prefix 42501). fixture ROLLBACK 정리 완료.
+    - **`npm run lint` / `npm run build` / `npm run test` (55건) 모두 통과**.
+    - **잔여 advisor**: (1) `inquiry_events` RLS no policy INFO — 의도된 deny 설계 유지. (2) `public_bucket_allows_listing` WARN — 퍼블릭 버킷 의도된 설계 (파일 URL 직접 접근). (3) `increment_view_count` anon EXECUTE WARN — /shuffle 비로그인 정책 의도 (T-015 anchor). (4) `increment_inquiry_count` / `increment_view_count` / `is_admin` authenticated EXECUTE WARN — RPC 공개 API 설계 의도. (5) Auth Leaked Password Protection WARN — T-015 범위.
 
 - **T-009: 시드 30개 + 태그 10종 + UI 와이어업 (더미 → 실제 fetch)** — **본 Phase 의 통합 지점**
   - **(A) DB 시드 적재**
