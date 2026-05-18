@@ -170,7 +170,7 @@ export function FilterPanel({ initial, mode, onApply }: FilterPanelProps) {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col overflow-x-hidden">
       {/* ── 패널 헤더: 「フィルター」 + 「リセット」 ── */}
       <header className="flex items-center justify-between pb-4">
         <h2 className="text-lg font-semibold">フィルター</h2>
@@ -186,7 +186,12 @@ export function FilterPanel({ initial, mode, onApply }: FilterPanelProps) {
       {/* ── 스크롤 영역 ──
           카테고리는 검색 페이지의 SearchCategories 그리드가 담당하므로 본 패널에서 제거.
           lg+ /circles 사이드바에서는 헤더 🔍 → /search 진입으로 카테고리 변경. */}
-      <div className={cn("flex-1 space-y-6", mode === "sheet" ? "overflow-y-auto" : "")}>
+      <div
+        className={cn(
+          "flex-1 space-y-6 overflow-x-hidden",
+          mode === "sheet" ? "overflow-y-auto" : ""
+        )}
+      >
         {/* §1 募集状態 — 다중 선택, 풀-블리드 가로 스크롤 */}
         <section className="space-y-2">
           <h3 className="text-sm font-semibold">募集状態</h3>
