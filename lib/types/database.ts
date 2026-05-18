@@ -4,7 +4,7 @@
  * 본 파일은 **mcp__supabase__generate_typescript_types 자동 생성** 결과를 그대로 반영합니다.
  * 수동 편집 금지. 스키마 변경 시 (마이그레이션 후) 같은 MCP 도구로 재생성하세요.
  *
- * - 마지막 동기화: T-005 (2026-05-18, 마이그레이션 005_01 ~ 005_05b 적용 후)
+ * - 마지막 동기화: T-007 (2026-05-18, 마이그레이션 007_rpc_increment_counts + 007b + 007c 적용 후)
  * - 도메인 타입은 `lib/types/domain.ts` — 본 파일의 `Tables<>` 를 기반으로 작성
  * - enum 값 SSOT 는 `lib/constants/*.ts` — DB enum 과 1:1 일치 확인됨
  */
@@ -405,7 +405,15 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      increment_inquiry_count: {
+        Args: { p_circle_id: string };
+        Returns: undefined;
+      };
+      increment_view_count: {
+        Args: { p_circle_id: string };
+        Returns: undefined;
+      };
+      is_admin: { Args: { uid?: string }; Returns: boolean };
     };
     Enums: {
       activity_frequency_enum: "weekly_1" | "weekly_2_3" | "monthly";

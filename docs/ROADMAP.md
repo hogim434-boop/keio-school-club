@@ -206,13 +206,13 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
 > Phase 1.1 에서 만든 UI 가 사용 중인 더미 데이터를 **실제 Supabase fetch / Server Action / RPC** 로 교체한다.
 > 스키마 → RLS → RPC → Storage 가 모두 준비된 후, 마지막 **T-009** 에서 시드 적재와 UI 와이어업을 한꺼번에 처리하여 정합성 확인 비용을 한 번에 모은다.
 
-| ID        | 작업                                                        | 상태      | 공수 | 선행                        | 관련 기능              |
-| --------- | ----------------------------------------------------------- | --------- | ---- | --------------------------- | ---------------------- |
-| **T-005** | DB 스키마 마이그레이션 1차 (10 테이블 + 8 enum) ✅          | completed | 1d   | T-003                       | 전 기능                |
-| **T-006** | RLS 정책 분리·`is_admin()` 헬퍼 ✅                          | completed | 1d   | T-005                       | F005, F006, F007, F010 |
-| **T-007** | RPC `increment_inquiry_count` + `inquiry_events` 디바운스   | pending   | 0.5d | T-005, T-006                | F012                   |
-| **T-008** | Storage 버킷·정책·EXIF 제거                                 | pending   | 0.5d | T-005                       | F003, F005             |
-| **T-009** | 시드 30개 + 태그 10종 + **UI 와이어업 (더미 → 실제 fetch)** | pending   | 1.5d | T-005, T-008, T-010 ~ T-014 | F002, F004, F007, F012 |
+| ID        | 작업                                                         | 상태      | 공수 | 선행                        | 관련 기능              |
+| --------- | ------------------------------------------------------------ | --------- | ---- | --------------------------- | ---------------------- |
+| **T-005** | DB 스키마 마이그레이션 1차 (10 테이블 + 8 enum) ✅           | completed | 1d   | T-003                       | 전 기능                |
+| **T-006** | RLS 정책 분리·`is_admin()` 헬퍼 ✅                           | completed | 1d   | T-005                       | F005, F006, F007, F010 |
+| **T-007** | RPC `increment_inquiry_count` + `inquiry_events` 디바운스 ✅ | completed | 0.5d | T-005, T-006                | F012                   |
+| **T-008** | Storage 버킷·정책·EXIF 제거                                  | pending   | 0.5d | T-005                       | F003, F005             |
+| **T-009** | 시드 30개 + 태그 10종 + **UI 와이어업 (더미 → 실제 fetch)**  | pending   | 1.5d | T-005, T-008, T-010 ~ T-014 | F002, F004, F007, F012 |
 
 - **T-005: DB 스키마 마이그레이션 1차** ✅
   - `supabase` MCP `list_tables` 로 기존 상태(`instruments` 만 존재) 확인 후, `apply_migration` 으로 **10개 테이블** 생성 (핵심 8 + 보조 2):
@@ -261,11 +261,24 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
     - **SQL 시나리오 테스트 20건 PASS**: anon/non-owner/owner/admin 4 컨텍스트 × SELECT·INSERT·UPDATE·DELETE·trigger·deny-by-default 시나리오 전부 기대값 일치. fixture 정리 완료.
     - **잔여 advisor**: (1) `inquiry_events` RLS no policy INFO — 의도된 deny (T-007 범위). (2) `is_admin()` anon/authenticated EXECUTE WARN — RLS USING절 평가에 필수이므로 불가피. (3) Auth Leaked Password Protection WARN — T-015 범위.
 
-- **T-007: RPC `increment_inquiry_count` + `inquiry_events` 디바운스**
-  - PRD 「Postgres 함수 (RPC)」 절의 SQL 그대로 `apply_migration` 으로 등록.
-  - 검증 이슈 **M-NEW-2** 대응으로 `inquiry_events(user_id uuid, circle_id uuid, day date, primary key(user_id, circle_id, day))` 테이블 추가 후, RPC 내부에서 동일 (user, circle, day) 가 이미 존재하면 카운트 증가를 스킵.
-  - `anon` 권한 회수 + `authenticated` 만 EXECUTE 허용.
-  - **테스트**: 같은 사용자가 동일 서클을 하루 두 번 호출 → 두 번째는 `inquiry_count` 가 증가하지 않음을 Playwright + 직접 SQL 검증.
+- **T-007: RPC `increment_inquiry_count` + `inquiry_events` 디바운스** ✅
+  - PRD 「Postgres 함수 (RPC)」 절 line 410-466 의 SQL 그대로 `apply_migration` 으로 등록. 검증 이슈 **M-NEW-2** 완전 해소.
+  - **RPC 시그니처**:
+    - `public.increment_inquiry_count(p_circle_id uuid) RETURNS void` — SECURITY DEFINER, search_path=public, **authenticated 전용 EXECUTE**.
+    - `public.increment_view_count(p_circle_id uuid) RETURNS void` — SECURITY DEFINER, search_path=public, **anon+authenticated EXECUTE** (T-015 /shuffle 비로그인 정책 anchor).
+  - **디바운스 동작** (`increment_inquiry_count`):
+    1. `auth.uid() IS NULL` → `RAISE EXCEPTION 'unauthorized' (42501)` — anon 차단.
+    2. `circles WHERE id=p_circle_id AND status='approved'` NOT EXISTS → `RETURN` — pending/rejected/non-existent 조용히 무시.
+    3. `INSERT INTO inquiry_events (user_id, circle_id, day) VALUES (..., CURRENT_DATE) ON CONFLICT (user_id, circle_id, day) DO NOTHING` — PK 충돌 시 `FOUND=false`.
+    4. `IF FOUND THEN UPDATE circles SET inquiry_count = inquiry_count + 1` — 새 row 삽입된 경우에만 카운트 증가.
+  - **컬럼 권한 보강** (T-007c 보강 마이그레이션): T-006 컬럼 REVOKE가 테이블 수준 GRANT ALL로 무효화된 현상을 발견하여, `REVOKE UPDATE ON circles FROM anon, authenticated` 후 허용 컬럼 17개만 `GRANT UPDATE ... TO authenticated` 재부여. `inquiry_count` / `view_count` / `status` 등은 SECURITY DEFINER RPC 및 관리자 경로로만 갱신 가능.
+  - **T-009 anchor**: `components/circles/join-channel-modal.tsx` 의 클라이언트측 카운트 로직 → `increment_inquiry_count` RPC 호출 Server Action 으로 교체 (T-009 와이어업 시점).
+  - **완료 (2026-05-18)**:
+    - **마이그레이션 3건 적용**: `007_rpc_increment_counts` (RPC 2종), `007b_revoke_inquiry_anon_safe` (anon EXECUTE 자동부여 Supabase 현상 보강 REVOKE), `007c_fix_circles_column_revoke` (컬럼 권한 재설계).
+    - **SQL 시나리오 테스트 12건 PASS**: S1(anon 42501) / S2~S4(디바운스 시퀀스 1→1→2) / S5(pending 무시) / S6~S7(view +1+1) / S8(pending view 무시) / S9~S10(컬럼 REVOKE 42501) / S11(owner name 변경 성공) / S12(non-existent uuid 무시). fixture ROLLBACK 정리 완료.
+    - **`lib/types/database.ts` 갱신**: `Functions` 객체에 `increment_inquiry_count` / `increment_view_count` / `is_admin` 3개 추가. T-007 동기화 날짜 반영.
+    - **`npm run lint` / `npm run build` / `npm run test` 모두 통과**.
+    - **잔여 advisor**: (1) `inquiry_events` RLS no policy INFO — 의도된 deny 설계 유지. (2) `increment_view_count` anon EXECUTE WARN — /shuffle 비로그인 정책 의도 (T-015 anchor). (3) `increment_inquiry_count` / `increment_view_count` / `is_admin` authenticated EXECUTE WARN — RPC 공개 API 설계 의도. (4) Auth Leaked Password Protection WARN — T-015 범위.
 
 - **T-008: Storage 버킷·정책·EXIF 제거**
   - 검증 이슈 **M-3** 대응: `circles-public` 퍼블릭 버킷 생성, path prefix `circles/{circle_id}/...` 로 RLS 적용 (owner / admin 만 write).
