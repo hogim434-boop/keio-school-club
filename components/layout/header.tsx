@@ -14,6 +14,7 @@ import { KCircleLogo } from "@/components/layout/kcircle-logo";
  *
  * Hide 대상 경로:
  * - 서클 상세 페이지 (/circles/{uuid}) — 메루카리 풀-블리드 cover 패턴
+ * - 활동 리포트 상세 페이지 (/circles/{uuid}/reports/{uuid}) — 콘텐츠 중심 페이지, floating 뒤로가기 사용
  * - 검색 페이지 (/search) — 당근앱 패턴, SearchPageHeader 가 글로벌 헤더 역할 인계
  *
  * pathname 은 middleware(proxy.ts) 가 설정한 x-pathname request header 에서 읽음.
@@ -24,10 +25,13 @@ export async function Header() {
   const headersList = await headers();
   const pathname = headersList.get("x-pathname") ?? "";
   const isCircleDetail = /^\/circles\/[0-9a-f-]+$/i.test(pathname) && pathname !== "/circles/new";
+  // 활동 리포트 상세 — /circles/{uuid}/reports/{uuid} 패턴. 콘텐츠 중심 페이지라 글로벌 헤더 미노출
+  // reportId 는 더미 데이터에서 `{uuid}-report-{n}` 형태 → [\w-]+ 로 영문 포함 매칭
+  const isCircleReportDetail = /^\/circles\/[0-9a-f-]+\/reports\/[\w-]+$/i.test(pathname);
   const isSearch = pathname === "/search";
   // /shuffle — Tinder 스타일 swipe deck 풀스크린 패턴, 글로벌 헤더 미노출
   const isShuffle = pathname === "/shuffle";
-  if (isCircleDetail || isSearch || isShuffle) return null;
+  if (isCircleDetail || isCircleReportDetail || isSearch || isShuffle) return null;
 
   // 우측 아이콘 공통 클래스 — 40×40 hit target + focus ring + hover 반응
   const iconButton =
