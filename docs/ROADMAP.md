@@ -30,8 +30,6 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
 > **🟦 모바일 퍼스트 (전 ROADMAP 의 최우선 설계 원칙)**
 > 본 서비스는 일본 대학생이 스마트폰으로 활용하는 것을 전제로 한다. 모든 UI 작업의 기본 viewport 는 **360–428px**(iPhone SE ~ iPhone Pro Max / Android 표준)이며, 데스크탑(`md:` 이상, 768px+) 은 보조 환경으로서 progressive enhancement 로만 다룬다. 모든 카드·폼·CTA 는 우선 모바일 1열 레이아웃·44px 이상 터치 타깃·safe-area inset 을 보장한 뒤, 가용 너비가 늘어남에 따라 다열 그리드·사이드바·인라인 CTA 로 확장한다.
 
-본 ROADMAP은 [`docs/PRD.md`](./PRD.md)의 단일 진실 공급원(SSOT)에 기반하며, PRD의 기능 ID(F001~F012)와 본 문서의 작업 ID(T-XXX)는 끝부분의 매핑 테이블을 통해 양방향으로 추적할 수 있습니다.
-
 ---
 
 ## 개발 워크플로우
@@ -211,7 +209,7 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
 | ID        | 작업                                                        | 상태      | 공수 | 선행                        | 관련 기능              |
 | --------- | ----------------------------------------------------------- | --------- | ---- | --------------------------- | ---------------------- |
 | **T-005** | DB 스키마 마이그레이션 1차 (10 테이블 + 8 enum) ✅          | completed | 1d   | T-003                       | 전 기능                |
-| **T-006** | RLS 정책 분리·`is_admin()` 헬퍼                             | pending   | 1d   | T-005                       | F005, F006, F007, F010 |
+| **T-006** | RLS 정책 분리·`is_admin()` 헬퍼 ✅                          | completed | 1d   | T-005                       | F005, F006, F007, F010 |
 | **T-007** | RPC `increment_inquiry_count` + `inquiry_events` 디바운스   | pending   | 0.5d | T-005, T-006                | F012                   |
 | **T-008** | Storage 버킷·정책·EXIF 제거                                 | pending   | 0.5d | T-005                       | F003, F005             |
 | **T-009** | 시드 30개 + 태그 10종 + **UI 와이어업 (더미 → 실제 fetch)** | pending   | 1.5d | T-005, T-008, T-010 ~ T-014 | F002, F004, F007, F012 |
@@ -238,12 +236,30 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
   - **완료 (2026-05-18)**: (a) 6건 마이그레이션 적용 — `005_01_extensions_enums`, `005_02_profiles_circles`, `005_03_circle_satellite`, `005_04_activity_reports`, `005_05_misc_indexes_rls`, `005_05b_revoke_handle_new_user` (security advisor 보강). (b) `mcp__supabase__generate_typescript_types` 자동 생성 결과로 `lib/types/database.ts` 무손실 교체 — 수동 정의 → 12개 Tables + 8개 Enums + `Tables<>`/`TablesInsert<>`/`TablesUpdate<>`/`Enums<>`/`CompositeTypes<>` 헬퍼 + `Constants` 런타임 객체. (c) `npm run lint` / `npm run build` (27 페이지) / `npm run test` (4 files / 51 tests) 모두 통과. (d) `get_advisors security` 남은 항목: RLS policy missing INFO 11건 (T-006 예상) + Auth Leaked Password Protection WARN 1건 (Supabase Auth 대시보드 설정, T-015 범위).
   - **See**: `docs/tasks/T-005-db-schema-migration.md`
 
-- **T-006: RLS 정책 분리·`is_admin()` 헬퍼**
+- **T-006: RLS 정책 분리·`is_admin()` 헬퍼** ✅
   - 검증 이슈 **H-2** 대응: 모든 테이블에 대해 `select / insert / update / delete` 정책을 명시적으로 분리.
   - `public.is_admin()` SECURITY DEFINER 헬퍼 함수 추가 (RLS 정책 내부에서 재귀 호출 방지).
   - `circles.status` 가 `'approved'` 인 행만 익명 select 가능, owner 는 자신의 모든 status 행, admin 은 전체.
   - `circles` update 정책에 `inquiry_count` 컬럼 변경 금지를 명시 (RPC 함수만 갱신).
   - **테스트**: 익명 / 일반 사용자 / owner / admin 4개 컨텍스트에서 각 테이블의 select·insert·update·delete 시도 → 기대값과 일치하는지 SQL 단위 테스트.
+  - **완료 (2026-05-18)**:
+    - **is_admin() 시그니처**: `public.is_admin(uid uuid DEFAULT auth.uid()) RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path = public STABLE` — 정책 USING절에서 인수 없이 호출 가능, SECURITY DEFINER로 profiles RLS 우회 없이 읽기, STABLE로 트랜잭션 내 캐시.
+    - **정책 매트릭스 (26개, 10개 테이블)**:
+      - `profiles` (3): select_own_or_admin / update_own / delete_admin
+      - `circles` (4): select_public_or_owner_or_admin / insert_authenticated / update_owner_or_admin / delete_owner_or_admin
+      - `tags` (2): select_all / write_admin
+      - `circle_tags` (2): select_visible_circle / write_owner_or_admin
+      - `circle_images` (2): select_visible_circle / write_owner_or_admin
+      - `shinkan_events` (2): select_visible_circle / write_owner_or_admin
+      - `favorites` (3): select_own / insert_own / delete_own
+      - `activity_reports` (4): select_public / insert_owner_or_admin / update_owner_or_admin / delete_owner_or_admin
+      - `activity_report_images` (2): select_public / write_owner_or_admin (2단계 EXISTS: report → circle)
+      - `app_settings` (2): select_all / write_admin
+    - **circles_status_admin_check 트리거**: BEFORE UPDATE ON circles, `NEW.status IS DISTINCT FROM OLD.status AND NOT is_admin()` → RAISE EXCEPTION 'Only admin can change circle status' (ERRCODE=42501). RLS UPDATE 정책이 OLD/NEW 비교 불가능한 한계를 트리거로 보완.
+    - **inquiry_events 의도된 deny**: 정책 0건 유지. RLS 활성화 + 정책 없음 = 모든 역할 기본 거부. T-007 `increment_inquiry_count` RPC (SECURITY DEFINER)만 INSERT 가능. `get_advisors` INFO 1건 잔여 — 의도된 설계.
+    - **마이그레이션 5건 적용**: `006_01_is_admin_helper_and_column_revoke`, `006_01b_is_admin_revoke_fix`, `006_01c_is_admin_grant_anon_safe`, `006_02_profiles_circles_satellite_policies`, `006_03_activity_reports_misc_policies`, `006_04_revoke_trigger_fn_public`.
+    - **SQL 시나리오 테스트 20건 PASS**: anon/non-owner/owner/admin 4 컨텍스트 × SELECT·INSERT·UPDATE·DELETE·trigger·deny-by-default 시나리오 전부 기대값 일치. fixture 정리 완료.
+    - **잔여 advisor**: (1) `inquiry_events` RLS no policy INFO — 의도된 deny (T-007 범위). (2) `is_admin()` anon/authenticated EXECUTE WARN — RLS USING절 평가에 필수이므로 불가피. (3) Auth Leaked Password Protection WARN — T-015 범위.
 
 - **T-007: RPC `increment_inquiry_count` + `inquiry_events` 디바운스**
   - PRD 「Postgres 함수 (RPC)」 절의 SQL 그대로 `apply_migration` 으로 등록.
