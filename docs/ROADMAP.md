@@ -206,13 +206,13 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
 > Phase 1.1 에서 만든 UI 가 사용 중인 더미 데이터를 **실제 Supabase fetch / Server Action / RPC** 로 교체한다.
 > 스키마 → RLS → RPC → Storage 가 모두 준비된 후, 마지막 **T-009** 에서 시드 적재와 UI 와이어업을 한꺼번에 처리하여 정합성 확인 비용을 한 번에 모은다.
 
-| ID        | 작업                                                         | 상태      | 공수 | 선행                        | 관련 기능              |
-| --------- | ------------------------------------------------------------ | --------- | ---- | --------------------------- | ---------------------- |
-| **T-005** | DB 스키마 마이그레이션 1차 (10 테이블 + 8 enum) ✅           | completed | 1d   | T-003                       | 전 기능                |
-| **T-006** | RLS 정책 분리·`is_admin()` 헬퍼 ✅                           | completed | 1d   | T-005                       | F005, F006, F007, F010 |
-| **T-007** | RPC `increment_inquiry_count` + `inquiry_events` 디바운스 ✅ | completed | 0.5d | T-005, T-006                | F012                   |
-| **T-008** | Storage 버킷·정책·EXIF 제거 ✅                               | completed | 0.5d | T-005                       | F003, F005             |
-| **T-009** | 시드 30개 + 태그 10종 + **UI 와이어업 (더미 → 실제 fetch)**  | pending   | 1.5d | T-005, T-008, T-010 ~ T-014 | F002, F004, F007, F012 |
+| ID        | 작업                                                           | 상태      | 공수 | 선행                        | 관련 기능              |
+| --------- | -------------------------------------------------------------- | --------- | ---- | --------------------------- | ---------------------- |
+| **T-005** | DB 스키마 마이그레이션 1차 (10 테이블 + 8 enum) ✅             | completed | 1d   | T-003                       | 전 기능                |
+| **T-006** | RLS 정책 분리·`is_admin()` 헬퍼 ✅                             | completed | 1d   | T-005                       | F005, F006, F007, F010 |
+| **T-007** | RPC `increment_inquiry_count` + `inquiry_events` 디바운스 ✅   | completed | 0.5d | T-005, T-006                | F012                   |
+| **T-008** | Storage 버킷·정책·EXIF 제거 ✅                                 | completed | 0.5d | T-005                       | F003, F005             |
+| **T-009** | 시드 30개 + 태그 10종 + **UI 와이어업 (더미 → 실제 fetch)** ✅ | completed | 1.5d | T-005, T-008, T-010 ~ T-014 | F002, F004, F007, F012 |
 
 - **T-005: DB 스키마 마이그레이션 1차** ✅
   - `supabase` MCP `list_tables` 로 기존 상태(`instruments` 만 존재) 확인 후, `apply_migration` 으로 **10개 테이블** 생성 (핵심 8 + 보조 2):
@@ -307,7 +307,7 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
     - **`npm run lint` / `npm run build` / `npm run test` (55건) 모두 통과**.
     - **잔여 advisor**: (1) `inquiry_events` RLS no policy INFO — 의도된 deny 설계 유지. (2) `public_bucket_allows_listing` WARN — 퍼블릭 버킷 의도된 설계 (파일 URL 직접 접근). (3) `increment_view_count` anon EXECUTE WARN — /shuffle 비로그인 정책 의도 (T-015 anchor). (4) `increment_inquiry_count` / `increment_view_count` / `is_admin` authenticated EXECUTE WARN — RPC 공개 API 설계 의도. (5) Auth Leaked Password Protection WARN — T-015 범위.
 
-- **T-009: 시드 30개 + 태그 10종 + UI 와이어업 (더미 → 실제 fetch)** — **본 Phase 의 통합 지점**
+- **T-009: 시드 30개 + 태그 10종 + UI 와이어업 (더미 → 실제 fetch)** ✅ — **본 Phase 의 통합 지점**
   - **(A) DB 시드 적재**
     - PRD 「더미 데이터 정책」의 카테고리 분포대로 `apply_migration` 실행.
     - 태그 10종은 PRD의 SQL 그대로 insert.
@@ -323,6 +323,15 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
   - **(C) 회귀 검증**
     - Phase 1.1 의 Playwright 시나리오를 그대로 재실행 → 더미가 아닌 실제 DB 에서 동일 결과가 나오는지 확인.
     - 동일 사용자가 같은 서클을 즉시 재호출 → `inquiry_count` 가 1만 증가하는지 DB 직접 SELECT.
+  - **완료 (2026-05-19, commit `f549c71`)**:
+    - **(시드)** 4 마이그 적용 — `009_00_tag_kind_enum_extend` (tag_kind enum 보강), `009_01_tags_seed` (10종), `009_02_circles_satellite_seed` (30 circles + 93 circle_tags + 120 circle_images + 10 shinkan_events, owner_id=NULL, status='approved', id 고정 UUID `00000000-0000-4000-8000-{seq}` lib/dummy 일치), `009_03_activity_reports_seed` (120 reports + 360 images). picsum.photos seed URL 그대로 (Storage 업로드는 T-018).
+    - **(queries 모듈)** `lib/supabase/queries/circles.ts` (7 함수: getPopularCircles / getNewCircles / getCirclesByCategory / getCircleById / filterCircles / getFavorites / isFavorited) + `lib/supabase/queries/activity-reports.ts` (2 함수). Supabase JS JOIN nested shape → CircleSummary/Detail/ActivityReport mapping.
+    - **(페이지 와이어업)** `app/circles/page.tsx`, `circles/[id]/page.tsx`, `circles/[id]/reports/[reportId]/page.tsx`, `shuffle/page.tsx`, `search/page.tsx` 의 더미 import → Supabase 쿼리 전면 교체. circles 상세 진입 시 fire-and-forget `supabase.rpc('increment_view_count')`.
+    - **(Server Action)** `app/circles/[id]/actions.ts` 신설 — `toggleFavorite` (auth.getClaims 검증 + favorites insert/delete + revalidatePath) / `incrementInquiryCount` (RPC + revalidatePath). `app/search/actions.ts` 신설 — `getFilterCount` (Apply 버튼 카운트).
+    - **(비로그인 가드 — PRD F012 패턴)** `use-favorites.ts` 전면 재작성 (sessionStorage 완전 제거, `useOptimistic` + `startTransition` + 모듈 singleton 인증 캐시). `FavoriteToggleButton` / `CircleActions` 에 `isAuthenticated` prop 추가 — **♡ 하트 토글**과 **「参加する」 가입 버튼** 둘 다 비로그인 시 `/auth/login?next=...` 리디렉션. `JoinChannelModal.handleChannelClick` → Server Action 연동.
+    - **(컴포넌트)** `components/circles/hourly-category-strip.tsx`, `components/shuffle/swipe-deck.tsx` 도 Supabase 쿼리 / Server Action 직접 호출로 교체.
+    - **(검증)** `npm run build` (27 페이지 PPR) + `npm run lint` 통과. `get_advisors` 신규 critical 0건, 잔여는 T-006~T-008 의도된 항목만.
+    - **Phase 1.2 완료 선언** — T-005 ~ T-009 모두 ✅. 다음 단계: Phase 1.3 인증 & 사용자 영역 (T-015 ~ T-018).
 
 ### Phase 1.3 — 인증 & 사용자 영역 (T-015 ~ T-018)
 
