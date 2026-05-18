@@ -11,11 +11,21 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
 - **즐겨찾기 + 비교 (F007 / F008)**: 하트 토글로 저장한 단체를 최대 3개까지 횡열 비교.
 - **콘텐츠 공급 파이프라인 (F005 / F006)**: 대표자가 단체를 등록하면 관리자가 **실재 여부·학칙 준수 여부** 를 확인 후 승인·거절. official_type 자칭 정확성도 함께 검수.
 - **실재 신뢰도 (F010 / F011)**: @keio.jp 이메일 인증으로 `keio_verified` 자동 부여 + 관리자 수동 검증의 이중 게이트.
+- **활동 리포트 (F-NEW, T-034)**: 단체별 활동 사진·후기 게시판. 신입생이 단체 분위기를 카드 시각으로 판단 — 「掲示板」 탭 + 미리보기 캐러셀 + 리포트 상세 페이지(`/circles/[id]/reports/[reportId]`).
 
 > **⚠️ 慶應과의 관계 면책**: 본 서비스는 학생 운영의 단체 검색 도구이며, 慶應義塾大学 公式 인증·後援 과는 무관합니다. 「公認」 표기는 등록자 자기 신고 + 관리자 1차 검수 결과로, 慶應 측의 보증을 의미하지 않습니다. 자세한 면책 사항은 PRD 「면책 사항」 절 참조. 푸터·등록 폼·이용 약관 3곳에 면책 문구 노출 의무.
 
 > **🏷️ `official_type` UI 표시 정책 (2026-05-16 결정, commit `3b2b100`)**
 > 도메인 모델은 5종 (`athletics` / `official` / `unofficial` / `intercollegiate` / `other`) 을 보존하지만, **UI 뱃지·필터 옵션은 `体育会` / `インカレ` 2종만 노출**한다 (`getOfficialTypeDisplayLabel` / `VISIBLE_OFFICIAL_TYPES`). 「公認 / 非公認 / その他」 라벨은 카드·상세·필터 칩에서 모두 숨김. 단 검색 URL `?officialType=official` 직접 입력은 power user / admin 용으로 5종 모두 허용 (DB·검수 메타 정보로 보존).
+
+> **💴 `年会費` (annual_fee_yen) / `新入生比率` (freshmen_ratio) UI 제거 정책 (2026-05-17 결정, commit `0e6298b`)**
+> 두 필드는 **UI 표시·필터·정렬 전부에서 제거**되었다. 이유: (a) 신입생이 가입 시점에 정확한 액수를 입력 받기 어렵고, (b) 「新入生比率」 는 단체별 자기보고 의존도가 높아 신뢰도가 낮으며, (c) 「無料/有料」 정도의 거친 분류는 추후 태그(`tag-kind=cost`)로 표현하는 편이 더 정확. 영향 범위: 카드(`circle-card.tsx`)·필터 패널(`filter-panel.tsx`)·셔플 카드(`swipe-card.tsx`)·요약 카드(상세) 모두 미노출. **DB 컬럼(`circles.annual_fee_yen`)은 보존** — 추후 정책 환원·관리자 검수 메모 등 활용 여지 유지. `CircleDetail` (`lib/types/domain.ts`) 에서 필드 제거됨.
+
+> **🌞 다크모드 완전 제거 정책 (2026-05-16 결정, commit `6c482cb` + `52717aa`)**
+> 모든 페이지는 **라이트 톤 전용**으로 운영한다. 이유: (a) 신입생 대상 콘셉트가 「밝고 친근」 — 다크모드는 후순위, (b) 일본 대학생 모바일 UX 관행 (LINE/Instagram 류 라이트 기본) 부합, (c) 디자인 리소스 절감 (다크 토큰 검수·이미지 다크 버전 불필요). 제거 항목: `next-themes` 패키지, `ThemeProvider`, `<ThemeSwitcher />`, `@theme dark` 토큰, `dark:` Tailwind variant 사용 금지. `<html>` 에 `class="dark"` 부여 금지. `sonner` 토스터는 `theme="light"` 명시.
+
+> **🗺️ Discover / Search / Shuffle IA 분리 정책 (2026-05-16, 당근앱 패턴)**
+> 라우팅 IA 가 (a) **Discover 모드** (`/circles` 진입 시 필터 미적용 → `HomeCategoryGrid` + `PromoTileCarousel` + `HorizontalCircleStrip` 인기/신착 + `HourlyCategoryStrip` 1시간 회전), (b) **Results 모드** (`/circles?q&filter` 한 개라도 활성 → 사이드바 + 카드 그리드 + 페이지네이션), (c) **`/search` 페이지** (헤더 🔍 진입, 검색어 + 카테고리 + quick filter 4종 + `もっと絞り込む` bottom sheet → 「N件のサークルを見る」 → `/circles?q&filter` navigate), (d) **`/shuffle` 페이지** (Tinder 스타일 swipe deck, **상시 비로그인 허용** = 게스트 디스커버리 진입점). 글로벌 헤더는 **`/circles/[id]`, `/circles/[id]/reports/[reportId]`, `/search`, `/shuffle`** 에서 hidden (메루카리 패턴). BottomNav 는 `/circles/[id]`, `/shuffle` 에서 hidden. 자세한 hide 규칙은 `components/layout/header.tsx` / `bottom-nav.tsx` / `header-client-gate.tsx` 참조.
 
 > **🟦 모바일 퍼스트 (전 ROADMAP 의 최우선 설계 원칙)**
 > 본 서비스는 일본 대학생이 스마트폰으로 활용하는 것을 전제로 한다. 모든 UI 작업의 기본 viewport 는 **360–428px**(iPhone SE ~ iPhone Pro Max / Android 표준)이며, 데스크탑(`md:` 이상, 768px+) 은 보조 환경으로서 progressive enhancement 로만 다룬다. 모든 카드·폼·CTA 는 우선 모바일 1열 레이아웃·44px 이상 터치 타깃·safe-area inset 을 보장한 뒤, 가용 너비가 늘어남에 따라 다열 그리드·사이드바·인라인 CTA 로 확장한다.
@@ -131,6 +141,7 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
   - **테스트**: 카드 30개 렌더 + 반응형 그리드 + 다크 모드 시각 회귀 (360px / 768px / 1280px 3종).
   - **완료 (2026-05-14)**: (a) `lib/dummy/circles.ts` — DUMMY_CIRCLES 30건 `CircleDetail[]` (T-012/T-018 재사용) + DUMMY_CIRCLES_DISTRIBUTION 객체 + async helper 3종(getPopularCircles/getCircleById/getCirclesByCategory). 학생 단체 통합 정책 분포: athletics 3 / official 12 / unofficial 9 / intercollegiate 4 / other 2. picsum.photos seed 기반 결정론적 이미지. (b) `components/circles/circle-card.tsx` (RSC) — props=CircleSummary, Link 전체 감쌈, next/image 16:9 fill + sizes, 카테고리/official_type 뱃지 + 태그 5개 + 활동빈도, 하트 placeholder(T-013 button 교체 예정). (c) `next.config.ts` `images.remotePatterns` 에 picsum.photos 허용. (d) `app/page.tsx` 전체 교체 — sticky top-14 검색바 + 카테고리 탭 8종 가로 스크롤(snap-x) + 인기 6개 카드 그리드(Suspense + Skeleton fallback) + bg-keio-navy CTA. (e) 단위 테스트 +13건(분포 회귀 가드, 총 23건 PASS) + E2E `tests/e2e/home.spec.ts` (카테고리 8 / 카드 6 / CTA, mobile+desktop 양쪽 PASS, 총 4 tests). lint/build/test/test:e2e 모두 통과.
   - **추가 완료 (2026-05-16, Discover 카드 패밀리 확장)**: 단일 `CircleCard` 외에 디스커버 모드 전용 카드 2종 + Link wrapper 1종 추가. (a) `CircleListCard` — 88×88 정사각 썸네일 + 텍스트 right column 가로형 (당근마켓 모임 패턴, `HorizontalCircleStrip` 안 4 cards × 2 columns 가로 스크롤). (b) `CircleAvatarCard` — 80×80 원형 (Instagram Story 톤, `HourlyCategoryStrip` 안 가로 스크롤). (c) `CircleCardLink` — 카드 안 nested Link / 버튼 충돌 회피 wrapper. 모두 props 가 `CircleSummary` 동일 → Phase 1.2 T-009 와이어업 비용 동일. commit `b8ddab3`, `bf3143b`, `fff59b7`, `42d375e`, `b2b4983`.
+  - **추가 완료 (2026-05-17~18, 카드 시각·신착 strip 보강)**: (a) `CircleCard` 의 태그 표시를 plain 텍스트에서 **칩(rounded outline)** 으로 전환 + slug → 일본어 라벨 매핑 (`lib/circles/filter-labels.ts` `TAG_SEEDS`, commit `91d7b81`). (b) 신착 strip 카드에 **NEW outline 배지** 노출 (`5d1fe82`). (c) 신착 섹션을 **1열 stack 레이아웃**(`HorizontalCircleStrip` variant) 으로 변경 + 10건 노출 (`181ec35`). (d) 카드 이미지 호스트는 `picsum.photos` (seed 결정론적) 로 통일 — Phase 1.2 T-009 시점 Supabase Storage URL 로 교체.
 
 - **T-011: 서클 목록 페이지 + 카테고리 탭 + 필터** ✅
   - `app/circles/page.tsx`: `searchParams` 사용 → Suspense 경계 필수.
@@ -142,6 +153,7 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
   - **테스트**: 필터 조합 5종에 대해 Playwright 로 결과 카드 수 검증 (모바일 360px viewport 포함).
   - **완료 (2026-05-14)**: (a) `lib/circles/search-params.ts` 신설 — CirclesSearchParams 타입 + parseCirclesSearchParams(fail-safe enum allowlist) + buildCirclesUrl(빈값 생략, page=1 생략) + countAppliedFilters. (b) `lib/dummy/circles.ts` 에 filterCircles + FilterCirclesResult 추가 — 모든 필터 AND, 같은 필터 다중 OR, q case-insensitive 부분매칭, page clamp(1~totalPages). (c) `components/circles/category-tabs.tsx` 신설 — 「すべて」 + 8 카테고리 = 9 link, 활성 시 bg-keio-navy, 홈/목록 공통 사용. 홈 E2E count 8→9 갱신. (d) `components/circles/filter-panel.tsx` (Client) — 5섹션 필터(q/frequency/officialType/tags 10/fee_max select), draft useState + 「適用」 시 router.push(buildCirclesUrl({...draft, page:undefined})) + 「リセット」 → /circles. PRD 태그 시드 10종 컴포넌트 내부 정의(T-009 이후 교체). (e) `components/circles/filter-trigger.tsx` (Client, lg:hidden) — shadcn Sheet bottom + 적용 개수 Badge. (f) `app/circles/page.tsx` 본 디자인 — 본문 전체 Suspense 래핑(cacheComponents 모드의 searchParams 호환), sticky 검색 form(다른 필터 hidden input 보존) + CategoryTabs + FilterTrigger, lg:grid-cols-[260px_1fr] 사이드바 분기, CardGrid(grid-cols-1 sm:grid-cols-2 xl:grid-cols-3), Pagination(前へ/X/次へ), EmptyState. (g) 단위 테스트 +9건(filterCircles 5종 + 페이지네이션), E2E +3 spec × mobile+desktop = 6건 PASS, 총 32 unit + 14 E2E.
   - **추가 완료 (2026-05-16, /search 분리 + Discover/Results 분기)**: (a) `/circles` 가 `isDiscoverMode(params)` 분기 — 필터 모두 기본값이면 **DiscoverContent** (`HomeCategoryGrid` 8 카테고리 4×2 + `PromoTileCarousel` 3 타일 자동 회전 + 人気/新着 `HorizontalCircleStrip` + `HourlyCategoryStrip` 1시간 회전), 한 개라도 활성이면 **SearchResults** (사이드바 + 카드 그리드 + 페이지네이션). (b) sticky 인라인 검색 form 제거 → 검색·카테고리·필터 진입은 별도 `/search` 페이지 (헤더 🔍 진입, 당근앱 패턴) + 결과 모드 안 「絞り込みを編集」 칩. (c) `lib/circles/search-params.ts` 에 `isDiscoverMode` / `buildSearchUrl` 헬퍼 추가. commit `1e9b9fa`, `b2b4983`.
+  - **추가 완료 (2026-05-17~18, 필터 패널 9섹션 확장 + 시트 안정화)**: (a) `FilterPanel` 이 기존 5섹션(q/frequency/officialType/tags/fee_max) → **9섹션** 으로 확장: 募集状態 / 活動頻度 / 活動時間帯 / 活動曜日 / 団体区分 / 会員数 / タグ / 並び替え (`年会費`/`新入生比率` 섹션은 정책 변경으로 제거). 각 섹션은 토스 스타일 **`SegmentedOption`** (h-12 border-2) 칩 + `-mx-4 ... overflow-x-auto px-5` 풀-블리드 가로 스크롤. (b) 새 enum 상수 3종 추가: `lib/constants/activity-time-band.ts`(3종) / `lib/constants/recruitment-status.ts`(3종) / `lib/circles/filter-labels.ts` 의 `MEMBER_SIZE_OPTIONS`·`SORT_OPTIONS`·`WEEKDAYS`·`TAG_SEEDS`. `CirclesSearchParams` 에 `recruitmentStatus[]` / `activityTimeBand[]` / `activityDays[]` / `memberSize` / `sort` / `all` 추가 (`lib/circles/search-params.ts`). (c) **「適用」 버튼 디자인 통일** — rounded-full + 컨테이너 보더 제거 (commit `378d279`). (d) **필터 시트 가로 스크롤 잠금** — `FilterPanel` 루트 + 스크롤 영역에 `overflow-x-hidden` 추가, 자식의 `-mx-4` 풀-블리드는 유지 (commit `d0b1287`). (e) `/search` 페이지의 `QuickFilters` 4종(募集中/初心者歓迎/ゆるい/ガチ) + bottom Sheet 안 `FilterPanel` 재사용 (mode="sheet" 분기).
 
 - **T-012: 서클 상세 페이지 + 갤러리** ✅
   - `app/circles/[id]/page.tsx`: 동적 라우트, Suspense 경계 필수. 더미 배열에서 `id` 로 find.
@@ -150,6 +162,7 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
   - **모바일 (기본)**: 본문 1열 스택. 갤러리는 가로 swipe 캐러셀 + 도트 인디케이터(`overflow-x-auto snap-x`). 요약 카드(활동빈도/연회비/요일/회원수/신입생비율) 는 모바일 1열, `md` 이상에서 2열 그리드. 본문 하단에는 T-013 액션 바가 가리지 않도록 `pb-20` 여유 확보.
   - `view_count` 증가 로직은 Phase 1.2 T-009 에서 RPC `increment_view_count` 와이어업.
   - **완료 (2026-05-14)**: (a) `lib/types/domain.ts` CircleDetail 에 activity_days/member_count/freshmen_ratio 3 필수 필드 추가. (b) `lib/dummy/circles.ts` 의 buildGallery + assets helper 도입, 30건 모두 새 필드 + 갤러리 4장(picsum seed) 보강. 단위 테스트 +5건(총 37 PASS). (c) `components/circles/circle-gallery.tsx` (Client) — 모바일 가로 swipe(snap-x mandatory) / 데스크탑 3열 그리드 + shadcn Dialog 전체화면. (d) `app/circles/[id]/page.tsx` 본 디자인 — 본문 전체 Suspense + async CircleDetailContent + getCircleById + notFound. CoverImage(16:9 / 21:9 priority) + Header(카테고리·official_type 뱃지 + h1 + 태그 칩) + SummaryGrid(5종 dl) + Description(whitespace-pre-line) + CircleGallery + ContactSection(Instagram/X/LINE inline + ExternalLink). pb-24 md:pb-12. (e) `app/circles/[id]/not-found.tsx` 404 UI. (f) E2E `circle-detail.spec.ts` 3 test × mobile+desktop = 6 PASS. (g) lint/build/test(37)/test:e2e(전체) 통과.
+  - **추가 완료 (2026-05-17~18, 상세 페이지 IA 재구성 + sticky CTA 통합 + 헤더 hide)**: (a) **IA 재구성** (commit `7558a76`) — 상세 페이지 본문이 `DetailPageHeader` (오버레이 floating 戻る/홈/공유) + `CoverImage` + 메타 헤더 + `ShinkanBanner` + `SummaryGrid` (5종 dl, `freshmen_ratio`·`annual_fee_yen` 제거 후 募集状況/活動頻度/活動日/活動時間/会員数 5종) + `Description` + `CircleDetailTabs` (ホーム/掲示板) 순으로 재배열. (b) **sticky CTA portal + lagging spring** (commit `f1c8ec6`) — `CircleActions` 가 `createPortal` 로 body 마운트, motion/react `spring` 으로 약간 지연되며 따라오는 통합 pill (좋아요 + 「参加する」), pb-24~28 본문 여유. (c) **新歓 배너** — `ShinkanBanner` RSC, `shinkan_events` 중 `event_date >= 오늘` 만 노출 (Phase 1.2 T-009 와이어업 anchor). (d) **글로벌 헤더 hidden** (commit `eec196d` + `ccc5bdb`) — 상세 페이지·리포트 상세·검색·셔플은 자체 floating 헤더만 노출 (메루카리/Airbnb 패턴), `header.tsx` + `header-client-gate.tsx` + `bottom-nav.tsx` 3곳 정규식 hide. (e) **탭 손 스와이프** (commit `fcd72ac`) — `CircleDetailTabs` 가 motion/react `drag="x"` + `SWIPE_THRESHOLD` 로 ホーム ↔ 掲示板 손가락 스와이프 지원, 탭 옆 미리보기 카드 클릭은 `CircleCardLink` 로 same-URL re-trigger 방지. (f) **掲示板 탭 active 복귀** (commit `ac511f7`) — 리포트 상세에서 뒤로가기 시 (`sessionStorage` 마커) 掲示板 탭 active 상태로 복귀. (g) `年会費` / `新入生比率` 표시·필터·정렬 전부 제거 (commit `0e6298b`, 상단 정책 박스 참조).
 
 - **T-013: 하단 고정 액션 바 + 즐겨찾기 토글 UI**
   - PRD 「당근 모임 패턴」 하단 고정 액션 바 (모바일 safe-area inset 고려).
@@ -158,6 +171,7 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
   - 미로그인 사용자의 하트 탭 시 `/auth/login?next=/circles/{id}` 리디렉션 동선은 미리 와이어업 (인증 자체는 T-015).
   - **모바일 (기본)**: 하단 고정 액션 바는 **모바일 전용**(`md:hidden`) — fixed bottom + `env(safe-area-inset-bottom)` 패딩, 좌측 하트 토글 + 우측 「参加する」 풀폭 CTA(터치 타깃 최소 48px). `md` 이상에서는 액션 바를 숨기고 본문 우측 칼럼 또는 본문 내 인라인 CTA 로 대체.
   - **완료 (2026-05-14)**: (a) `lib/circles/use-favorites.ts` (Client hook) — sessionStorage 'kcircle:favorites' + 모듈 singleton authPromise + CustomEvent 'kcircle:favorites-changed' broadcast 로 다중 인스턴스 동기화. (b) `components/circles/favorite-toggle-button.tsx` variant 2종(card/action-bar) + e.preventDefault+stopPropagation 으로 카드 Link 충돌 회피. (c) `components/circles/circle-card.tsx` 의 placeholder span → FavoriteToggleButton 으로 교체. (d) `components/circles/circle-actions.tsx` layout='mobile'/'desktop' 분기 — 모바일 fixed bottom md:hidden + safe-area-inset-bottom, 데스크탑 hidden md:flex Header inline. handleJoin 은 T-014 anchor(console.info). (e) `app/circles/[id]/page.tsx` Header 안 데스크탑 + 본문 끝 모바일 액션 바 통합. (f) 단위 테스트 6건 PASS, E2E favorites 28건(mobile+desktop) PASS. lint+build+test+test:e2e 통과.
+  - **추가 완료 (2026-05-16~17, RegisterFloatingCTA + scroll collapse + Auth 가드)**: (a) `components/layout/register-floating-cta.tsx` (Client) 신설 — `/circles` 만 노출 (`pathname !== "/circles"` 시 null), 우하단 floating ⊕. 스크롤 80px 이상 시 **알약 → 원형 collapse 애니메이션** (commit `b15b54c`, motion/react scale/opacity). (b) `/mypage` 비로그인 사용자 `redirect("/auth/login?next=/mypage")` 2차 방어 (commit `3e2dcd6`, RSC `supabase.auth.getClaims()` 검증). (c) `FavoriteToggleButton` variant 에 `action-bar-card` 추가 (셔플 카드 상단 노출용).
 
 - **T-014: 「参加する」 채널 모달 UI**
   - 우측 메인 CTA 버튼 (慶應 濃紺 `#003366`).
@@ -171,6 +185,23 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
     - Instagram 선택 → 새 탭이 instagram.com 도메인으로 열림.
   - **완료 (2026-05-14)**: (a) `components/circles/join-channel-modal.tsx` 신설 — Client, shadcn Sheet side="bottom" 단일 패턴, CHANNEL_META 외부 const, channels 배열에 입력된 채널만 push, 0개면 EmptyState + 「閉じる」, 1+개면 Button asChild + a target="\_blank" rel="noopener noreferrer" 풀폭. handleChannelClick 안 console.info '[T-009 anchor] incrementInquiryCount' + onOpenChange(false). JSDoc 에 T-009·T-015 anchor 명시. (b) `components/circles/circle-actions.tsx` 수정 — useState modalOpen + handleJoin 의 console.info → setModalOpen(true) + Fragment 끝에 JoinChannelModal 1회 렌더. (c) e2e 3 케이스 추가 (모달 열림·채널 가시성·target/rel 속성) mobile+desktop 양쪽 PASS = 6 신규. (d) lint+build+test(54)+test:e2e(40) 통과.
   - **추가 완료 (2026-05-16, Discover 트랜지션 + Shuffle)**: T-014 채널 모달 외 진입 동선·트랜지션 보강. (a) `CirclesPageShell` (Client wrapper) + `CirclesSlideOutContext` + `SlideOutLink` — 카테고리 클릭·「もっと見る」 클릭 시 옛 페이지 좌측 슬라이드 아웃 → 새 페이지 페이드 인 (iOS push easing, AnimatePresence mode="wait"). 외부 진입 시 700ms fade-in, 새로고침/다른 internal navigation 은 hard-cut, `prefers-reduced-motion` 시 skip. (b) `/shuffle` Tinder swipe deck 페이지 + 「シャッフルで探す」 promo 카드 진입. (c) `PromoTileCarousel` 셔플/お気に入り/검색 3 타일 자동 회전 (드래그 swipe + dots, motion/react v12 `AnimatePresence` + `LazyMotion`). (d) `HourlyCategoryStrip` `Math.floor(Date.now() / 3_600_000) % CATEGORIES.length` 1시간 회전 카테고리. commit `b2b4983`, `304844a`, `42d375e`, `32329a4`, `f82e943`, `1e9b9fa`.
+  - **추가 완료 (2026-05-17, K-Ring 로고 + Fluent 3D Emoji + lucide hybrid)**: (a) 헤더 슬림화 + **K-Ring 로고** (commit `d654934`, `1a83e54`) — `components/layout/kcircle-logo.tsx` (Client), motion/react LazyMotion, K 심볼 원 둘레 ring draw 마운트 애니메이션, 크기 sm(28px)/md(48px)/lg(64px). (b) **Fluent 3D Emoji 도입** (commit `a0300ac`) — `components/ui/emoji.tsx` Iconify wrapper, 14종 화이트리스트(trophy/artist-palette/musical-notes/books/globe/party-popper/handshake/clapper-board/sparkles/house/red-heart/bust-in-silhouette/bell/magnifying-glass). 카테고리 그리드·셔플 카드·BottomNav 일부에서 사용. (c) BottomNav 는 **lucide 단색 아이콘 복귀** (commit `2b63ab4`, Fluent → lucide revert) — 액션 아이콘은 단색 일관성 유지, 콘텐츠/카테고리 표현에만 Fluent 3D 사용. 의존성 변경: `next-themes` 제거 + `@iconify/react` + `@iconify-json/fluent-emoji` 추가 (commit `52717aa`).
+
+- **T-034: 活動レポート 시스템 (掲示板 탭 + 미리보기 + 상세 페이지)** ✅
+  - **상태**: completed (2026-05-17~18, 5개 commit)
+  - **공수**: 2d
+  - **선행**: T-012 (상세 페이지)
+  - **관련 PRD 기능**: F-NEW (PRD 「F003 상세 정보」 의 보강. 다음 PRD 개정 시 F013 「活動レポート」 로 정식 채번 검토)
+  - **목적**: 신입생이 단체 분위기를 판단할 수 있는 **활동 사진·후기 게시판**. 단체 내부 갤러리에 묻혀 있던 활동 기록을 카드 형태로 노출.
+  - **구현 산출물**:
+    - **데이터**: `lib/constants/activity-report-type.ts` (5종 enum: practice/camp/event/meeting/other) + `lib/types/domain.ts` `ActivityReport` 타입 + `lib/dummy/activity-reports.ts` (~100건 결정론적 더미, 서클당 3-4건, TITLE/CONTENT/BODY POOL 각 12개 일본어 더미).
+    - **컴포넌트**: `components/circles/activity-reports-preview.tsx` (Client, ホーム 탭 미리보기 가로 캐러셀 4-5건 + 「もっと見る」), `activity-reports-list.tsx` (掲示板 탭 전체 세로 리스트, 좌측 정사각 썸네일 + 우측 텍스트), `report-page-header.tsx` (리포트 상세 floating 戻る, createPortal + safe-area-inset-top), `circle-detail-tabs.tsx` (ホーム/掲示板 controlled Tabs + `drag="x"` 손 스와이프).
+    - **라우트**: `/circles/[id]/reports/[reportId]/page.tsx` (RSC, 중첩 동적 세그먼트, `report.circle_id !== id` 검증 후 `notFound()`), `not-found.tsx`, `loading.tsx`, `template.tsx` (`ReportSlideOutContext` + iOS push 트랜지션).
+    - **트랜지션**: 상세 → 리포트 진입 시 좌측 슬라이드 + 페이드 인, 뒤로가기 시 掲示板 탭 active 복귀 (`sessionStorage` 마커).
+    - **UI hide**: 리포트 상세 페이지는 글로벌 헤더 + BottomNav 둘 다 hidden (자체 floating 戻る만 노출).
+  - **관련 commit**: `5e18ca8` (코어 시스템), `00679a1` (리포트 상세 + 트랜지션), `fcd72ac` (탭 손 스와이프 + 미리보기 카드 navigate), `eec196d` (글로벌 헤더 hidden), `ac511f7` (掲示板 탭 active 복귀).
+  - **Phase 1.2 와이어업 anchor**: 더미 `lib/dummy/activity-reports.ts` → Supabase `activity_reports` 테이블 fetch (DB 스키마는 T-005 마이그레이션 시점 추가 필요. 현재 `lib/types/database.ts` 미포함 → **T-005 갱신 ToDo**).
+  - **테스트 미반영**: Playwright E2E 시나리오(ホーム → 미리보기 → 「もっと見る」 → 掲示板 → 카드 클릭 → 리포트 상세 → 戻る → 掲示板 active 복귀) 아직 없음. Phase 1.4 T-022 통합 E2E 에 포함시킬 것.
 
 ### Phase 1.2 — DB 기반 구축 + UI 와이어업 (T-005 ~ T-009)
 
@@ -428,19 +459,20 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
 
 ## PRD 기능 ↔ ROADMAP 작업 매핑
 
-| PRD 기능             | 설명                     | 주관 작업                           | 보조 작업                                 |
-| -------------------- | ------------------------ | ----------------------------------- | ----------------------------------------- |
-| **F001** 검색·필터   | 카테고리 탭 + 다중 필터  | T-011 (UI), T-009 (와이어업)        | T-003 (타입)                              |
-| **F002** 카드 목록   | 카드 + 그리드            | T-010, T-011 (UI), T-009 (와이어업) | —                                         |
-| **F003** 상세 정보   | 갤러리 + 요약 카드       | T-012 (UI), T-009 (와이어업)        | T-008 (이미지 정책)                       |
-| **F004** 태그 시스템 | 칩 10종                  | T-010, T-011, T-012                 | T-009 (시드)                              |
-| **F005** 등록 폼     | RHF + Zod                | T-018                               | T-008 (이미지)                            |
-| **F006** 승인 큐     | admin 페이지             | T-019                               | T-020 (알림), T-021 (운영)                |
-| **F007** 즐겨찾기    | 하트 토글 + 페이지       | T-013 (UI), T-017, T-009 (와이어업) | T-006 (RLS)                               |
-| **F008** 비교        | 횡열 테이블              | T-024                               | T-017 (송출)                              |
-| **F010** 인증        | 회원가입·로그인·verified | T-015                               | 기존 스타터킷 활용                        |
-| **F011** 마이페이지  | 프로필 + 내 서클 관리    | T-016                               | T-018 (등록 동선)                         |
-| **F012** 참여 의사   | 채널 모달 + RPC          | T-014 (UI), T-009 (RPC 와이어업)    | T-007 (RPC 정의), T-025 (Phase 2 metrics) |
+| PRD 기능              | 설명                                                             | 주관 작업                           | 보조 작업                                                        |
+| --------------------- | ---------------------------------------------------------------- | ----------------------------------- | ---------------------------------------------------------------- |
+| **F001** 검색·필터    | 카테고리 탭 + 다중 필터                                          | T-011 (UI), T-009 (와이어업)        | T-003 (타입)                                                     |
+| **F002** 카드 목록    | 카드 + 그리드                                                    | T-010, T-011 (UI), T-009 (와이어업) | —                                                                |
+| **F003** 상세 정보    | 갤러리 + 요약 카드                                               | T-012 (UI), T-009 (와이어업)        | T-008 (이미지 정책), **T-034 (掲示板 탭·활동 리포트)**           |
+| **F004** 태그 시스템  | 칩 10종                                                          | T-010, T-011, T-012                 | T-009 (시드)                                                     |
+| **F005** 등록 폼      | RHF + Zod                                                        | T-018                               | T-008 (이미지)                                                   |
+| **F006** 승인 큐      | admin 페이지                                                     | T-019                               | T-020 (알림), T-021 (운영)                                       |
+| **F007** 즐겨찾기     | 하트 토글 + 페이지                                               | T-013 (UI), T-017, T-009 (와이어업) | T-006 (RLS)                                                      |
+| **F008** 비교         | 횡열 테이블                                                      | T-024                               | T-017 (송출)                                                     |
+| **F010** 인증         | 회원가입·로그인·verified                                         | T-015                               | 기존 스타터킷 활용                                               |
+| **F011** 마이페이지   | 프로필 + 내 서클 관리                                            | T-016                               | T-018 (등록 동선)                                                |
+| **F012** 참여 의사    | 채널 모달 + RPC                                                  | T-014 (UI), T-009 (RPC 와이어업)    | T-007 (RPC 정의), T-025 (Phase 2 metrics)                        |
+| **F-NEW** 활동 리포트 | 掲示板 탭 + 미리보기 + 상세 (`/circles/[id]/reports/[reportId]`) | T-034 (UI 완료)                     | T-005 (DB `activity_reports` 테이블 추가 필요), T-009 (와이어업) |
 
 ---
 
@@ -448,19 +480,20 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
 
 > CLAUDE.md 의 3-context 패턴을 위반하면 쿠키 동기화가 깨지므로 페이지 신설 시 반드시 본 표 기준으로 클라이언트를 선택할 것.
 
-| 경로                              | 컨텍스트               | 사용 클라이언트                                           | 비고                                                                 |
-| --------------------------------- | ---------------------- | --------------------------------------------------------- | -------------------------------------------------------------------- |
-| `/`                               | RSC                    | `lib/supabase/server.ts`                                  | 인기 서클 fetch, Suspense 필수                                       |
-| `/circles`                        | RSC                    | `lib/supabase/server.ts`                                  | `searchParams` 사용, Suspense 필수                                   |
-| `/circles/[id]`                   | RSC                    | `lib/supabase/server.ts`                                  | 동적 라우트, Suspense 필수                                           |
-| `/shuffle`                        | Client                 | (현재 더미 — Phase 1.2 T-009 시점 익명 세션 server fetch) | Tinder swipe deck, **상시 비로그인 허용** (게스트 디스커버리 진입점) |
-| `/search`                         | RSC                    | `lib/supabase/server.ts`                                  | 카테고리·필터 진입 전용, `/circles` 결과 모드로 router.push          |
-| `/notifications`                  | RSC                    | `lib/supabase/server.ts`                                  | 알림 페이지 (Phase 3 T-030 PWA 푸시 이력)                            |
-| `/circles/[id]` 의 하트·참여 토글 | Client + Server Action | `lib/supabase/client.ts` + Server Action 내부 `server.ts` | `useOptimistic`                                                      |
-| `/circles/new`                    | Client                 | `lib/supabase/client.ts`                                  | RHF + Zod 폼                                                         |
-| `/favorites`                      | RSC                    | `lib/supabase/server.ts`                                  | 로그인 필수, Suspense                                                |
-| `/compare`                        | RSC                    | `lib/supabase/server.ts`                                  | `?ids=` 쿼리, Suspense                                               |
-| `/mypage`, `/mypage/circles`      | RSC                    | `lib/supabase/server.ts`                                  | Suspense                                                             |
-| `/admin/circles`                  | RSC + Server Action    | `lib/supabase/server.ts`                                  | `is_admin()` 사전 검증                                               |
-| `/auth/*` (기존)                  | Client + Server Action | 기존 스타터킷 유지                                        | —                                                                    |
-| `proxy.ts` (Edge)                 | Edge                   | `lib/supabase/proxy.ts`                                   | 인증 미들웨어, 변경 시 주의                                          |
+| 경로                               | 컨텍스트               | 사용 클라이언트                                           | 비고                                                                                                                                                            |
+| ---------------------------------- | ---------------------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`                                | RSC                    | (redirect 만, fetch 없음)                                 | 루트 → `/circles` redirect (`app/page.tsx`). Phase 2 별도 랜딩 페이지 검토                                                                                      |
+| `/circles`                         | RSC                    | `lib/supabase/server.ts`                                  | **Discover 모드** (필터 미적용, HomeCategoryGrid + Promo + HorizontalStrip + Hourly) ↔ **Results 모드** (필터 활성, 사이드바 + 그리드) 자동 분기. Suspense 필수 |
+| `/circles/[id]`                    | RSC                    | `lib/supabase/server.ts`                                  | 동적 라우트, Suspense 필수. 글로벌 헤더 + BottomNav hide (자체 floating 헤더)                                                                                   |
+| `/circles/[id]/reports/[reportId]` | RSC                    | `lib/supabase/server.ts`                                  | 활동 리포트 상세 (T-034). 중첩 동적 세그먼트, 글로벌 헤더 + BottomNav 모두 hide                                                                                 |
+| `/shuffle`                         | Client                 | (현재 더미 — Phase 1.2 T-009 시점 익명 세션 server fetch) | Tinder swipe deck, **상시 비로그인 허용** (게스트 디스커버리 진입점). 글로벌 헤더 + BottomNav hide                                                              |
+| `/search`                          | RSC + Client           | `lib/supabase/server.ts` (RSC) + Client `draft` state     | 검색·카테고리·필터 진입 전용 (당근앱 패턴). 「N件のサークルを見る」 → `/circles?q&filter` navigate. 글로벌 헤더 hide (자체 sticky 검색 헤더)                    |
+| `/notifications`                   | RSC                    | `lib/supabase/server.ts`                                  | 알림 페이지 (Phase 3 T-030 PWA 푸시 이력)                                                                                                                       |
+| `/circles/[id]` 의 하트·참여 토글  | Client + Server Action | `lib/supabase/client.ts` + Server Action 내부 `server.ts` | `useOptimistic`                                                                                                                                                 |
+| `/circles/new`                     | Client                 | `lib/supabase/client.ts`                                  | RHF + Zod 폼                                                                                                                                                    |
+| `/favorites`                       | RSC                    | `lib/supabase/server.ts`                                  | 로그인 필수, Suspense                                                                                                                                           |
+| `/compare`                         | RSC                    | `lib/supabase/server.ts`                                  | `?ids=` 쿼리, Suspense                                                                                                                                          |
+| `/mypage`, `/mypage/circles`       | RSC                    | `lib/supabase/server.ts`                                  | Suspense                                                                                                                                                        |
+| `/admin/circles`                   | RSC + Server Action    | `lib/supabase/server.ts`                                  | `is_admin()` 사전 검증                                                                                                                                          |
+| `/auth/*` (기존)                   | Client + Server Action | 기존 스타터킷 유지                                        | —                                                                                                                                                               |
+| `proxy.ts` (Edge)                  | Edge                   | `lib/supabase/proxy.ts`                                   | 인증 미들웨어, 변경 시 주의                                                                                                                                     |
