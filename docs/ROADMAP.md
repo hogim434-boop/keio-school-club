@@ -208,24 +208,35 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
 > Phase 1.1 에서 만든 UI 가 사용 중인 더미 데이터를 **실제 Supabase fetch / Server Action / RPC** 로 교체한다.
 > 스키마 → RLS → RPC → Storage 가 모두 준비된 후, 마지막 **T-009** 에서 시드 적재와 UI 와이어업을 한꺼번에 처리하여 정합성 확인 비용을 한 번에 모은다.
 
-| ID        | 작업                                                        | 상태    | 공수 | 선행                        | 관련 기능              |
-| --------- | ----------------------------------------------------------- | ------- | ---- | --------------------------- | ---------------------- |
-| **T-005** | DB 스키마 마이그레이션 1차 (7개 테이블)                     | pending | 1d   | T-003                       | 전 기능                |
-| **T-006** | RLS 정책 분리·`is_admin()` 헬퍼                             | pending | 1d   | T-005                       | F005, F006, F007, F010 |
-| **T-007** | RPC `increment_inquiry_count` + `inquiry_events` 디바운스   | pending | 0.5d | T-005, T-006                | F012                   |
-| **T-008** | Storage 버킷·정책·EXIF 제거                                 | pending | 0.5d | T-005                       | F003, F005             |
-| **T-009** | 시드 30개 + 태그 10종 + **UI 와이어업 (더미 → 실제 fetch)** | pending | 1.5d | T-005, T-008, T-010 ~ T-014 | F002, F004, F007, F012 |
+| ID        | 작업                                                        | 상태      | 공수 | 선행                        | 관련 기능              |
+| --------- | ----------------------------------------------------------- | --------- | ---- | --------------------------- | ---------------------- |
+| **T-005** | DB 스키마 마이그레이션 1차 (10 테이블 + 8 enum) ✅          | completed | 1d   | T-003                       | 전 기능                |
+| **T-006** | RLS 정책 분리·`is_admin()` 헬퍼                             | pending   | 1d   | T-005                       | F005, F006, F007, F010 |
+| **T-007** | RPC `increment_inquiry_count` + `inquiry_events` 디바운스   | pending   | 0.5d | T-005, T-006                | F012                   |
+| **T-008** | Storage 버킷·정책·EXIF 제거                                 | pending   | 0.5d | T-005                       | F003, F005             |
+| **T-009** | 시드 30개 + 태그 10종 + **UI 와이어업 (더미 → 실제 fetch)** | pending   | 1.5d | T-005, T-008, T-010 ~ T-014 | F002, F004, F007, F012 |
 
-- **T-005: DB 스키마 마이그레이션 1차** — 우선순위
-  - `supabase` MCP `list_tables` 로 기존 상태(`instruments` 만 존재) 확인 후, `apply_migration` 으로 7개 테이블 생성:
-    `profiles`, `circles`, `tags`, `circle_tags`, `circle_images`, `favorites`, `shinkan_events`.
-  - PRD 「circles」 필드 + 검증 이슈 H-NEW-3 보강 컬럼 포함:
-    - `rejection_reason text` / `updated_at timestamptz` / `pledge_accepted_at timestamptz` / `reviewed_by uuid` / `reviewed_at timestamptz` / `slug text unique` / `submission_note text`.
-  - **`circles.official_type` 은 Postgres enum 타입 `official_type_enum` 으로 정의** — 값: `'athletics' | 'official' | 'unofficial' | 'intercollegiate' | 'other'` (T-003 의 lib/constants/official-type.ts 와 single source of truth 일치). 일본어 라벨(`体育会` / `公認` / `非公認` / `インカレ` / `その他`)은 application 레이어 매핑.
-  - `circles` CHECK 제약: `contact_instagram`, `contact_x`, `contact_line` 중 1개 이상 NOT NULL.
-  - `updated_at` 트리거(`moddatetime`) 적용.
-  - `profiles` 는 `auth.users` insert 트리거로 자동 생성.
-  - **테스트**: `supabase` MCP `execute_sql` 로 모든 테이블 INSERT 더미 1건 → SELECT 검증.
+- **T-005: DB 스키마 마이그레이션 1차** ✅
+  - `supabase` MCP `list_tables` 로 기존 상태(`instruments` 만 존재) 확인 후, `apply_migration` 으로 **10개 테이블** 생성 (핵심 8 + 보조 2):
+    `profiles`, `circles`, `tags`, `circle_tags`, `circle_images`, `favorites`, `shinkan_events`, `activity_reports`, `activity_report_images`, `inquiry_events`, `app_settings`.
+    (보조 2종 `inquiry_events` / `app_settings` 는 T-007 / T-021 의존이지만, 본 마이그레이션 1차에서 함께 생성 — 후속 작업이 RPC / UI 만 짜면 되도록.)
+  - **8개 enum 생성** (`lib/constants/*` SSOT 와 1:1 일치):
+    `category_enum` (8), `official_type_enum` (5, UI 는 2종만 노출 — 정책 박스 🏷️), `activity_frequency_enum` (3), `circle_status_enum` (3), `tag_kind_enum` (4), `recruitment_status_enum` (3, **신규**), `activity_time_band_enum` (3, **신규**), `activity_report_type_enum` (5, **신규**).
+  - PRD 「circles」 필드 + 검증 이슈 H-NEW-3 보강 컬럼 + **2026-05 신규 5컬럼** 포함:
+    - 검증 보강: `rejection_reason` / `updated_at` / `pledge_accepted_at` / `reviewed_by` / `reviewed_at` / `slug` unique / `submission_note`.
+    - 신규 5컬럼: `description text`, `activity_days text`, `member_count int`, `recruitment_status`, `activity_time_band[]`.
+    - **`annual_fee_yen` 컬럼 보존** (UI 만 제거, 정책 박스 💴).
+    - **`freshmen_ratio` 컬럼 없음** (DB 도 정리).
+  - **`circles.official_type` 은 Postgres enum 타입 `official_type_enum` 으로 정의** — DB 5종 보존, UI 노출은 2종 (정책 박스 🏷️).
+  - `circles` CHECK 제약: `contact_instagram`, `contact_x`, `contact_line` 중 1개 이상 NOT NULL (`circles_contact_at_least_one`).
+  - `updated_at` 트리거(`moddatetime`, extensions 스키마) 적용.
+  - `profiles` 는 `auth.users` insert 트리거 (`handle_new_user`, SECURITY DEFINER) 로 자동 생성. anon/authenticated 의 REST RPC 직접 호출은 `REVOKE EXECUTE` 로 차단.
+  - **활동 리포트 (T-034 의존)**: `activity_reports` + `activity_report_images` (circle_images 패턴) 추가. F-NEW 의 DB 스키마 해소.
+  - **RLS enable (기본 deny)** — 모든 신규 11개 테이블 `ENABLE ROW LEVEL SECURITY` (정책 없이). T-006 에서 select/insert/update/delete 세분화.
+  - **인덱스**: `circles_status_created` (partial, status='approved'), `circles_category`, `favorites_user_created`, `shinkan_events_circle_date`, `activity_reports_circle_created`.
+  - **테스트**: `supabase` MCP `execute_sql` 로 CHECK 제약·CASCADE 무결성·moddatetime 트리거 모두 검증.
+  - **완료 (2026-05-18)**: (a) 6건 마이그레이션 적용 — `005_01_extensions_enums`, `005_02_profiles_circles`, `005_03_circle_satellite`, `005_04_activity_reports`, `005_05_misc_indexes_rls`, `005_05b_revoke_handle_new_user` (security advisor 보강). (b) `mcp__supabase__generate_typescript_types` 자동 생성 결과로 `lib/types/database.ts` 무손실 교체 — 수동 정의 → 12개 Tables + 8개 Enums + `Tables<>`/`TablesInsert<>`/`TablesUpdate<>`/`Enums<>`/`CompositeTypes<>` 헬퍼 + `Constants` 런타임 객체. (c) `npm run lint` / `npm run build` (27 페이지) / `npm run test` (4 files / 51 tests) 모두 통과. (d) `get_advisors security` 남은 항목: RLS policy missing INFO 11건 (T-006 예상) + Auth Leaked Password Protection WARN 1건 (Supabase Auth 대시보드 설정, T-015 범위).
+  - **See**: `docs/tasks/T-005-db-schema-migration.md`
 
 - **T-006: RLS 정책 분리·`is_admin()` 헬퍼**
   - 검증 이슈 **H-2** 대응: 모든 테이블에 대해 `select / insert / update / delete` 정책을 명시적으로 분리.
