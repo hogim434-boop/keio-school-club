@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 
 import { SwipeDeck } from "@/components/shuffle/swipe-deck";
-import { filterCircles } from "@/lib/dummy/circles";
+import { filterCircles } from "@/lib/supabase/queries/circles";
 
 /**
  * /shuffle — Tinder/Hinge 스타일 swipe deck 디스커버리 페이지 (RSC).
@@ -22,7 +22,8 @@ export default function ShufflePage() {
 }
 
 async function ShuffleContent() {
-  // 30건 전체 prefetch — 클라이언트 SwipeDeck 에서 Fisher-Yates 셔플 후 deck 구성
-  const result = await filterCircles({});
-  return <SwipeDeck circles={result.items} />;
+  // 전체 prefetch — all:true 로 페이지네이션 없이 전부 취득.
+  // 클라이언트 SwipeDeck 에서 Fisher-Yates 셔플 후 deck 구성.
+  const { circles } = await filterCircles({ all: true });
+  return <SwipeDeck circles={circles} />;
 }

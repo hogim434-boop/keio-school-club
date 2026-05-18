@@ -1,7 +1,7 @@
 import { CircleAvatarCard } from "@/components/circles/circle-avatar-card";
 import { SlideOutLink } from "@/components/circles/slide-out-link";
 import { CATEGORIES, CATEGORY_LABELS } from "@/lib/constants/category";
-import { getCirclesByCategory } from "@/lib/dummy/circles";
+import { getCirclesByCategory } from "@/lib/supabase/queries/circles";
 
 /**
  * 카테고리별 1시간 회전 가로 스크롤 섹션 (RSC).

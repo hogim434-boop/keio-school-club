@@ -15,8 +15,9 @@ import { ACTIVITY_TIME_BAND_LABELS } from "@/lib/constants/activity-time-band";
 import { CATEGORY_LABELS } from "@/lib/constants/category";
 import { getOfficialTypeDisplayLabel } from "@/lib/constants/official-type";
 import { RECRUITMENT_STATUS_LABELS } from "@/lib/constants/recruitment-status";
-import { getActivityReportsByCircleId } from "@/lib/dummy/activity-reports";
-import { getCircleById } from "@/lib/dummy/circles";
+import { getReportsByCircle } from "@/lib/supabase/queries/activity-reports";
+import { getCircleById, isFavorited } from "@/lib/supabase/queries/circles";
+import { createClient } from "@/lib/supabase/server";
 import type { CircleDetail } from "@/lib/types/domain";
 
 interface CircleDetailPageProps {
@@ -46,7 +47,23 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
    * 활동 리포트 — 최신순 정렬된 전체 목록.
    * 「ホーム」 탭 미리보기 (slice 5건) + 「掲示板」 탭 전체 리스트 둘 다 같은 데이터 source.
    */
-  const reports = await getActivityReportsByCircleId(circle.id);
+  const reports = await getReportsByCircle(circle.id);
+
+  const supabase = await createClient();
+
+  /**
+   * fire-and-forget 조회수 증가 RPC — await 하지 않아 렌더 블로킹 없음.
+   * 에러 시 콘솔 출력만, UX에 영향 없음.
+   */
+  supabase.rpc("increment_view_count", { p_circle_id: id }).then(({ error }) => {
+    if (error) console.warn("[increment_view_count]", error.message);
+  });
+
+  // 인증 상태 + 초기 즐겨찾기 상태 조회 — CircleActions prop으로 전달
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const userId = claimsData?.claims?.sub as string | undefined;
+  const isAuthenticated = Boolean(userId);
+  const initialFavorited = userId ? await isFavorited(userId, id) : false;
 
   return (
     <article className="space-y-6">
@@ -82,7 +99,11 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
        * 5. lagging spring sticky 액션 — viewport 하단 고정 + 스크롤 velocity 반응.
        * fixed positioning 이라 부모 영향 없음 → 시맨틱상 container 밖, article 의 마지막 자식.
        */}
-      <CircleActions circle={circle} />
+      <CircleActions
+        circle={circle}
+        initialFavorited={initialFavorited}
+        isAuthenticated={isAuthenticated}
+      />
     </article>
   );
 }

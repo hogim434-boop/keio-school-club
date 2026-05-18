@@ -7,8 +7,8 @@ import { ReportPageHeader } from "@/components/circles/report-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ACTIVITY_REPORT_TYPE_LABELS } from "@/lib/constants/activity-report-type";
-import { getActivityReportById } from "@/lib/dummy/activity-reports";
-import { getCircleById } from "@/lib/dummy/circles";
+import { getReportById } from "@/lib/supabase/queries/activity-reports";
+import { getCircleById } from "@/lib/supabase/queries/circles";
 import type { ActivityReport } from "@/lib/types/domain";
 
 interface Props {
@@ -37,8 +37,8 @@ export default function ActivityReportDetailPage({ params }: Props) {
 async function ReportDetailContent({ params }: Props) {
   const { id, reportId } = await params;
 
-  // circle + report 병렬 fetch
-  const [circle, report] = await Promise.all([getCircleById(id), getActivityReportById(reportId)]);
+  // circle + report 병렬 fetch — Supabase 쿼리 함수로 교체
+  const [circle, report] = await Promise.all([getCircleById(id), getReportById(reportId)]);
 
   // 존재하지 않거나 서클-리포트 불일치 시 404
   if (!circle || !report || report.circle_id !== id) notFound();

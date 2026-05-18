@@ -14,6 +14,7 @@
 
 import { ExternalLink, Instagram, MessageCircle, Twitter } from "lucide-react";
 
+import { incrementInquiryCount } from "@/app/circles/[id]/actions";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -55,12 +56,12 @@ export function JoinChannelModal({ circle, open, onOpenChange }: JoinChannelModa
   /**
    * 채널 링크 클릭 처리.
    *
-   * - T-009 anchor: Phase 1.2 에서 incrementInquiryCount Server Action 으로 교체 예정.
-   * - T-015 anchor: 미로그인 시 router.push(`/auth/login?next=/circles/${circle.id}`) — Phase 1.2 이후 구현.
+   * - fire-and-forget 로 incrementInquiryCount Server Action 호출.
+   * - 에러가 나도 UX에 영향 없음 (void 처리).
    */
-  function handleChannelClick(key: "instagram" | "x" | "line") {
-    // T-009 anchor — Phase 1.2 에서 incrementInquiryCount RPC 호출로 교체
-    console.info("[T-009 anchor] incrementInquiryCount", circle.id, key);
+  function handleChannelClick() {
+    // 문의 카운트 증가 — fire-and-forget (await 없음)
+    void incrementInquiryCount(circle.id);
     onOpenChange(false);
   }
 
@@ -96,7 +97,7 @@ export function JoinChannelModal({ circle, open, onOpenChange }: JoinChannelModa
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={`${meta.label}で問い合わせる(外部リンク)`}
-                      onClick={() => handleChannelClick(ch.key)}
+                      onClick={() => handleChannelClick()}
                     >
                       <Icon className="size-5" aria-hidden="true" />
                       <span>{meta.label}</span>

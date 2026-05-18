@@ -19,7 +19,7 @@ import {
   isDiscoverMode,
   parseCirclesSearchParams,
 } from "@/lib/circles/search-params";
-import { filterCircles, getPopularCircles, getRecentCircles } from "@/lib/dummy/circles";
+import { filterCircles, getNewCircles, getPopularCircles } from "@/lib/supabase/queries/circles";
 
 interface CirclesPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -64,7 +64,7 @@ async function CirclesContent({ searchParams }: CirclesPageProps) {
  */
 async function DiscoverContent() {
   // 2열 × 4행 = 8 개 (HorizontalCircleStrip 가 자체 slice(0, 8) 방어, 여기서도 정확히 8 요청)
-  const [popular, recent] = await Promise.all([getPopularCircles(8), getRecentCircles(10)]);
+  const [popular, recent] = await Promise.all([getPopularCircles(8), getNewCircles(10)]);
 
   return (
     <div className="container mx-auto max-w-6xl space-y-8 px-4 py-6">
@@ -142,21 +142,25 @@ function ResultsHeader({ total, params }: { total: number; params: CirclesSearch
 
 /** 결과 렌더 — filterCircles 호출 + CardGrid + Pagination + 빈 결과 */
 async function Results({ params }: { params: CirclesSearchParams }) {
-  const result = await filterCircles({
+  const PAGE_SIZE = 12; // lib/supabase/queries/circles.ts 와 동기화
+
+  const { circles, total } = await filterCircles({
     q: params.q,
     category: params.category,
     frequency: params.frequency,
     officialType: params.officialType,
     tags: params.tags,
     page: params.page,
-    activityDays: params.activityDays,
     memberSize: params.memberSize,
     recruitmentStatus: params.recruitmentStatus,
     activityTimeBand: params.activityTimeBand,
     sort: params.sort,
   });
 
-  if (result.items.length === 0) {
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const currentPage = params.page ?? 1;
+
+  if (circles.length === 0) {
     return (
       <div className="space-y-6">
         <ResultsHeader total={0} params={params} />
@@ -167,18 +171,14 @@ async function Results({ params }: { params: CirclesSearchParams }) {
 
   return (
     <div className="space-y-6">
-      <ResultsHeader total={result.total} params={params} />
+      <ResultsHeader total={total} params={params} />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {result.items.map((circle) => (
+        {circles.map((circle) => (
           <CircleCard key={circle.id} circle={circle} />
         ))}
       </div>
-      {result.totalPages > 1 && (
-        <Pagination
-          current={result.page}
-          totalPages={result.totalPages}
-          baseSearchParams={params}
-        />
+      {totalPages > 1 && (
+        <Pagination current={currentPage} totalPages={totalPages} baseSearchParams={params} />
       )}
     </div>
   );

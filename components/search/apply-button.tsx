@@ -2,10 +2,10 @@
 
 import { useContext, useEffect, useState } from "react";
 
+import { getFilterCount } from "@/app/search/actions";
 import { SearchSlideOutContext } from "@/app/search/template";
 import { Button } from "@/components/ui/button";
 import { buildCirclesUrl, type CirclesSearchParams } from "@/lib/circles/search-params";
-import { filterCircles } from "@/lib/dummy/circles";
 
 interface ApplyButtonProps {
   /** 현재 draft state — 매칭 카운트 fetch + 「適用」 클릭 시 결과 URL 조립 */
@@ -24,17 +24,16 @@ interface ApplyButtonProps {
  * - count === 0: 「該当するサークルがありません」 (클릭 가능 — 결과 페이지의 EmptyState 가 「リセット」 안내)
  * - count === null (초기 로딩): 「適用」 (스켈레톤 회피로 단순 fallback)
  *
- * Phase 2 마이그레이션 시: filterCircles 클라이언트 호출은 server action / API route 로 교체 권장.
- * (현재 더미 데이터라 클라이언트 import 가능하지만 Supabase 전환 시 server-only 가 됨)
+ * Phase 1.2 T-009: 더미 filterCircles → getFilterCount Server Action 으로 교체.
  */
 export function ApplyButton({ draft }: ApplyButtonProps) {
   const exit = useContext(SearchSlideOutContext);
   const [count, setCount] = useState<number | null>(null);
 
-  // draft 변경 시 매칭 카운트 fetch — 클라이언트 호출 (더미 데이터 단순)
+  // draft 변경 시 매칭 카운트 fetch — Server Action 호출 (Supabase)
   useEffect(() => {
     let cancelled = false;
-    filterCircles({
+    getFilterCount({
       q: draft.q,
       category: draft.category,
       frequency: draft.frequency,
@@ -45,8 +44,8 @@ export function ApplyButton({ draft }: ApplyButtonProps) {
       recruitmentStatus: draft.recruitmentStatus,
       activityTimeBand: draft.activityTimeBand,
       sort: draft.sort,
-    }).then((r) => {
-      if (!cancelled) setCount(r.total);
+    }).then((total) => {
+      if (!cancelled) setCount(total);
     });
     return () => {
       cancelled = true;
