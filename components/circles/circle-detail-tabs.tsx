@@ -17,11 +17,19 @@
  * - onDragEnd: info.offset.x ± SWIPE_THRESHOLD 임계값 넘으면 setTab 호출.
  * - touch-pan-y: 가로 drag 만 가로채고 세로 스크롤은 native 유지 (모바일 필수).
  * - prefers-reduced-motion 시 drag 비활성 (탭 클릭으로만 전환).
+ *
+ * 활동 상세 → 뒤로가기 복귀 시 「掲示板」 탭 활성화:
+ * - 활동 상세 template 이 router.back() 직전 sessionStorage 에 DETAIL_RETURN_TAB_FLAG="board" set.
+ * - 본 컴포넌트가 mount 시 flag 확인 → 「掲示板」 으로 초기 setTab.
+ * - flag 는 useEffect 안에서 자동 제거 안 함. 사용자가 탭 직접 클릭 (handleValueChange) 시점에 제거.
+ *   이유: cacheComponents + Suspense streaming 환경에서 컴포넌트가 여러 차례 mount/unmount 반복되는데,
+ *   첫 mount 가 flag 를 소비/삭제하면 후속 mount 가 default home 으로 다시 초기화되어 동작 실패.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LazyMotion, domMax, m, useReducedMotion, type PanInfo } from "motion/react";
 
+import { DETAIL_RETURN_TAB_FLAG } from "@/app/circles/[id]/reports/[reportId]/template";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ActivityReportsList } from "@/components/circles/activity-reports-list";
 import { ActivityReportsPreview } from "@/components/circles/activity-reports-preview";
@@ -45,9 +53,31 @@ export function CircleDetailTabs({ circleId, reports, homeContent }: CircleDetai
   const [tab, setTab] = useState<TabValue>("home");
   const prefersReducedMotion = useReducedMotion();
 
-  /** 「もっと見る」 클릭 → 「掲示板」 탭으로 전환 */
+  // 활동 상세 → 뒤로가기 복귀 시 「掲示板」 탭으로 초기 전환 (자세한 동작 원리는 파일 상단 docstring 참조).
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(DETAIL_RETURN_TAB_FLAG);
+      if (saved === "board" || saved === "home") {
+        setTab(saved);
+      }
+    } catch {
+      // sessionStorage 접근 차단 환경 (private mode 등) — 기본 home 유지
+    }
+  }, []);
+
+  // 사용자가 탭을 직접 변경한 시점에만 sessionStorage flag 제거 → 다음 페이지 진입 시 default 동작 복귀.
+  function handleValueChange(value: string) {
+    setTab(value as TabValue);
+    try {
+      sessionStorage.removeItem(DETAIL_RETURN_TAB_FLAG);
+    } catch {
+      // 무시 — flag 없어도 default 동작
+    }
+  }
+
+  // 「もっと見る」 클릭 → 「掲示板」 탭. handleValueChange 경유로 flag 제거까지 일관 처리.
   function handleMoreClick() {
-    setTab("board");
+    handleValueChange("board");
   }
 
   /**
@@ -64,7 +94,7 @@ export function CircleDetailTabs({ circleId, reports, homeContent }: CircleDetai
   }
 
   return (
-    <Tabs value={tab} onValueChange={(value) => setTab(value as TabValue)} className="w-full">
+    <Tabs value={tab} onValueChange={handleValueChange} className="w-full">
       <TabsList variant="line" className="w-full justify-start border-b">
         <TabsTrigger
           value="home"

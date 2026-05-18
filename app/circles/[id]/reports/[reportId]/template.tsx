@@ -18,6 +18,13 @@ export const ReportSlideOutContext = createContext<() => void>(() => {});
 export const DETAIL_FADE_UP_FLAG = "kc-detail-fade-up";
 
 /**
+ * CircleDetailTabs 가 mount 시 읽는 sessionStorage 키.
+ * 활동 상세 → 뒤로가기 시점에 "board" set, CircleDetailTabs mount 시 1회 소비.
+ * 활동 상세에서 돌아오면 항상 「掲示板」 탭이 활성화된 상태로 노출.
+ */
+export const DETAIL_RETURN_TAB_FLAG = "kc-circle-detail-return-tab";
+
+/**
  * 활동 리포트 상세 페이지 전환 애니메이션.
  *
  * - 진입: opacity 0 → 1 (제자리 페이드 인)
@@ -59,6 +66,8 @@ export default function ReportTemplate({ children }: { children: React.ReactNode
             // → 부모가 mount 시 이 flag 확인 후 페이드 업 진입 모션 적용
             try {
               sessionStorage.setItem(DETAIL_FADE_UP_FLAG, "1");
+              // 뒤로 가서 부모 페이지에 도착 시 「掲示板」 탭이 활성화된 상태로 노출되도록 신호
+              sessionStorage.setItem(DETAIL_RETURN_TAB_FLAG, "board");
             } catch {
               // sessionStorage 접근 차단 환경 (private mode 등) — 무시, 기본 진입 모션 사용
             }
