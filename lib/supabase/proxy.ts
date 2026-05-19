@@ -8,6 +8,7 @@ import { hasEnvVars } from "../utils";
 // /search 는 검색 페이지 (당근앱 패턴) — 결과 페이지 /circles 가 공개이므로 검색도 공개.
 // /notifications 는 ComingSoon placeholder — Phase 2 에서 인증 필수로 전환 예정.
 // /mypage 는 인증 필수 — fallthrough false 로도 동작하지만 가독성 위해 명시.
+// /admin/* 는 인증 필수 (1차 가드). role='admin' 검증은 app/admin/layout.tsx 의 AdminGuard 가 담당 (2차 가드).
 function isPublicPath(pathname: string): boolean {
   if (pathname === "/") return true;
   if (pathname.startsWith("/auth")) return true;
@@ -17,6 +18,7 @@ function isPublicPath(pathname: string): boolean {
   // /shuffle 은 상시 비로그인 허용 — 게스트 디스커버리 진입점 (회원가입 전 체험 동선, 정책 결정)
   if (pathname === "/shuffle") return true;
   if (pathname === "/mypage") return false;
+  if (pathname.startsWith("/admin")) return false;
   if (pathname === "/circles") return true;
   if (pathname.startsWith("/circles/")) {
     if (pathname === "/circles/new") return false;
