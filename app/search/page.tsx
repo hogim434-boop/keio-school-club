@@ -18,24 +18,31 @@ interface SearchPageProps {
  *
  * 칩 클릭은 draft 토글만 → 사용자가 여러 조건을 모은 후 하단 sticky 「適用」 한 번에 navigate.
  *
- * cacheComponents 호환: 본문 전체 Suspense 로 감싸 searchParams await 영역 보호.
- * key={JSON.stringify(initial)} — URL 외부 변경 시 SearchPageBody 리마운트로 draft 동기화.
+ * cacheComponents 호환:
+ * - 부모에서 searchParams 를 미리 await → page 자체를 dynamic 으로 명시
+ * - Suspense 에 key={JSON.stringify(raw)} → searchParams 변경 시 자식 강제 리마운트
+ *   (stale RSC payload 재사용으로 「이전 필터로 검색 페이지 진입」 버그 차단)
+ * - SearchPageBody 의 key 는 client draft 동기화용 (별개 목적, 그대로 유지)
  */
-export default function SearchPage({ searchParams }: SearchPageProps) {
+export default async function SearchPage({ searchParams }: SearchPageProps) {
+  // 부모에서 await — page 자체를 dynamic 으로 만들어 cacheComponents 경계 명시
+  const raw = await searchParams;
+
   return (
     // overflow-x-clip — SearchCategories 의 음수 마진 가로 캐러셀이 페이지 자체 가로 스크롤로
     // 전파되는 걸 차단. clip 은 scroll container 를 만들지 않아 stacking context 영향 X.
     // 자식 캐러셀(overflow-x-auto)의 자체 가로 스크롤은 그대로 동작.
     <main className="overflow-x-clip pb-20 md:pb-12">
-      <Suspense fallback={<SearchPageFallback />}>
-        <SearchContent searchParams={searchParams} />
+      {/* key — searchParams 가 변경되면 Suspense 자식이 강제 리마운트되어
+          새 RSC payload 로 평가됨. cacheComponents 환경에서 stale 결과 차단. */}
+      <Suspense key={JSON.stringify(raw)} fallback={<SearchPageFallback />}>
+        <SearchContent raw={raw} />
       </Suspense>
     </main>
   );
 }
 
-async function SearchContent({ searchParams }: SearchPageProps) {
-  const raw = await searchParams;
+async function SearchContent({ raw }: { raw: Record<string, string | string[] | undefined> }) {
   const initial = parseCirclesSearchParams(raw);
 
   return (

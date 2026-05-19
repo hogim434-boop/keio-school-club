@@ -34,24 +34,32 @@ interface CirclesPageProps {
  * 검색·필터·카테고리 진입은 /search 페이지로 일원화 (당근앱 패턴, PR3 분리).
  * 헤더의 🔍 아이콘 또는 결과 모드의 「絞り込みを編集」 링크로 진입.
  *
- * cacheComponents 호환: 본문 전체를 Suspense 로 감싸 searchParams await 영역 보호.
+ * cacheComponents 호환:
+ * - 부모에서 searchParams 를 미리 await → page 자체를 dynamic 으로 명시
+ * - Suspense 에 key={JSON.stringify(raw)} → searchParams 변경 시 자식 강제 리마운트
+ *   (stale RSC payload 재사용으로 인한 「이전 필터 결과 표시」 버그 차단)
  */
-export default function CirclesPage({ searchParams }: CirclesPageProps) {
+export default async function CirclesPage({ searchParams }: CirclesPageProps) {
+  // 부모에서 await — page 자체를 dynamic 으로 만들어 cacheComponents 경계 명시
+  const raw = await searchParams;
+
   return (
     <main className="pb-20 md:pb-12">
       {/* iOS Push entry — search 의 좌측 슬라이드 아웃과 짝맞춤. 자세한 톤은 shell 주석 참조. */}
       <CirclesPageShell>
-        <Suspense fallback={<CirclesPageFallback />}>
-          <CirclesContent searchParams={searchParams} />
+        {/* key — searchParams 가 변경되면 Suspense 자식이 강제 리마운트되어
+            fallback skeleton 이 다시 표시되고 새 RSC payload 로 children 평가됨.
+            이게 없으면 cacheComponents 환경에서 「적용 직후 이전 결과」 stale 버그 발생. */}
+        <Suspense key={JSON.stringify(raw)} fallback={<CirclesPageFallback />}>
+          <CirclesContent raw={raw} />
         </Suspense>
       </CirclesPageShell>
     </main>
   );
 }
 
-/** 실제 본문 — searchParams await 후 모드 분기 수행 */
-async function CirclesContent({ searchParams }: CirclesPageProps) {
-  const raw = await searchParams;
+/** 실제 본문 — 이미 await 된 raw 를 parseCirclesSearchParams 로 도메인 모델 변환 */
+async function CirclesContent({ raw }: { raw: Record<string, string | string[] | undefined> }) {
   const params = parseCirclesSearchParams(raw);
   const discover = isDiscoverMode(params);
 
