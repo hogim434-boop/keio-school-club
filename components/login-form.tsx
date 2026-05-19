@@ -7,8 +7,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+
+// 오픈 리다이렉트 방지: next 파라미터는 안전한 상대 경로일 때만 사용
+// 외부 URL(https://evil.com)이나 protocol-relative URL(//evil.com)은 차단
+function sanitizeNext(rawNext: string | null): string | null {
+  if (!rawNext) return null;
+  if (!rawNext.startsWith("/")) return null;
+  if (rawNext.startsWith("//")) return null;
+  return rawNext;
+}
 
 export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRef<"div">) {
   const [email, setEmail] = useState("");
@@ -16,6 +25,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,8 +39,9 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
         password,
       });
       if (error) throw error;
-      // Update this route to redirect to an authenticated route. The user already has an active session.
-      router.push("/protected");
+      // 로그인 전 가려던 경로(?next=)가 있으면 그곳으로, 없으면 서클 목록으로 이동
+      const next = sanitizeNext(searchParams.get("next"));
+      router.push(next ?? "/circles");
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
