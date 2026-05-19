@@ -68,9 +68,15 @@ export function ShinkanBanner({ events }: ShinkanBannerProps) {
         </time>
       </span>
 
-      {/* 시각적 affordance only — Phase 2 에서 클릭 시 페이지 내 新歓 섹션으로 anchor 스크롤하는 client 컴포넌트 (또는 Link) 로 교체 예정.
-          현재는 빈 onClick 이라 button 으로 두면 (1) Server Component 에서 event handler 전달 에러 (Next.js 16) (2) 스크린리더에 「클릭 가능」 으로 인식되나 아무 동작 없는 UX 문제 두 가지 모두 발생 — 단순 icon 으로 격하. */}
-      <ChevronRight className="text-keio-navy h-4 w-4" aria-hidden="true" />
+      {/* TODO: Phase 2 — 클릭 시 페이지 내 新歓 섹션으로 anchor 스크롤 */}
+      <button
+        type="button"
+        onClick={() => {}}
+        aria-label="新歓イベントの詳細を見る"
+        className="hover:bg-keio-navy/10 rounded p-0.5 transition-colors active:scale-95 motion-reduce:transform-none"
+      >
+        <ChevronRight className="text-keio-navy h-4 w-4" aria-hidden="true" />
+      </button>
     </div>
   );
 }
