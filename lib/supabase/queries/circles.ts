@@ -10,6 +10,8 @@
  * - filterCircles의 q 검색은 name ilike '%q%' 단순 구현 — Phase 2에서 full-text 확장
  */
 
+import { unstable_noStore as noStore } from "next/cache";
+
 import { createClient } from "@/lib/supabase/server";
 import type { CircleDetail, CircleImage, CircleSummary, ShinkanEvent } from "@/lib/types/domain";
 import type { CirclesSearchParams } from "@/lib/circles/search-params";
@@ -177,6 +179,10 @@ export async function getCircleById(id: string): Promise<CircleDetail | null> {
 export async function filterCircles(
   params: Partial<CirclesSearchParams>
 ): Promise<{ circles: CircleSummary[]; total: number }> {
+  // Vercel Data Cache 우회 — 사용자가 필터를 바꾸면 즉시 새 결과를 봐야 함.
+  // cacheComponents: true 환경에서 Next.js 가 fetch 응답을 자동 캐싱하여 stale 결과를 반환하는
+  // 「localhost 정상 / Vercel stale」 버그의 진원지. noStore() 1줄로 이 함수의 모든 fetch 가 Data Cache 제외됨.
+  noStore();
   const supabase = await createClient();
 
   // 기본값 설정
@@ -301,6 +307,8 @@ export async function getFavorites(userId: string): Promise<CircleSummary[]> {
  * @param circleId 서클 UUID
  */
 export async function isFavorited(userId: string, circleId: string): Promise<boolean> {
+  // 사용자별 데이터 — 캐시되면 다른 사용자에게 잘못 노출되거나 본인의 토글이 반영 안 됨.
+  noStore();
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("favorites")
