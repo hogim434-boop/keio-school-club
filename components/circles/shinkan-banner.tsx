@@ -68,15 +68,10 @@ export function ShinkanBanner({ events }: ShinkanBannerProps) {
         </time>
       </span>
 
-      {/* TODO: Phase 2 — 클릭 시 페이지 내 新歓 섹션으로 anchor 스크롤 */}
-      <button
-        type="button"
-        onClick={() => {}}
-        aria-label="新歓イベントの詳細を見る"
-        className="hover:bg-keio-navy/10 rounded p-0.5 transition-colors active:scale-95 motion-reduce:transform-none"
-      >
-        <ChevronRight className="text-keio-navy h-4 w-4" aria-hidden="true" />
-      </button>
+      {/* Phase 2 에서 클릭 시 페이지 내 新歓 섹션으로 anchor 스크롤 예정.
+          현재는 장식용 chevron 아이콘만 표시 — Server Component 라 onClick 핸들러를 붙일 수 없음.
+          (인터랙션이 필요해지면 이 컴포넌트를 Client 로 분리하거나 chevron 만 Client 로 감쌀 것) */}
+      <ChevronRight className="text-keio-navy h-4 w-4 shrink-0" aria-hidden="true" />
     </div>
   );
 }
