@@ -18,7 +18,7 @@ const nextConfig: NextConfig = {
       {
         // Supabase Storage: circles-public 버킷 공개 이미지 — T-008 추가
         protocol: "https",
-        hostname: "wmiaxjgitpahribjrdyh.supabase.co",
+        hostname: "qugoxkrwlejeqarijztt.supabase.co",
         pathname: "/storage/v1/object/public/circles-public/**",
       },
     ],
