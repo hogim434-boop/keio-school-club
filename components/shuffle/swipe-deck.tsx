@@ -7,7 +7,6 @@ import Link from "next/link";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { LazyMotion, domAnimation } from "motion/react";
 import { ArrowLeft, Heart, X } from "lucide-react";
-import { toast } from "sonner";
 
 import { addFavoriteLocal } from "@/lib/circles/use-favorites";
 import { ShuffleSlideOutContext } from "@/app/shuffle/template";
@@ -45,9 +44,9 @@ export function SwipeDeck({ circles }: SwipeDeckProps) {
     if (dir === "right") {
       const target = shuffled[currentIndex];
       if (target) {
-        // 방향 A: 로그인 없이 localStorage 즐겨찾기에 추가
+        // 방향 A: 로그인 없이 localStorage 즐겨찾기에 추가.
+        // 시각 피드백은 SwipeCard 의 「気になる」 스탬프 슬램이 담당 (별도 토스트 미노출).
         addFavoriteLocal(target.id);
-        toast.success("気になるに追加しました");
       }
     }
     setCurrentIndex((i) => i + 1);
@@ -86,7 +85,7 @@ export function SwipeDeck({ circles }: SwipeDeckProps) {
 
   return (
     <LazyMotion features={domAnimation}>
-      <div className="relative mx-auto flex h-dvh max-w-md flex-col px-4 pb-32">
+      <div className="relative mx-auto flex h-full max-w-md flex-col px-4 pb-32">
         {/* ── 헤더 영역 — 戻る 버튼 전용 region. 카드 영역과 layout 상 완전 분리. ── */}
         <header
           className="flex items-center"
