@@ -846,7 +846,7 @@ export async function getCirclesByCategory(category: Category): Promise<CircleSu
  * - 모든 필터는 AND, 같은 필터 내 다중값은 OR (Postgres `IN`/`OVERLAPS` 와 동일).
  * - q 는 name 의 case-insensitive 부분 매칭 (T-009 와이어업 후 Supabase `ilike` 로 교체).
  * - tags 는 더미 데이터의 tags 배열과 1건 이상 겹치면 매칭 (OR).
- * - activity_days 는 선택 요일(한자 1자) 전부가 activity_days 문자열에 포함 (AND substring).
+ * - activity_days 는 선택 요일 중 하나라도 활동하면 매칭 (OR, DB activity_weekdays && 와 동일).
  * - member_size 는 member_count 범위 (small≤30 / mid 31-100 / large 101-200 / huge 200+).
  * - recruitment_status 는 OR (선택 값 중 하나라도 일치).
  * - activity_time_band 는 OR (단체 배열과 선택 배열이 1건 이상 교집합).
@@ -866,7 +866,7 @@ export interface FilterCirclesOptions {
   tags?: string[];
   page?: number;
   pageSize?: number;
-  /** 활동 요일 — 일본 한자 1자 토큰 배열. 전체 AND 매칭 (모든 요일이 포함된 단체만) */
+  /** 활동 요일 — 일본 한자 1자 토큰 배열. OR 매칭 (선택 요일 중 하나라도 활동하면 매칭) */
   activityDays?: string[];
   /** 회원수 범위 — 단일 선택 */
   memberSize?: MemberSize;
@@ -884,6 +884,18 @@ export interface FilterCirclesResult {
   page: number;
   pageSize: number;
   totalPages: number;
+}
+
+/**
+ * activity_days(text) → 요일 한자 배열. DB의 parse_activity_weekdays 생성 컬럼과 동일 규칙.
+ * 1) "X曜" 형식: 曜 앞 글자가 요일 (第3水曜日→水, "曜日"의 日은 제외)
+ * 2) bare 형식: 曜 가 없고 "・" 토큰이 요일 (月・水・金)
+ */
+export function parseActivityWeekdays(src: string): string[] {
+  const WD = ["月", "火", "水", "木", "金", "土", "日"];
+  const hasYou = src.includes("曜");
+  const bareTokens = hasYou ? [] : src.split("・").map((s) => s.trim());
+  return WD.filter((wd) => src.includes(`${wd}曜`) || (!hasYou && bareTokens.includes(wd)));
 }
 
 export async function filterCircles(
@@ -913,9 +925,10 @@ export async function filterCircles(
     if (tags.length > 0 && !tags.some((t) => c.tags.includes(t))) return false;
     if (qLower && !c.name.toLowerCase().includes(qLower)) return false;
 
-    // 활동 요일 AND substring 매칭 — 선택한 요일 전부가 activity_days 에 포함되어야 함
-    if (activityDays.length > 0 && !activityDays.every((day) => c.activity_days.includes(day))) {
-      return false;
+    // 활동 요일 OR 매칭 — 선택 요일 중 하나라도 활동하면 통과 (DB activity_weekdays && 와 동일)
+    if (activityDays.length > 0) {
+      const weekdays = parseActivityWeekdays(c.activity_days);
+      if (!activityDays.some((day) => weekdays.includes(day))) return false;
     }
 
     // 회원수 범위 단일 선택

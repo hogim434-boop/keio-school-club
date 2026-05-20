@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DUMMY_CIRCLES, filterCircles } from "@/lib/dummy/circles";
+import { DUMMY_CIRCLES, filterCircles, parseActivityWeekdays } from "@/lib/dummy/circles";
 
 describe("filterCircles — 단일 필터", () => {
   it("category=sports → 5건", async () => {
@@ -59,19 +59,33 @@ describe("filterCircles — 복합 + 페이지네이션", () => {
 });
 
 describe("filterCircles — 신규 5종 필터", () => {
-  it("activityDays=['火'] → activity_days 에 '火' 가 포함된 단체만 (AND substring)", async () => {
-    // 더미 데이터에서 직접 기대값 산출
-    const expectedCount = DUMMY_CIRCLES.filter((c) => c.activity_days.includes("火")).length;
-    expect(expectedCount).toBeGreaterThan(0); // 더미에 火 포함 단체 존재 확인
+  it("activityDays=['火'] → 火요일에 활동하는 단체만 (OR, 요일 배열 매칭)", async () => {
+    // 기대값은 DB activity_weekdays 와 동일한 파서로 산출 (substring 아님)
+    const expectedCount = DUMMY_CIRCLES.filter((c) =>
+      parseActivityWeekdays(c.activity_days).includes("火")
+    ).length;
+    expect(expectedCount).toBeGreaterThan(0); // 더미에 火요일 활동 단체 존재 확인
 
     const r = await filterCircles({ activityDays: ["火"] });
     expect(r.total).toBe(expectedCount);
-    // 모든 결과가 activity_days 에 '火' 를 포함하는지 확인
+    // 모든 결과가 火요일에 활동하는지 확인
     // (filterCircles 는 CircleSummary 반환이라 activity_days 없음 → DUMMY_CIRCLES 에서 검증)
     const resultIds = new Set(r.items.map((c) => c.id));
     for (const circle of DUMMY_CIRCLES) {
       if (resultIds.has(circle.id)) {
-        expect(circle.activity_days, `circle ${circle.id}`).toContain("火");
+        expect(parseActivityWeekdays(circle.activity_days), `circle ${circle.id}`).toContain("火");
+      }
+    }
+  });
+
+  it("activityDays=['日'] → 第N水曜日 등 「曜日」 false-positive 가 안 잡힌다 (OR)", async () => {
+    // 정규화 핵심 검증: 「日」 필터가 "第3水曜日" 같은 수요일 단체를 잘못 매칭하지 않아야 함
+    const r = await filterCircles({ activityDays: ["日"] });
+    const resultIds = new Set(r.items.map((c) => c.id));
+    for (const circle of DUMMY_CIRCLES) {
+      if (resultIds.has(circle.id)) {
+        // 매칭된 단체는 반드시 日요일에 활동 (parseActivityWeekdays 에 '日' 포함)
+        expect(parseActivityWeekdays(circle.activity_days), `circle ${circle.id}`).toContain("日");
       }
     }
   });
