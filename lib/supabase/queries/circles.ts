@@ -263,6 +263,27 @@ export async function getCircleById(id: string): Promise<CircleDetail | null> {
 }
 
 /**
+ * id 다건 조회 — /favorites(게스트 localStorage 즐겨찾기) 카드 그리드용.
+ * approved 만 반환(비공개/거절 서클 제외). 반환 순서는 보장하지 않으므로
+ * 호출측에서 필요 시 id 순서대로 재정렬한다.
+ */
+export async function getCirclesByIds(ids: string[]): Promise<CircleSummary[]> {
+  if (ids.length === 0) return [];
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("circles")
+    .select("*, circle_tags(tags(slug))")
+    .eq("status", "approved")
+    .in("id", ids);
+
+  if (error) {
+    console.error("[getCirclesByIds]", error.message);
+    return [];
+  }
+  return (data ?? []).map((row) => toCircleSummary(row as Record<string, unknown>));
+}
+
+/**
  * 필터 검색 — /circles 결과 모드 + /search 페이지에서 사용.
  * CirclesSearchParams의 모든 필드를 Supabase 쿼리로 변환.
  *

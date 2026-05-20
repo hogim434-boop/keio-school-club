@@ -1,13 +1,12 @@
-import { ComingSoon } from "@/components/layout/coming-soon";
+import { FavoritesPageBody } from "@/components/favorites/favorites-page-body";
 
-// Phase 1.3 T-017 에서 favorites 테이블 fetch + 비교 송출로 실제 구현 예정
-// 그 때 로그인 사용자 fetch 로 Suspense 경계 추가 필요
+/**
+ * 즐겨찾기 페이지 (T-017) — 게스트 localStorage(`kc:favorites`) 기반.
+ *
+ * 클라이언트 주도(localStorage 읽기 → 서버 액션 `getFavoriteCircles` 로 서클 fetch)라
+ * 본문은 Client Component(FavoritesPageBody)로 분리한다.
+ * 글로벌 헤더/하단탭은 노출 유지(인증 페이지 아님). `/favorites` 는 isPublicPath 공개.
+ */
 export default function FavoritesPage() {
-  return (
-    <ComingSoon
-      title="お気に入り"
-      description="気になるサークルを保存し、後で比較するためのページ"
-      plannedPhase="Phase 1.3 (T-017)"
-    />
-  );
+  return <FavoritesPageBody />;
 }
