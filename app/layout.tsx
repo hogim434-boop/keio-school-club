@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { Header } from "@/components/layout/header";
 import { HeaderClientGate } from "@/components/layout/header-client-gate";
+import { MainPaddingGate } from "@/components/layout/main-padding-gate";
 import { RegisterFloatingCTA } from "@/components/layout/register-floating-cta";
 import "./globals.css";
 
@@ -61,8 +62,9 @@ export default function RootLayout({
           </HeaderClientGate>
         </Suspense>
         {/* 모바일 하단 탭 바가 본문을 가리지 않도록 모바일에서만 pb-16 추가
-            (BottomNav 의 fixed 영역 ≈ 64px). 데스크탑은 BottomNav 미노출이라 패딩 불필요. */}
-        <div className="pb-16 md:pb-0">{children}</div>
+            (BottomNav 의 fixed 영역 ≈ 64px). 데스크탑은 BottomNav 미노출이라 패딩 불필요.
+            BottomNav 가 숨겨지는 풀스크린 경로(셔플 등)에서는 패딩도 제거 → MainPaddingGate 가 분기. */}
+        <MainPaddingGate>{children}</MainPaddingGate>
         {/* 모바일 전용 하단 탭 바 (md 미만, 당근앱 패턴) — 서클 상세에서는 자동 숨김.
             usePathname() 사용 Client 컴포넌트라 cacheComponents 모드에서 Suspense 필수. */}
         <Suspense fallback={null}>
