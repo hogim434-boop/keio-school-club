@@ -13,7 +13,9 @@ import { filterCircles } from "@/lib/supabase/queries/circles";
  */
 export default function ShufflePage() {
   return (
-    <main className="min-h-dvh">
+    // 셔플은 풀스크린 카드 인터랙션 화면 — 페이지 스크롤을 막아 뷰포트에 고정한다.
+    // (min-h-dvh 는 내용이 넘치면 늘어나 스크롤이 생기므로 h-dvh + overflow-hidden 으로 잠금)
+    <main className="h-dvh overflow-hidden overscroll-none">
       <Suspense fallback={null}>
         <ShuffleContent />
       </Suspense>
