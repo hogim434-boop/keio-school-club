@@ -1,133 +1,104 @@
 "use client";
 
 /**
- * useFavorites — Supabase Server Action 기반 즐겨찾기 hook
+ * useFavorites — localStorage 기반 게스트 즐겨찾기 hook
  *
- * Phase 1.2 T-009 와이어업: sessionStorage 완전 제거.
- * useOptimistic + startTransition 으로 낙관적 UI 업데이트 구현.
+ * 방향 A(디렉터리형): 탐색·즐겨찾기는 로그인 불필요. 누구나 브라우저
+ * localStorage 에 즐겨찾기를 저장한다. (계정 동기화는 추후 로그인 도입 시 추가)
  *
- * 동작 정책:
- * - 초기 즐겨찾기 상태(initialFavorited)는 RSC에서 isFavorited()로 조회하여 prop으로 전달.
- *   카드 목록처럼 prop을 내려주기 어려운 경우에는 false (비즐겨찾기 상태)로 시작.
- * - toggle 호출 시 즉시 낙관적 업데이트 → Server Action 실행 → 에러 시 롤백.
- * - 비로그인 시 /auth/login?next=${encodeURIComponent(pathname)} 로 리다이렉트.
- * - isAuthenticated가 undefined면 Supabase client에서 1회 lazy 조회.
+ * 동작:
+ * - SSR 안전: 서버 렌더 시 false, 마운트 후 localStorage 에서 hydrate.
+ * - 같은 탭의 여러 하트(목록 카드 등) 는 custom event 로, 다른 탭은 storage event 로 동기화.
+ * - 로그인 리다이렉트 없음 (이전 Supabase Server Action 방식 폐기).
  */
 
-import { startTransition, useCallback, useEffect, useOptimistic, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { toggleFavorite as toggleFavoriteAction } from "@/app/circles/[id]/actions";
-import { createClient } from "@/lib/supabase/client";
-import { hasEnvVars } from "@/lib/utils";
+import { useCallback, useEffect, useState } from "react";
+
+/** localStorage 키 — 즐겨찾기 circle id 배열을 JSON 으로 저장 */
+const STORAGE_KEY = "kc:favorites";
+/** 같은 탭 내 hook 인스턴스 동기화용 custom event 이름 */
+const SYNC_EVENT = "kc-favorites-changed";
+
+/** localStorage 에서 즐겨찾기 id 집합을 읽음 (실패 시 빈 집합) */
+function readIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return new Set();
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed.filter((x): x is string => typeof x === "string"));
+  } catch {
+    return new Set();
+  }
+}
+
+/** 즐겨찾기 id 집합을 저장하고 동기화 이벤트를 발행 */
+function writeIds(ids: Set<string>): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify([...ids]));
+  } catch {
+    // quota 초과 등은 조용히 무시 (즐겨찾기는 보조 기능)
+  }
+  // 같은 탭 내 다른 hook 인스턴스가 즉시 반영하도록 알림
+  window.dispatchEvent(new CustomEvent(SYNC_EVENT));
+}
+
+/** 즐겨찾기 추가 (hook 없이 호출 — 셔플 우측 스와이프 등에서 사용) */
+export function addFavoriteLocal(circleId: string): void {
+  const ids = readIds();
+  ids.add(circleId);
+  writeIds(ids);
+}
+
+/** 현재 즐겨찾기 여부 */
+export function isFavoriteLocal(circleId: string): boolean {
+  return readIds().has(circleId);
+}
+
+/** 저장된 즐겨찾기 id 배열 (즐겨찾기 페이지 등에서 사용 예정) */
+export function getFavoriteIds(): string[] {
+  return [...readIds()];
+}
 
 // ─── hook 반환 타입 ───────────────────────────────────────────────────────────
 export interface UseFavoritesReturn {
-  /** 현재 즐겨찾기 상태 (낙관적 포함) */
+  /** 현재 즐겨찾기 상태 */
   isFavorited: boolean;
-  /** 즐겨찾기 토글 — 비로그인 시 리다이렉트 */
+  /** 즐겨찾기 토글 (로그인 불필요) */
   toggle: () => void;
-  /** 토글 진행 중 여부 (중복 클릭 방지용) */
+  /** 진행 중 여부 — localStorage 는 동기 처리라 항상 false (호출부 호환용) */
   isPending: boolean;
 }
 
 /**
- * 인증 상태를 1회 조회하는 모듈 singleton Promise.
- * 카드 목록처럼 다수의 FavoriteToggleButton이 동시 마운트될 때
- * auth 조회를 반복하지 않도록 공유 캐시.
- */
-let cachedAuthPromise: Promise<boolean> | null = null;
-
-function getAuthStatus(): Promise<boolean> {
-  if (!cachedAuthPromise) {
-    if (!hasEnvVars) {
-      // 환경 변수 미설정 환경 — false로 처리
-      cachedAuthPromise = Promise.resolve(false);
-    } else {
-      cachedAuthPromise = createClient()
-        .auth.getClaims()
-        .then(({ data }) => Boolean(data?.claims))
-        .catch(() => false);
-    }
-  }
-  return cachedAuthPromise;
-}
-
-/**
- * 단일 서클에 대한 즐겨찾기 상태를 제공하는 Client hook.
+ * 단일 서클의 즐겨찾기 상태를 제공하는 Client hook.
  *
  * @param circleId 대상 서클 UUID
- * @param initialFavorited 초기 즐겨찾기 상태 (RSC에서 조회한 값 또는 false)
- * @param isAuthenticatedProp RSC에서 확인한 인증 상태 (undefined이면 client에서 lazy 조회)
  */
-export function useFavorites(
-  circleId: string,
-  initialFavorited: boolean = false,
-  isAuthenticatedProp?: boolean
-): UseFavoritesReturn {
-  const router = useRouter();
-  const pathname = usePathname();
+export function useFavorites(circleId: string): UseFavoritesReturn {
+  const [isFavorited, setIsFavorited] = useState(false);
 
-  // 서버 실행 중 여부 추적 (중복 클릭 방지)
-  const [isPending, setIsPending] = useState(false);
-
-  // 인증 상태 — prop이 있으면 그대로, 없으면 lazy 조회 (null: 조회 전)
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(
-    isAuthenticatedProp !== undefined ? isAuthenticatedProp : null
-  );
-
-  // isAuthenticatedProp이 undefined인 경우 mount 시 lazy 조회
+  // 마운트 후 localStorage 에서 초기 상태 hydrate + 변경 이벤트 구독
   useEffect(() => {
-    if (isAuthenticatedProp === undefined) {
-      getAuthStatus().then(setIsAuthenticated);
-    }
-  }, [isAuthenticatedProp]);
+    const sync = () => setIsFavorited(isFavoriteLocal(circleId));
+    sync();
+    window.addEventListener(SYNC_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(SYNC_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [circleId]);
 
-  // useOptimistic: 낙관적 상태 — 실제 상태와 별도로 즉각 반영
-  const [optimisticFavorited, setOptimisticFavorited] = useOptimistic(initialFavorited);
-
-  /** 즐겨찾기 토글 — 비로그인 시 로그인 페이지로 이동 */
   const toggle = useCallback(() => {
-    // 인증 상태 조회 전(null)이거나 명시적 미인증(false)이면 리다이렉트
-    if (isAuthenticated === false) {
-      router.push(`/auth/login?next=${encodeURIComponent(pathname)}`);
-      return;
-    }
+    const ids = readIds();
+    if (ids.has(circleId)) ids.delete(circleId);
+    else ids.add(circleId);
+    writeIds(ids);
+    setIsFavorited(ids.has(circleId));
+  }, [circleId]);
 
-    // 인증 상태 조회 중(null)이면 대기
-    if (isAuthenticated === null) return;
-
-    // 중복 클릭 방지
-    if (isPending) return;
-
-    startTransition(async () => {
-      setIsPending(true);
-      // 낙관적 업데이트: 토글 즉시 반영
-      setOptimisticFavorited((prev) => !prev);
-
-      try {
-        const result = await toggleFavoriteAction(circleId);
-        if (result.error === "unauthenticated") {
-          // 서버측에서 비인증 판정 — 롤백 후 리다이렉트
-          setOptimisticFavorited((prev) => !prev);
-          router.push(`/auth/login?next=${encodeURIComponent(pathname)}`);
-        } else if (result.error) {
-          // 기타 서버 에러 — 낙관적 상태 롤백
-          setOptimisticFavorited((prev) => !prev);
-          console.error("[useFavorites] toggle error:", result.error);
-        }
-      } catch (e) {
-        // 네트워크 에러 등 — 롤백
-        setOptimisticFavorited((prev) => !prev);
-        console.error("[useFavorites] unexpected error:", e);
-      } finally {
-        setIsPending(false);
-      }
-    });
-  }, [isAuthenticated, isPending, circleId, pathname, router, setOptimisticFavorited]);
-
-  return {
-    isFavorited: optimisticFavorited,
-    toggle,
-    isPending,
-  };
+  return { isFavorited, toggle, isPending: false };
 }

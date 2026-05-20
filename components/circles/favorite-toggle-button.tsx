@@ -3,8 +3,7 @@
 /**
  * FavoriteToggleButton — 즐겨찾기 토글 버튼 컴포넌트
  *
- * Phase 1.2 T-009: sessionStorage 제거 → Supabase Server Action 기반으로 교체.
- * useFavorites hook에 circleId / initialFavorited / isAuthenticated 전달.
+ * 방향 A: localStorage 기반 게스트 즐겨찾기 (로그인 불필요). useFavorites hook 사용.
  *
  * variant='card' 는 카드 우상단 오버레이용, variant='action-bar' 는 하단 고정 액션 바 / 데스크탑 inline 용.
  * variant='action-bar-card' 는 하단 sticky 바 이미지 패턴용 정사각 카드 버튼 (56×56px, keio-navy 하트).
@@ -26,18 +25,6 @@ interface FavoriteToggleButtonProps {
    * - 'action-bar-card': 하단 sticky 바 이미지 패턴 (56×56px 정사각, rounded-xl, keio-navy 하트)
    */
   variant: "card" | "action-bar" | "action-bar-card";
-  /**
-   * RSC 에서 내려주는 초기 즐겨찾기 상태.
-   * 카드 목록에서는 false 로 시작 (DB 쿼리 비용 절감), 상세 페이지에서는 isFavorited()로 조회.
-   */
-  initialFavorited?: boolean;
-  /**
-   * RSC 에서 내려주는 인증 상태 (선택적).
-   * - 제공된 경우: 그 값을 즉시 사용.
-   * - 미제공(카드 목록 등): hook 내부에서 Supabase client로 lazy 조회.
-   * false 면 토글 시 로그인 페이지로 리다이렉트.
-   */
-  isAuthenticated?: boolean;
 }
 
 /**
@@ -45,18 +32,8 @@ interface FavoriteToggleButtonProps {
  * 카드 전체가 Link 로 감싸진 경우에도 클릭이 페이지 이동으로 이어지지 않도록
  * e.preventDefault() + e.stopPropagation() 을 호출한다.
  */
-export function FavoriteToggleButton({
-  circleId,
-  variant,
-  initialFavorited = false,
-  isAuthenticated,
-}: FavoriteToggleButtonProps) {
-  // isAuthenticated가 undefined이면 hook 내부에서 lazy 조회 (카드 목록 등)
-  const {
-    isFavorited: active,
-    toggle,
-    isPending,
-  } = useFavorites(circleId, initialFavorited, isAuthenticated);
+export function FavoriteToggleButton({ circleId, variant }: FavoriteToggleButtonProps) {
+  const { isFavorited: active, toggle, isPending } = useFavorites(circleId);
 
   return (
     <button

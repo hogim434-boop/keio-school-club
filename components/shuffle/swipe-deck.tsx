@@ -4,13 +4,12 @@
 // LazyMotion 래핑 담당 (SwipeCard 에서 m.div 사용 → 여기서 domAnimation 공급).
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { LazyMotion, domAnimation } from "motion/react";
 import { ArrowLeft, Heart, X } from "lucide-react";
 import { toast } from "sonner";
 
-import { toggleFavorite as toggleFavoriteAction } from "@/app/circles/[id]/actions";
+import { addFavoriteLocal } from "@/lib/circles/use-favorites";
 import { ShuffleSlideOutContext } from "@/app/shuffle/template";
 import { SwipeCard, type SwipeCardHandle } from "@/components/shuffle/swipe-card";
 import { Emoji } from "@/components/ui/emoji";
@@ -38,24 +37,16 @@ export function SwipeDeck({ circles }: SwipeDeckProps) {
   // 현재 상단 카드 인덱스 — swipe 발생할 때마다 +1
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const router = useRouter();
-
   // 가장 위 카드의 imperative handle — 좌우 버튼·키보드가 호출해 fly-out 트리거
   const topCardRef = useRef<SwipeCardHandle>(null);
-
-  const pathname = usePathname();
 
   // fly-out 완료 후 SwipeCard.onSwipe 콜백으로 호출됨 — 즐겨찾기·인덱스 갱신만 담당
   const handleSwipe = (dir: "left" | "right") => {
     if (dir === "right") {
       const target = shuffled[currentIndex];
       if (target) {
-        // Server Action fire-and-forget: 비인증 시 로그인 리다이렉트
-        void toggleFavoriteAction(target.id).then((result) => {
-          if (result.error === "unauthenticated") {
-            router.push(`/auth/login?next=${encodeURIComponent(pathname)}`);
-          }
-        });
+        // 방향 A: 로그인 없이 localStorage 즐겨찾기에 추가
+        addFavoriteLocal(target.id);
         toast.success("気になるに追加しました");
       }
     }

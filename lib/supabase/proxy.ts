@@ -17,6 +17,8 @@ function isPublicPath(pathname: string): boolean {
   if (pathname === "/notifications") return true;
   // /shuffle 은 상시 비로그인 허용 — 게스트 디스커버리 진입점 (회원가입 전 체험 동선, 정책 결정)
   if (pathname === "/shuffle") return true;
+  // /favorites 는 localStorage 기반 게스트 즐겨찾기 (방향 A) — 비로그인 허용.
+  if (pathname === "/favorites") return true;
   if (pathname === "/mypage") return false;
   if (pathname.startsWith("/admin")) return false;
   if (pathname === "/circles") return true;
