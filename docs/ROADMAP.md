@@ -30,6 +30,21 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
 > **🟦 모바일 퍼스트 (전 ROADMAP 의 최우선 설계 원칙)**
 > 본 서비스는 일본 대학생이 스마트폰으로 활용하는 것을 전제로 한다. 모든 UI 작업의 기본 viewport 는 **360–428px**(iPhone SE ~ iPhone Pro Max / Android 표준)이며, 데스크탑(`md:` 이상, 768px+) 은 보조 환경으로서 progressive enhancement 로만 다룬다. 모든 카드·폼·CTA 는 우선 모바일 1열 레이아웃·44px 이상 터치 타깃·safe-area inset 을 보장한 뒤, 가용 너비가 늘어남에 따라 다열 그리드·사이드바·인라인 CTA 로 확장한다.
 
+> **🧭 인증 전략 = Direction A (디렉터리형, 2026-05-20 결정)**
+> 「전원 회원가입」 모델을 폐기하고, **탐색자(일반 학생)는 무로그인, 계정은 서클 대표·관리자만** 만드는 디렉터리형으로 전환한다. 근거: 현실에서 학생은 Instagram → 新歓 LINE 으로 참여하며 게이오 학생 여부를 묻지 않음 → 회원가입 벽은 마찰만 유발. 영향:
+>
+> - **무로그인 허용**: 둘러보기·검색·셔플·상세·**連絡(Instagram/X/LINE 외부 링크)**·**즐겨찾기(localStorage)** 전부 비로그인.
+> - **계정 필요 영역**: 서클 등록/관리(`/circles/new`, `/mypage`), 관리자(`/admin`). 회원가입은 사실상 「서클 대표 온보딩」.
+> - **Keio 인증의 의미**: 일반 유저 게이트가 아니라 **서클 대표 신뢰 배지(`keio_verified`)** 로만 사용 (가짜 서클 방지 + 관리자 승인 이중 게이트).
+> - **회원가입/로그인 구현**: 회원가입 = Google(Keio) OAuth 인증 → 비밀번호 설정 → 닉네임 → 완료(4단계 풀스크린 온보딩). 로그인 = Keio 이메일+비밀번호. (`components/login-form.tsx`, `sign-up-form.tsx`, `components/auth/*`, `app/auth/callback/route.ts`)
+> - **連絡 동선**: 「参加する」 → 채널 모달 → Instagram/X/LINE 외부 링크(로그인 불필요). 익명 클릭 시 `inquiry_count` 는 조용히 스킵.
+
+> **🔥 新歓(shinkan_events) 기능 제거 (2026-05-20 결정)**
+> MVP 범위 축소를 위해 新歓 **이벤트 기능**(DB `shinkan_events` 테이블·`ShinkanBanner`·CTA 분기·시드)을 전부 제거. 상세 CTA 「新歓に参加する」 → 「参加する」 단순화. **MVP 출시 후 재도입 예정.** (※ "4월 新歓 시즌 출시" 의 新歓 = 모집 시즌 개념으로 별개, 유지)
+
+> **🗃️ Supabase 프로젝트 일본 리전 이전 (2026-05-20)**
+> 리전 오설정으로 신규 일본 리전 프로젝트(`qugoxkrwlejeqarijztt`) 생성 + 마이그레이션 전체 재적용. `.mcp.json` / `.env.local` / `next.config.ts` 이미지 호스트 갱신 완료.
+
 ---
 
 ## 개발 워크플로우
@@ -335,32 +350,39 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
 
 ### Phase 1.3 — 인증 & 사용자 영역 (T-015 ~ T-018)
 
-| ID        | 작업                                      | 상태    | 공수 | 선행         | 관련 기능 |
-| --------- | ----------------------------------------- | ------- | ---- | ------------ | --------- |
-| **T-015** | @keio.jp 인증 + `keio_verified` 자동 부여 | pending | 1d   | T-005, T-006 | F010      |
-| **T-016** | 마이페이지 + 내 서클 관리 페이지          | pending | 1.5d | T-015        | F011      |
-| **T-017** | 즐겨찾기 페이지                           | pending | 1d   | T-013        | F007      |
-| **T-018** | 서클 등록 폼 + URL 화이트리스트 검증      | pending | 2d   | T-008, T-015 | F005      |
+| ID        | 작업                                                 | 상태             | 공수 | 선행         | 관련 기능 |
+| --------- | ---------------------------------------------------- | ---------------- | ---- | ------------ | --------- |
+| **T-015** | 인증(Google/Keio OAuth + 비밀번호) + `keio_verified` | ✅ 코드\*        | 1d   | T-005, T-006 | F010      |
+| **T-016** | 마이페이지 = 서클 대표 대시보드 (Direction A 재정의) | pending          | 1.5d | T-015        | F011      |
+| **T-017** | 즐겨찾기 페이지 (게스트 localStorage, 로그인 불필요) | 🚧 저장✅/페이지 | 0.5d | T-013        | F007      |
+| **T-018** | 서클 등록 폼 + URL 화이트리스트 검증                 | pending          | 2d   | T-008, T-015 | F005      |
 
-- **T-015: @keio.jp 인증 + `keio_verified` 자동 부여**
-  - 기존 `components/sign-up-form.tsx` 의 이메일 인증 콜백에서 도메인 검사.
-  - `auth.users` insert 트리거가 `profiles` 행 생성 시 이메일 도메인이 `keio.jp` 또는 `*.keio.jp` 면 `keio_verified=true` 설정.
-  - 마이페이지에 「慶應生認証済み」 뱃지 노출.
-  - **모바일 (기본)**: 로그인·회원가입 폼은 1열 스택, 폼 너비 `max-w-sm mx-auto` + 풀폭 입력. 각 input 에 `inputmode="email"` / `autocomplete="email"` / `autocomplete="current-password"` 적용하여 모바일 키보드와 자동완성 최적화. 제출 버튼은 최소 48px, 풀폭.
-  - **`/shuffle` 상시 비로그인 허용 정책**: `/shuffle` 은 **회원가입 전 게스트 디스커버리 진입점**으로 상시 비로그인 허용 (`isPublicPath()` 분기 영구 유지, `lib/supabase/proxy.ts:18`). Phase 1.2 T-009 와이어업 시 `increment_view_count` RPC 는 **익명 (anon role) 호출 허용** 으로 설계 — RPC 정의에 `SECURITY DEFINER` + `GRANT EXECUTE ... TO anon` 또는 클라이언트 측 view_count 증가 생략. 즐겨찾기·「参加する」 같은 인증 의존 액션 클릭 시에만 `/auth/login?next=/shuffle` 리디렉션.
-  - **테스트**: `test@keio.jp` 로 가입 시 verified, `test@gmail.com` 으로 가입 시 unverified.
+> \* T-015 는 코드 구현 완료. 단 실제 Google 로그인 동작에는 **Google Cloud OAuth 클라이언트 + Supabase Google provider 활성화 + Redirect URL 설정**(대시보드 작업)이 선행돼야 함.
 
-- **T-016: 마이페이지 + 내 서클 관리 페이지**
-  - `app/mypage/page.tsx`: 표시명·이메일·verified 뱃지·등록 서클 수 카드 + 「登録サークルを管理」 링크.
-  - `app/mypage/circles/page.tsx`: 내 서클 목록 (status 뱃지 「審査中」/「公開中」/「却下」 + 거절 사유 표시).
-  - 둘 다 `lib/supabase/server.ts` 사용 + Suspense 경계.
-  - **모바일 (기본)**: 프로필 카드와 등록 서클 카드 모두 1열 풀폭 스택. 「登録サークルを管理」 링크는 풀폭 버튼(터치 타깃 48px). 내 서클 목록은 1열 카드, 상태 뱃지는 카드 우상단.
+- **T-015: 인증 (Google/Keio OAuth + 비밀번호) + `keio_verified` 자동 부여** ✅ — _Direction A 로 재설계_
+  - **회원가입 = 4단계 풀스크린 온보딩**: ① Google(Keio) OAuth 인증(`hd=keio.jp` 힌트) → ② 비밀번호 설정(8자+) → ③ 닉네임(`display_name`) → ④ 완료. (`components/sign-up-form.tsx`, `components/auth/google-button.tsx`, `app/auth/sign-up/page.tsx`)
+  - **로그인 = Keio 이메일 + 비밀번호** (`signInWithPassword`). Google 버튼 없음. (`components/login-form.tsx`)
+  - **OAuth 콜백** `app/auth/callback/route.ts`: `exchangeCodeForSession` → `profiles.display_name` 이 null(온보딩 미완)이면 `?step=password` 로, 있으면 `next`/`/circles` 로 분기. `sanitizeNext` 공용화(`lib/auth/sanitize-next.ts`).
+  - **`keio_verified` 자동 부여**: `auth.users` insert 트리거 `handle_new_user` 가 `is_keio_email(NEW.email)` 로 `keio.jp`/`*.keio.jp` 판정 (마이그레이션 `015_handle_new_user_keio_verified` 적용 완료). Google 로그인이어도 이메일 도메인 기준 자동.
+  - **비-keio 계정**: 가입은 허용하되 `keio_verified=false` (코드에서 차단하지 않음 — Direction A).
+  - **풀스크린 온보딩 UI (디렉션 C)**: 우상단 「n / 4」 숫자 진행 + 큰 타이틀 + 연한 채움 input(`lib/auth/input-class.ts`) + 비번 show/hide 토글(`components/auth/password-input.tsx`) + 네이비 CTA. 셸 `components/auth/auth-screen.tsx`. `/auth/*` 에서 글로벌 헤더·하단탭 숨김(`header.tsx`/`header-client-gate.tsx`/`bottom-nav.tsx`).
+  - **`/shuffle` 등 게스트 정책**: 둘러보기·검색·셔플·상세·連絡·즐겨찾기 전부 비로그인(`isPublicPath` 에 `/shuffle`·`/favorites` 공개). `increment_view_count` 익명 허용 유지.
+  - **⚠️ 선행 조건(미완)**: 실제 Google 로그인 동작에는 Google Cloud OAuth 클라이언트 + Supabase Google provider 활성화 + Redirect URL(`/auth/callback`) 설정 필요(대시보드 작업).
+  - **테스트**: `*@keio.jp` 가입 시 verified, 그 외 unverified.
 
-- **T-017: 즐겨찾기 페이지**
-  - `app/favorites/page.tsx`: 로그인 필수 (미로그인 시 `/auth/login?next=/favorites` 리디렉션).
-  - 카드 그리드 + 카드별 하트 해제 버튼 + 비교 체크박스 (최대 3개, 초과 시 `toast` 경고).
-  - 「比較する」 버튼 → `/compare?ids=a,b,c` 로 이동 (Phase 1 후반 stretch goal — T-024 에서 실제 비교 페이지 구현).
-  - **모바일 (기본)**: 카드 그리드 1열 (`sm:grid-cols-2`). 비교 체크박스는 카드 좌상단 24×24px 이상 + 터치 타깃 영역 44px 확보. 「比較する」 버튼은 하단 sticky 바(`md:` 이상에서는 카드 그리드 상단 인라인 버튼).
+- **T-016: 마이페이지 = 서클 대표 대시보드** — _Direction A 재정의_
+  - **대상**: 로그인한 사용자(사실상 서클 대표/관리자). 일반 탐색자는 계정이 없으므로 마이페이지 비대상 — **"비로그인 유저가 못 쓰는 것"이 정상·의도된 설계**(즐겨찾기는 별도 게스트 탭 `/favorites`).
+  - **비로그인 접근**: `proxy.ts` 가 `/mypage` 를 비공개로 막아 `/auth/login?next=/mypage` 로 리디렉트. 「サークルを運営していますか? ログイン」 톤의 안내(로그인=서클 대표 입구).
+  - `app/mypage/page.tsx`: 프로필(닉네임 `display_name`·`keio_verified` 「慶應生認証済み」 배지) + 등록 서클 수 카드 + 「登録サークルを管理」 링크 + 로그아웃. **등록 서클이 0개이면 「サークルを登録する」 CTA**(대표가 아직 미등록인 경우).
+  - `app/mypage/circles/page.tsx`: 내 서클 목록 (status 뱃지 「審査中」/「公開中」/「却下」 + 거절 사유).
+  - 둘 다 `lib/supabase/server.ts` + Suspense. **모바일 (기본)**: 1열 풀폭 스택, 「登録サークルを管理」 풀폭 버튼(48px), 상태 뱃지 카드 우상단.
+
+- **T-017: 즐겨찾기 페이지 (게스트 localStorage)** — _Direction A: 로그인 불필요. 🚧 저장 로직 완료 / 페이지 UI 남음_
+  - **✅ 저장 로직 완료 (Direction A 리팩토링 시 적용)**: `lib/circles/use-favorites.ts` 가 브라우저 `localStorage`(`kc:favorites`)에 circle id 저장(로그인 불필요). 헬퍼 export: `useFavorites(circleId)` / `addFavoriteLocal` / `isFavoriteLocal` / `getFavoriteIds`. 상세 하트(`circle-actions`)·카드 하트(`favorite-toggle-button`)·셔플 우측 스와이프(`swipe-deck`) 모두 게스트 동작. `/favorites` 는 `isPublicPath` 공개로 변경됨. DB `favorites` 테이블·서버 액션 `toggleFavorite` 는 보존(현재 미사용).
+  - **⬜ 남은 작업 — 즐겨찾기 페이지 UI**: `app/favorites/page.tsx` (현재 `ComingSoon`) 교체. 클라이언트에서 `getFavoriteIds()` 로 저장된 id 읽기 → **신규 쿼리 `getCirclesByIds(ids)`** (`lib/supabase/queries/circles.ts`, `.in("id", ids)`) 로 카드 데이터 fetch → 카드 그리드 렌더. 빈 상태 안내. 카드별 하트 해제 시 목록 즉시 반영(`kc-favorites-changed` 이벤트 활용) + 비교 체크박스(최대 3개, 초과 시 `toast`).
+  - 「比較する」 → `/compare?ids=a,b,c` (T-024 에서 비교 페이지).
+  - **계정 동기화는 추후**: 로그인 도입 시 보존된 DB `favorites` 테이블 + 서버 액션으로 기기 간 동기화 확장.
+  - **모바일 (기본)**: 카드 그리드 1열(`sm:grid-cols-2`), 비교 체크박스 터치 타깃 44px, 「比較する」 하단 sticky 바.
 
 - **T-018: 단체 등록 폼 + URL 화이트리스트 검증** — 우선순위
   - `app/circles/new/page.tsx` (Client Component, RHF + Zod).
