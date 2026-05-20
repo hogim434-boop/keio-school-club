@@ -31,7 +31,9 @@ export async function Header() {
   const isSearch = pathname === "/search";
   // /shuffle — Tinder 스타일 swipe deck 풀스크린 패턴, 글로벌 헤더 미노출
   const isShuffle = pathname === "/shuffle";
-  if (isCircleDetail || isCircleReportDetail || isSearch || isShuffle) return null;
+  // /auth/* — 풀스크린 인증 플로우. AuthScreen이 fixed inset-0으로 헤더를 덮으므로 미노출
+  const isAuth = pathname.startsWith("/auth");
+  if (isCircleDetail || isCircleReportDetail || isSearch || isShuffle || isAuth) return null;
 
   // 우측 아이콘 공통 클래스 — 40×40 hit target + focus ring + hover 반응
   const iconButton =

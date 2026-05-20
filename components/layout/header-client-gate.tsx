@@ -14,6 +14,7 @@ import type { ReactNode } from "react";
 // - 활동 리포트 상세 (/circles/{uuid}/reports/{uuid}) — 콘텐츠 중심 페이지, floating 뒤로가기 사용
 // - 검색 페이지 (/search) — 당근앱 패턴, SearchPageHeader 가 글로벌 헤더 역할 인계
 // - 셔플 페이지 (/shuffle) — Tinder 풀스크린 swipe deck
+// - 인증 페이지 (/auth/*) — 풀스크린 AuthScreen 이 헤더를 덮으므로 미노출
 export function HeaderClientGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const isCircleDetail = /^\/circles\/[0-9a-f-]+$/i.test(pathname) && pathname !== "/circles/new";
@@ -21,6 +22,8 @@ export function HeaderClientGate({ children }: { children: ReactNode }) {
   const isCircleReportDetail = /^\/circles\/[0-9a-f-]+\/reports\/[\w-]+$/i.test(pathname);
   const isSearch = pathname === "/search";
   const isShuffle = pathname === "/shuffle";
-  if (isCircleDetail || isCircleReportDetail || isSearch || isShuffle) return null;
+  // /auth/* — AuthScreen fixed inset-0 풀스크린이 헤더를 완전히 덮음
+  const isAuth = pathname.startsWith("/auth");
+  if (isCircleDetail || isCircleReportDetail || isSearch || isShuffle || isAuth) return null;
   return <>{children}</>;
 }

@@ -38,7 +38,9 @@ export function BottomNav() {
   const isCircleDetail = /^\/circles\/[0-9a-f-]+$/i.test(pathname) && pathname !== "/circles/new";
   // /shuffle — swipe deck 풀스크린, 하단 좌우 버튼 위해 BottomNav 미노출
   const isShuffle = pathname === "/shuffle";
-  if (isCircleDetail || isShuffle) return null;
+  // /auth/* — 풀스크린 인증 플로우. AuthScreen footer에 CTA가 있으므로 BottomNav 미노출
+  const isAuth = pathname.startsWith("/auth");
+  if (isCircleDetail || isShuffle || isAuth) return null;
 
   return (
     <nav
