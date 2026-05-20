@@ -14,6 +14,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { CircleDetail, CircleImage, CircleSummary } from "@/lib/types/domain";
 import type { CirclesSearchParams } from "@/lib/circles/search-params";
+import type { RecruitmentStatus } from "@/lib/constants/recruitment-status";
 import type { Category } from "@/lib/constants/category";
 import type { OfficialType } from "@/lib/constants/official-type";
 import type { CircleStatus } from "@/lib/constants/circle-status";
@@ -142,6 +143,8 @@ function toCircleSummary(row: Record<string, unknown>): CircleSummary {
     view_count: (row.view_count as number) ?? 0,
     inquiry_count: (row.inquiry_count as number) ?? 0,
     tags,
+    description: (row.description as string) ?? "",
+    recruitment_status: (row.recruitment_status as RecruitmentStatus | null) ?? null,
   };
 }
 
@@ -160,7 +163,6 @@ function toCircleDetail(row: Record<string, unknown>): CircleDetail {
 
   return {
     ...summary,
-    description: (row.description as string) ?? "",
     activity_days: (row.activity_days as string) ?? "",
     member_count: (row.member_count as number) ?? 0,
     contact_instagram: (row.contact_instagram as string | null) ?? null,
@@ -170,7 +172,6 @@ function toCircleDetail(row: Record<string, unknown>): CircleDetail {
     // owner_id NULL 시드이므로 빈 문자열로 fallback
     owner_id: (row.owner_id as string | null) ?? "",
     status: (row.status as CircleDetail["status"]) ?? "approved",
-    recruitment_status: row.recruitment_status as CircleDetail["recruitment_status"],
     activity_time_band: row.activity_time_band as CircleDetail["activity_time_band"],
   };
 }
@@ -217,6 +218,44 @@ export async function getNewCircles(limit = 10): Promise<CircleSummary[]> {
     return [];
   }
   return (data ?? []).map((row) => toCircleSummary(row as Record<string, unknown>));
+}
+
+/**
+ * 현재 모집중인 서클 — recruitment_status 가 설정된(모집 중인) 단체.
+ * 홈 Discover 「現在募集中のサークル」 가로 스크롤 섹션에서 사용.
+ *
+ * 정렬: 시급한 모집(open=現在募集中, newcomer_only=新歓限定)을 통년 모집(year_round)보다 앞에,
+ * 동일 우선순위 안에서는 인기순(view_count) 정렬해 노출.
+ */
+export async function getRecruitingCircles(limit = 12): Promise<CircleSummary[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("circles")
+    .select("*, circle_tags(tags(slug))")
+    .eq("status", "approved")
+    .not("recruitment_status", "is", null)
+    .order("view_count", { ascending: false })
+    .limit(24);
+
+  if (error) {
+    console.error("[getRecruitingCircles]", error.message);
+    return [];
+  }
+
+  // 모집 상태 우선순위 — open / newcomer_only(시급) 를 year_round(통년) 앞으로
+  const priority: Record<RecruitmentStatus, number> = {
+    open: 0,
+    newcomer_only: 1,
+    year_round: 2,
+  };
+  return (data ?? [])
+    .map((row) => toCircleSummary(row as Record<string, unknown>))
+    .sort(
+      (a, b) =>
+        priority[a.recruitment_status ?? "year_round"] -
+        priority[b.recruitment_status ?? "year_round"]
+    )
+    .slice(0, limit);
 }
 
 /**
