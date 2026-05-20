@@ -536,16 +536,21 @@ export function SignUpForm() {
           </div>
         }
         footer={
-          /* 보조 링크 — 기존 사용자 로그인 안내. CTA(GoogleButton)는 본문 중앙 그룹으로 이동됨. */
-          <p className="text-muted-foreground text-center text-sm">
-            すでにアカウントをお持ちですか?{" "}
-            <Link
-              href="/auth/login"
-              className="text-foreground font-semibold underline underline-offset-4"
-            >
-              ログイン
-            </Link>
-          </p>
+          /* 보조 링크 + 일반 사용자 안내 (Direction A: 탐색자는 가입 불필요) */
+          <div className="space-y-2 text-center">
+            <p className="text-muted-foreground text-sm">
+              すでにアカウントをお持ちですか?{" "}
+              <Link
+                href="/auth/login"
+                className="text-foreground font-semibold underline underline-offset-4"
+              >
+                ログイン
+              </Link>
+            </p>
+            <p className="text-muted-foreground text-xs">
+              ※ 一般の方は登録なしでご利用いただけます
+            </p>
+          </div>
         }
       >
         {/* ── 중앙 집약 그룹 ── 로고·타이틀·서브카피·GoogleButton을 한 덩어리로 */}
@@ -574,9 +579,9 @@ export function SignUpForm() {
             animate="visible"
             transition={makeFadeTransition(0.21)}
           >
-            @keio.jp で登録すると
+            サークルを運営する代表者向けの登録です。
             <br />
-            慶應生として認証されます
+            @keio.jp で慶應生として認証されます。
           </m.p>
 
           {/*

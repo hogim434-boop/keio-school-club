@@ -97,22 +97,8 @@ export function LoginForm() {
 
   return (
     <LazyMotion features={domAnimation}>
-      <AuthScreen
-        align="center"
-        footer={
-          /* 보조 링크 — 신규 가입 안내. next 파라미터를 유지해 가입 후 원래 목적지로 복원 가능. */
-          <p className="text-muted-foreground text-center text-sm">
-            アカウントをお持ちでないですか?{" "}
-            <Link
-              href={`/auth/sign-up${next ? `?next=${encodeURIComponent(next)}` : ""}`}
-              className="text-foreground font-semibold underline underline-offset-4"
-            >
-              新規登録
-            </Link>
-          </p>
-        }
-      >
-        {/* ── 중앙 집약 그룹 ── 로고·타이틀·폼을 한 덩어리로 */}
+      <AuthScreen align="center">
+        {/* ── 중앙 집약 그룹 ── 로고·타이틀·폼·신규가입 링크를 한 덩어리로 */}
         <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-6">
           {/*
             KCircleLogo는 자체 Ring Draw 애니메이션을 보유하므로
@@ -120,16 +106,29 @@ export function LoginForm() {
           */}
           <KCircleLogo size="lg" />
 
-          {/* 타이틀: delay 0.15s — 로고 애니메이션 완료 후 자연스럽게 이어짐 */}
-          <m.h1
-            className="text-center text-[1.75rem] font-bold tracking-tight"
-            variants={FADE_UP_VARIANTS}
-            initial={initial}
-            animate="visible"
-            transition={makeTransition(0.15)}
-          >
-            おかえりなさい
-          </m.h1>
+          {/* 타이틀 + 운영자 안내 — 한 블록으로 묶어 좁은 간격(서브타이틀처럼 보이게) */}
+          <div className="flex flex-col items-center gap-1.5 text-center">
+            {/* 타이틀: delay 0.15s — 로고 애니메이션 완료 후 자연스럽게 이어짐 */}
+            <m.h1
+              className="text-[1.75rem] font-bold tracking-tight"
+              variants={FADE_UP_VARIANTS}
+              initial={initial}
+              animate="visible"
+              transition={makeTransition(0.15)}
+            >
+              ログイン
+            </m.h1>
+            {/* Direction A: 계정은 서클 대표(운영자)/관리자용임을 명시 */}
+            <m.p
+              className="text-muted-foreground text-sm"
+              variants={FADE_UP_VARIANTS}
+              initial={initial}
+              animate="visible"
+              transition={makeTransition(0.18)}
+            >
+              サークル運営者向けのログインです
+            </m.p>
+          </div>
 
           {/* ── 로그인 폼 — 엔터 제출 지원을 위해 <form>으로 감쌈 ── */}
           <form onSubmit={handleLogin} className="flex w-full flex-col gap-4">
@@ -207,6 +206,23 @@ export function LoginForm() {
               </Button>
             </m.div>
           </form>
+
+          {/* 신규 가입 안내 — 로그인 버튼 바로 아래(눈에 잘 띄게). next 보존. */}
+          <m.p
+            className="text-muted-foreground text-center text-sm"
+            variants={FADE_UP_VARIANTS}
+            initial={initial}
+            animate="visible"
+            transition={makeTransition(0.39)}
+          >
+            アカウントをお持ちでないですか?{" "}
+            <Link
+              href={`/auth/sign-up${next ? `?next=${encodeURIComponent(next)}` : ""}`}
+              className="text-foreground font-semibold underline underline-offset-4"
+            >
+              新規登録
+            </Link>
+          </m.p>
         </div>
       </AuthScreen>
     </LazyMotion>
