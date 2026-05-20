@@ -349,38 +349,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      shinkan_events: {
-        Row: {
-          circle_id: string;
-          event_date: string;
-          id: string;
-          is_online: boolean;
-          title: string;
-        };
-        Insert: {
-          circle_id: string;
-          event_date: string;
-          id?: string;
-          is_online?: boolean;
-          title: string;
-        };
-        Update: {
-          circle_id?: string;
-          event_date?: string;
-          id?: string;
-          is_online?: boolean;
-          title?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "shinkan_events_circle_id_fkey";
-            columns: ["circle_id"];
-            isOneToOne: false;
-            referencedRelation: "circles";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       tags: {
         Row: {
           id: number;

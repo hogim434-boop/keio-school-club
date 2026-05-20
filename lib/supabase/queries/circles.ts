@@ -12,7 +12,7 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
-import type { CircleDetail, CircleImage, CircleSummary, ShinkanEvent } from "@/lib/types/domain";
+import type { CircleDetail, CircleImage, CircleSummary } from "@/lib/types/domain";
 import type { CirclesSearchParams } from "@/lib/circles/search-params";
 
 /** 페이지당 서클 수 */
@@ -155,16 +155,6 @@ function toCircleDetail(row: Record<string, unknown>): CircleDetail {
     })
   );
 
-  // shinkan_events JOIN → ShinkanEvent[]
-  const shinkan_events = ((row.shinkan_events as Record<string, unknown>[]) ?? []).map(
-    (ev): ShinkanEvent => ({
-      id: ev.id as string,
-      title: ev.title as string,
-      event_date: ev.event_date as string,
-      is_online: (ev.is_online as boolean) ?? false,
-    })
-  );
-
   return {
     ...summary,
     description: (row.description as string) ?? "",
@@ -177,7 +167,6 @@ function toCircleDetail(row: Record<string, unknown>): CircleDetail {
     // owner_id NULL 시드이므로 빈 문자열로 fallback
     owner_id: (row.owner_id as string | null) ?? "",
     status: (row.status as CircleDetail["status"]) ?? "approved",
-    shinkan_events,
     recruitment_status: row.recruitment_status as CircleDetail["recruitment_status"],
     activity_time_band: row.activity_time_band as CircleDetail["activity_time_band"],
   };
@@ -251,13 +240,13 @@ export async function getCirclesByCategory(category: string, limit = 8): Promise
 
 /**
  * 서클 상세 1건 — circles/[id] 페이지에서 사용.
- * circle_images, shinkan_events, circle_tags(tags) 전부 JOIN.
+ * circle_images, circle_tags(tags) 전부 JOIN.
  */
 export async function getCircleById(id: string): Promise<CircleDetail | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("circles")
-    .select("*, circle_tags(tags(slug)), circle_images(*), shinkan_events(*)")
+    .select("*, circle_tags(tags(slug)), circle_images(*)")
     .eq("id", id)
     .eq("status", "approved")
     .maybeSingle();

@@ -48,8 +48,6 @@ export interface CircleDetail extends CircleSummary {
   owner_id: string;
   /** 심사 상태 — owner / admin 에게만 노출. 공개 페이지에서는 'approved' 만 fetch */
   status: CircleStatus;
-  /** 新歓 이벤트 — Phase 2 T-029 까지는 빈 배열 가능 */
-  shinkan_events: ShinkanEvent[];
   /** 모집 상태 — open / newcomer_only / year_round (optional, 기존 코드 호환) */
   recruitment_status?: RecruitmentStatus;
   /** 활동 시간대 — 복수 가능. weekday_day / weekday_night / weekend (optional) */
@@ -63,16 +61,6 @@ export interface CircleImage {
   id: string;
   image_url: string;
   sort_order: number;
-}
-
-/**
- * 新歓 이벤트 한 건 — shinkan_events 행의 UI 표현.
- */
-export interface ShinkanEvent {
-  id: string;
-  title: string;
-  event_date: string;
-  is_online: boolean;
 }
 
 /**
