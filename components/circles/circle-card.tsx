@@ -20,7 +20,16 @@ interface CircleCardProps {
 // FavoriteToggleButton (Client) 을 우상단에 배치 — T-013b 에서 placeholder span 교체 완료.
 // 카드 전체를 Link 로 감싸 카드 어디를 눌러도 상세 페이지로 이동.
 export function CircleCard({ circle }: CircleCardProps) {
-  const { id, name, category, official_type, activity_frequency, cover_image_url, tags } = circle;
+  const {
+    id,
+    name,
+    category,
+    official_type,
+    activity_frequency,
+    cover_image_url,
+    tags,
+    description,
+  } = circle;
   // athletics / intercollegiate 만 노출. 그 외는 배지 비표시.
   const officialLabel = getOfficialTypeDisplayLabel(official_type);
 
@@ -67,6 +76,13 @@ export function CircleCard({ circle }: CircleCardProps) {
 
           {/* 서클명 — 1줄 자름 */}
           <h3 className="line-clamp-1 text-sm font-semibold">{name}</h3>
+
+          {/* 소개글 미리보기 — 2줄로 자름. 전체는 상세 페이지에서 확인 (내용 없으면 행 생략) */}
+          {description && (
+            <p className="text-muted-foreground line-clamp-2 text-xs leading-relaxed">
+              {description}
+            </p>
+          )}
 
           {/* 태그 칩 최대 5개 */}
           {tags.length > 0 && (
