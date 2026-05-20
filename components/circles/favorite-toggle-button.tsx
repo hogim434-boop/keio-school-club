@@ -10,8 +10,7 @@
  * onClick 에서 e.preventDefault + stopPropagation 으로 카드 Link navigation 을 차단한다.
  */
 
-import { Heart } from "lucide-react";
-
+import { AnimatedHeart } from "@/components/circles/animated-heart";
 import { useFavorites } from "@/lib/circles/use-favorites";
 import { cn } from "@/lib/utils";
 
@@ -61,17 +60,19 @@ export function FavoriteToggleButton({ circleId, variant }: FavoriteToggleButton
           "border-border bg-background hover:bg-accent size-14 rounded-xl border transition-transform active:scale-95 motion-reduce:transform-none"
       )}
     >
-      {/* 하트 아이콘 — variant에 따라 크기·색상 분기 */}
-      <Heart
+      {/*
+       * AnimatedHeart — 팝 + 링 펄스 마이크로 인터랙션 캡슐화 컴포넌트.
+       * className: variant 에 따라 아이콘 크기 분기.
+       * colorClassName: 활성 색상 컨텍스트 (비활성 시 적용 안 됨 → 부모 muted 색 상속).
+       */}
+      <AnimatedHeart
+        active={active}
         className={cn(
           "size-5",
           // action-bar-card 는 아이콘을 size-6 으로 약간 크게 표시
-          variant === "action-bar-card" && "size-6",
-          // active 상태 색상: action-bar-card → keio-navy, 나머지 → red-500
-          active && variant === "action-bar-card" && "text-keio-navy fill-current",
-          active && variant !== "action-bar-card" && "fill-current text-red-500"
+          variant === "action-bar-card" && "size-6"
         )}
-        aria-hidden="true"
+        colorClassName={variant === "action-bar-card" ? "text-keio-navy" : "text-red-500"}
       />
     </button>
   );

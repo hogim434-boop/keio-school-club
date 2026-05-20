@@ -26,8 +26,9 @@ import {
   useTransform,
   useVelocity,
 } from "motion/react";
-import { Heart } from "lucide-react";
 
+// Heart 아이콘은 AnimatedHeart 내부에서 캡슐화되어 있으므로 직접 import 불필요
+import { AnimatedHeart } from "@/components/circles/animated-heart";
 import { JoinChannelModal } from "@/components/circles/join-channel-modal";
 import { useFavorites } from "@/lib/circles/use-favorites";
 import type { CircleDetail } from "@/lib/types/domain";
@@ -127,10 +128,12 @@ export function CircleActions({ circle }: CircleActionsProps) {
               "disabled:pointer-events-none disabled:opacity-70"
             )}
           >
-            <Heart
-              className={cn("size-5 transition-all", favorited && "fill-current")}
-              aria-hidden="true"
-            />
+            {/*
+             * AnimatedHeart — 팝 + 링 펄스 마이크로 인터랙션.
+             * colorClassName="text-keio-navy": 활성 시 keio-navy 로 채워짐.
+             * 링도 border-current 로 동일 색 상속.
+             */}
+            <AnimatedHeart active={favorited} className="size-5" colorClassName="text-keio-navy" />
           </button>
 
           {/*
