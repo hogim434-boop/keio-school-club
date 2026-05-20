@@ -78,12 +78,12 @@ function applyCircleFilters<T>(
     query = query.gte("member_count", min).lte("member_count", max);
   }
 
-  // 활동 요일 — activity_days는 text 컬럼 (예: "月・水・金")
-  // 선택한 요일 중 하나라도 포함되면 매칭 (OR 조건)
-  // Supabase .or()는 "ilike.%月%,ilike.%火%" 형식의 필터 문자열을 받는다
+  // 활동 요일 — activity_weekdays(text[] 생성 컬럼)와 선택 요일의 교집합.
+  // overlaps(&&) = 선택 요일 중 하나라도 활동하면 매칭 (OR).
+  // 이전의 activity_days text ilike 방식은 "曜日"의 日 까지 잡는 false-positive 가 있어
+  // 요일만 정규 추출한 배열 컬럼으로 교체 (lib/types/database.ts activity_weekdays 참조).
   if (params.activityDays && params.activityDays.length > 0) {
-    const orFilter = params.activityDays.map((day) => `activity_days.ilike.%${day}%`).join(",");
-    query = query.or(orFilter);
+    query = query.overlaps("activity_weekdays", params.activityDays);
   }
 
   return query;

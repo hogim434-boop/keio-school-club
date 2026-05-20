@@ -169,6 +169,8 @@ export type Database = {
       circles: {
         Row: {
           activity_days: string;
+          // 생성 컬럼 — activity_days 에서 요일을 자동 추출한 필터용 배열 (직접 쓰기 불가, Insert/Update 제외)
+          activity_weekdays: string[];
           activity_frequency: Database["public"]["Enums"]["activity_frequency_enum"];
           activity_time_band: Database["public"]["Enums"]["activity_time_band_enum"][];
           annual_fee_yen: number;
