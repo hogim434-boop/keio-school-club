@@ -30,7 +30,16 @@ interface CircleListCardProps {
  * 텍스트 영역 div 와 1행 inner div 둘 다 `min-w-0` 필수.
  */
 export function CircleListCard({ circle, isNew = false }: CircleListCardProps) {
-  const { id, name, category, official_type, activity_frequency, cover_image_url, tags } = circle;
+  const {
+    id,
+    name,
+    category,
+    official_type,
+    activity_frequency,
+    cover_image_url,
+    tags,
+    description,
+  } = circle;
   // athletics / intercollegiate 만 라벨 표시. 그 외 (公認/非公認/その他) 는 배지 자체 비표시.
   const officialLabel = getOfficialTypeDisplayLabel(official_type);
 
@@ -94,7 +103,12 @@ export function CircleListCard({ circle, isNew = false }: CircleListCardProps) {
             </div>
           )}
 
-          {/* 3행: 카테고리 · 활동빈도 메타 */}
+          {/* 3행: 소개글 미리보기 — 1줄로 자름 (내용 없으면 행 생략) */}
+          {description && (
+            <p className="text-muted-foreground line-clamp-1 text-xs">{description}</p>
+          )}
+
+          {/* 4행: 카테고리 · 활동빈도 메타 */}
           <p className="text-muted-foreground text-xs">
             {CATEGORY_LABELS[category]} · {ACTIVITY_FREQUENCY_LABELS[activity_frequency]}
           </p>
