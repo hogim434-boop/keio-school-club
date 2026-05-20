@@ -2,16 +2,17 @@ import { Suspense } from "react";
 
 import { SignUpForm } from "@/components/sign-up-form";
 
+/**
+ * 회원가입·온보딩 페이지
+ *
+ * AuthScreen이 fixed inset-0으로 풀스크린을 점유하므로
+ * 기존의 min-h-svh 래퍼와 로고는 제거한다.
+ * SignUpForm 내부의 useSearchParams() 때문에 Suspense 경계는 필수다.
+ */
 export default function Page() {
   return (
-    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-      <div className="w-full max-w-sm">
-        {/* 향후 dynamic API (useSearchParams 등) 도입 시 build 깨지지 않도록 예방적 Suspense 경계.
-            login page 와 동일 패턴 유지. */}
-        <Suspense fallback={null}>
-          <SignUpForm />
-        </Suspense>
-      </div>
-    </div>
+    <Suspense fallback={null}>
+      <SignUpForm />
+    </Suspense>
   );
 }
