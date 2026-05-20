@@ -17,6 +17,8 @@
  */
 
 import type { ReactNode } from "react";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AuthScreenProps {
@@ -34,6 +36,12 @@ interface AuthScreenProps {
    * - "center": 세로 중앙 정렬 — 짧은 CTA 화면(로그인·start·done)에 사용.
    */
   align?: "top" | "center";
+  /**
+   * 좌상단 되돌아가기 버튼의 링크 경로.
+   * 지정하면 ArrowLeft 아이콘 버튼이 좌상단에 렌더된다.
+   * 지정하지 않으면 버튼이 표시되지 않는다.
+   */
+  backHref?: string;
 }
 
 /**
@@ -46,6 +54,7 @@ export function AuthScreen({
   footer,
   className,
   align = "top",
+  backHref,
 }: AuthScreenProps) {
   return (
     <div
@@ -55,6 +64,19 @@ export function AuthScreen({
         className
       )}
     >
+      {/* ── 좌상단 되돌아가기 버튼 — backHref가 있을 때만 렌더 ── */}
+      {/* absolute 포지셔닝이라 progress/children 레이아웃 흐름에 영향 없음 */}
+      {/* iOS safe area 상단 여백을 고려해 top을 동적으로 계산 */}
+      {backHref && (
+        <Link
+          href={backHref}
+          aria-label="ホームに戻る"
+          className="hover:bg-muted focus-visible:ring-ring absolute top-[calc(env(safe-area-inset-top)+0.75rem)] left-4 z-10 inline-flex size-10 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:outline-none"
+        >
+          <ArrowLeft className="size-5" aria-hidden="true" />
+        </Link>
+      )}
+
       {/* ── 상단 진행 바 슬롯 ── */}
       {progress && (
         <div

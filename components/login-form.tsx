@@ -97,7 +97,7 @@ export function LoginForm() {
 
   return (
     <LazyMotion features={domAnimation}>
-      <AuthScreen align="center">
+      <AuthScreen align="center" backHref="/">
         {/* ── 중앙 집약 그룹 ── 로고·타이틀·폼·신규가입 링크를 한 덩어리로 */}
         <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-6">
           {/*

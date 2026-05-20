@@ -517,6 +517,7 @@ export function SignUpForm() {
     <LazyMotion features={domAnimation}>
       <AuthScreen
         align="center"
+        backHref="/"
         progress={
           /* 우상단 숫자 표시 */
           <div className="flex justify-end">
