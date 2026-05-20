@@ -34,9 +34,9 @@ export function ApplyButton({ draft }: ApplyButtonProps) {
 
   // draft 변경 시 매칭 카운트 fetch — Server Action 호출 (Supabase).
   //
-  // 디바운스(300ms): 칩을 빠르게 여러 개 토글해도 마지막 1번만 서버 요청한다.
-  // 디바운스 없이 매 토글마다 호출하면 Vercel 에서는 (서버리스 cold start + 원거리 DB 왕복 +
-  // count:exact 무거운 쿼리) 때문에 요청이 줄줄이 쌓여 숫자가 손가락을 못 따라온다.
+  // 디바운스(250ms): 칩을 빠르게 여러 개 토글해도 마지막 1번만 서버 요청한다.
+  // 300ms에서 250ms로 단축 — countFilteredCircles가 경량 head 쿼리가 되어 서버 부담이 줄었으므로
+  // 응답성을 조금 더 높인다. (Vercel 서버리스 cold start + DB 왕복이 있으므로 너무 짧게는 금지)
   useEffect(() => {
     let cancelled = false;
     setPending(true);
@@ -60,9 +60,9 @@ export function ApplyButton({ draft }: ApplyButtonProps) {
           setPending(false);
         }
       });
-    }, 300);
+    }, 250); // 300ms → 250ms 로 단축
 
-    // draft 가 바뀌면 이전 타이머 취소 → 마지막 변경 후 300ms 가 지나야 실제 요청
+    // draft 가 바뀌면 이전 타이머 취소 → 마지막 변경 후 250ms 가 지나야 실제 요청
     return () => {
       cancelled = true;
       clearTimeout(timer);
@@ -84,9 +84,23 @@ export function ApplyButton({ draft }: ApplyButtonProps) {
   return (
     <div className="bg-background/95 supports-[backdrop-filter]:bg-background/80 fixed inset-x-0 bottom-16 z-30 px-4 py-3 backdrop-blur md:bottom-0">
       <div className="container mx-auto max-w-6xl">
+        {/*
+         * pending 상태 처리:
+         * - aria-busy: 스크린 리더에 "갱신 중"을 알리는 접근성 속성
+         * - opacity-70: 첫 로딩(count === null)이 아닐 때 직전 숫자를 유지한 채
+         *   살짝 흐리게 표시 → 사용자에게 "갱신 중"을 시각적으로 알림
+         * - count === null(첫 로딩)에는 label이 "件数を計算中…"이 되므로 opacity 변화 불필요
+         */}
         <Button
           onClick={handleApply}
-          className="bg-foreground text-background hover:bg-foreground/90 h-12 w-full rounded-full text-base font-semibold shadow-lg shadow-black/5"
+          aria-busy={pending}
+          className={[
+            "bg-foreground text-background hover:bg-foreground/90 h-12 w-full rounded-full text-base font-semibold shadow-lg shadow-black/5 transition-opacity",
+            // 첫 로딩(count===null) 이후 갱신 중일 때만 흐리게 — 첫 로딩은 label 자체가 바뀌므로 제외
+            pending && count !== null ? "opacity-70" : "opacity-100",
+          ]
+            .filter(Boolean)
+            .join(" ")}
         >
           {label}
         </Button>
