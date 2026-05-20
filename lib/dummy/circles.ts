@@ -759,6 +759,8 @@ function toSummary(detail: CircleDetail): CircleSummary {
     view_count,
     inquiry_count,
     tags,
+    description,
+    recruitment_status,
   } = detail;
   return {
     id,
@@ -770,6 +772,8 @@ function toSummary(detail: CircleDetail): CircleSummary {
     view_count,
     inquiry_count,
     tags,
+    description,
+    recruitment_status: recruitment_status ?? null,
   };
 }
 
