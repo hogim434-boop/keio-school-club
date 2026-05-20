@@ -24,6 +24,16 @@ export interface CircleSummary {
   inquiry_count: number;
   /** circle_tags 조인 → tags.slug 배열 (카드에 최대 5개 칩 표시) */
   tags: string[];
+  /**
+   * 단체 개요·활동 설명 (free text, 줄바꿈 보존).
+   * 카드(썸네일)에서는 1~2줄로 잘라 미리보기로 노출하고, 전체는 상세 페이지에서 확인한다.
+   */
+  description: string;
+  /**
+   * 모집 상태 — open(現在募集中) / newcomer_only(新歓限定) / year_round(通年募集).
+   * 「現在募集中のサークル」 섹션의 모집 뱃지에서 사용. 값이 없으면 null.
+   */
+  recruitment_status: RecruitmentStatus | null;
 }
 
 /**
@@ -33,8 +43,6 @@ export interface CircleSummary {
  * 정책: annual_fee_yen / freshmen_ratio 는 표시·등록 모두 폐기 (2026-05 결정).
  */
 export interface CircleDetail extends CircleSummary {
-  /** 단체 개요·활동 설명 (free text, 줄바꿈 보존) */
-  description: string;
   /** 활동 요일 — 「火・木」 같은 일본어 free text (요약 카드 표시용, T-012) */
   activity_days: string;
   /** 회원 수 — 「30名」 같이 표시. T-018 등록 폼에서 입력 받음 */
@@ -48,8 +56,6 @@ export interface CircleDetail extends CircleSummary {
   owner_id: string;
   /** 심사 상태 — owner / admin 에게만 노출. 공개 페이지에서는 'approved' 만 fetch */
   status: CircleStatus;
-  /** 모집 상태 — open / newcomer_only / year_round (optional, 기존 코드 호환) */
-  recruitment_status?: RecruitmentStatus;
   /** 활동 시간대 — 복수 가능. weekday_day / weekday_night / weekend (optional) */
   activity_time_band?: ActivityTimeBand[];
 }
