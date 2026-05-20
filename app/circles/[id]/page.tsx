@@ -6,7 +6,6 @@ import { Construction } from "lucide-react";
 import { CircleActions } from "@/components/circles/circle-actions";
 import { CircleDetailTabs } from "@/components/circles/circle-detail-tabs";
 import { DetailPageHeader } from "@/components/circles/detail-page-header";
-import { ShinkanBanner } from "@/components/circles/shinkan-banner";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TAG_LABELS } from "@/lib/circles/filter-labels";
@@ -16,7 +15,7 @@ import { CATEGORY_LABELS } from "@/lib/constants/category";
 import { getOfficialTypeDisplayLabel } from "@/lib/constants/official-type";
 import { RECRUITMENT_STATUS_LABELS } from "@/lib/constants/recruitment-status";
 import { getReportsByCircle } from "@/lib/supabase/queries/activity-reports";
-import { getCircleById, isFavorited } from "@/lib/supabase/queries/circles";
+import { getCircleById } from "@/lib/supabase/queries/circles";
 import { createClient } from "@/lib/supabase/server";
 import type { CircleDetail } from "@/lib/types/domain";
 
@@ -59,12 +58,6 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
     if (error) console.warn("[increment_view_count]", error.message);
   });
 
-  // 인증 상태 + 초기 즐겨찾기 상태 조회 — CircleActions prop으로 전달
-  const { data: claimsData } = await supabase.auth.getClaims();
-  const userId = claimsData?.claims?.sub as string | undefined;
-  const isAuthenticated = Boolean(userId);
-  const initialFavorited = userId ? await isFavorited(userId, id) : false;
-
   return (
     <article className="space-y-6">
       {/* 1. 커버 이미지 — 모바일 16:9 / 데스크탑 21:9 */}
@@ -73,9 +66,6 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
       <div className="container mx-auto max-w-6xl space-y-6 px-4">
         {/* 2. 헤더 — 뱃지 행 + 서클명 + 태그 칩 (데스크탑 inline 액션 제거됨) */}
         <Header circle={circle} />
-
-        {/* 3. 新歓 배너 — 오늘 이후 이벤트가 있을 때만 조건부 렌더 */}
-        <ShinkanBanner events={circle.shinkan_events} />
 
         {/*
          * 4. 탭 구조 — Client wrapper (state 관리) + Server Component children (homeContent).
@@ -99,11 +89,7 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
        * 5. lagging spring sticky 액션 — viewport 하단 고정 + 스크롤 velocity 반응.
        * fixed positioning 이라 부모 영향 없음 → 시맨틱상 container 밖, article 의 마지막 자식.
        */}
-      <CircleActions
-        circle={circle}
-        initialFavorited={initialFavorited}
-        isAuthenticated={isAuthenticated}
-      />
+      <CircleActions circle={circle} />
     </article>
   );
 }

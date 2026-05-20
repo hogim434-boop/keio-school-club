@@ -8,17 +8,12 @@
  * - 스크롤 velocity 에 따라 spring 으로 부드럽게 lagging
  * - prefers-reduced-motion 시 모션 비활성
  *
- * Phase 1.2 T-009: sessionStorage 제거 → Supabase Server Action 기반으로 교체.
- * RSC(CircleDetailContent)에서 initialFavorited / isAuthenticated 를 prop으로 내려줌.
+ * 방향 A: 즐겨찾기는 localStorage 기반 게스트 방식 (로그인 불필요, useFavorites hook).
  *
  * UI: 좋아요 + 가입하기 가 하나의 통합 pill 로 표시 (테두리 없음).
  * - 왼쪽: 하트 아이콘 영역 (좋아요 토글)
- * - 오른쪽: 가입하기 텍스트 영역 (모달 오픈)
+ * - 오른쪽: 「参加する」 텍스트 영역 (모달 오픈)
  * - 시각적으로 하나의 rounded-full bg-keio-navy pill, 클릭 영역만 내부 분리.
- *
- * CTA 텍스트 조건:
- * - shinkan_events 중 오늘 이후 이벤트 있음 → 「新歓に参加する」
- * - 없음 → 「参加する」
  */
 
 import { useEffect, useState } from "react";
@@ -41,13 +36,6 @@ import { cn } from "@/lib/utils";
 interface CircleActionsProps {
   /** 액션 대상 서클 상세 정보 */
   circle: CircleDetail;
-  /** RSC에서 isFavorited()로 조회한 초기 즐겨찾기 상태 */
-  initialFavorited: boolean;
-  /**
-   * RSC에서 getClaims()로 확인한 인증 상태 (선택적).
-   * 미제공 시 hook 내부에서 lazy 조회.
-   */
-  isAuthenticated?: boolean;
 }
 
 /**
@@ -56,7 +44,7 @@ interface CircleActionsProps {
  * motion/react 의 useScroll + useVelocity + useSpring 조합으로
  * 스크롤 velocity 에 따라 CTA 가 살짝 「밀려」 부드럽게 따라오는 모션 구현.
  */
-export function CircleActions({ circle, initialFavorited, isAuthenticated }: CircleActionsProps) {
+export function CircleActions({ circle }: CircleActionsProps) {
   /** 채널 선택 모달 열림 상태 */
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -91,16 +79,10 @@ export function CircleActions({ circle, initialFavorited, isAuthenticated }: Cir
   );
 
   /** 즐겨찾기 hook — Supabase Server Action 기반 */
-  const {
-    isFavorited: favorited,
-    toggle,
-    isPending,
-  } = useFavorites(circle.id, initialFavorited, isAuthenticated);
+  const { isFavorited: favorited, toggle, isPending } = useFavorites(circle.id);
 
-  /** 오늘 이후 新歓 이벤트 존재 여부 → CTA 텍스트 분기 */
-  const today = new Date().toISOString().slice(0, 10);
-  const hasUpcomingEvents = circle.shinkan_events.some((e) => e.event_date >= today);
-  const ctaText = hasUpcomingEvents ? "新歓に参加する" : "参加する";
+  /** CTA 텍스트 — 채널(連絡) 모달 오픈 */
+  const ctaText = "参加する";
 
   function handleFavoriteToggle() {
     toggle();
