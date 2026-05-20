@@ -9,6 +9,7 @@ import { HomeCategoryGrid } from "@/components/circles/home-category-grid";
 import { HorizontalCircleStrip } from "@/components/circles/horizontal-circle-strip";
 import { HourlyCategoryStrip } from "@/components/circles/hourly-category-strip";
 import { PromoTileCarousel } from "@/components/circles/promo-tile-carousel";
+import { RecruitingStrip } from "@/components/circles/recruiting-strip";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -19,7 +20,12 @@ import {
   isDiscoverMode,
   parseCirclesSearchParams,
 } from "@/lib/circles/search-params";
-import { filterCircles, getNewCircles, getPopularCircles } from "@/lib/supabase/queries/circles";
+import {
+  filterCircles,
+  getNewCircles,
+  getPopularCircles,
+  getRecruitingCircles,
+} from "@/lib/supabase/queries/circles";
 
 interface CirclesPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -72,7 +78,11 @@ async function CirclesContent({ raw }: { raw: Record<string, string | string[] |
  */
 async function DiscoverContent() {
   // 2열 × 4행 = 8 개 (HorizontalCircleStrip 가 자체 slice(0, 8) 방어, 여기서도 정확히 8 요청)
-  const [popular, recent] = await Promise.all([getPopularCircles(8), getNewCircles(10)]);
+  const [popular, recent, recruiting] = await Promise.all([
+    getPopularCircles(8),
+    getNewCircles(10),
+    getRecruitingCircles(12),
+  ]);
 
   return (
     <div className="container mx-auto max-w-6xl space-y-8 px-4 py-6">
@@ -89,6 +99,9 @@ async function DiscoverContent() {
       <HourlyCategoryStrip />
 
       <HorizontalCircleStrip title="新着のサークル" circles={recent} layout="stack" markNew />
+
+      {/* 현재 모집중 동아리 — 세로형 포스터 가로 스크롤. 하단에 배치(요청). */}
+      <RecruitingStrip circles={recruiting} />
     </div>
   );
 }
