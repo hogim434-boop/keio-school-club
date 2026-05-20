@@ -14,6 +14,9 @@
 import { createClient } from "@/lib/supabase/server";
 import type { CircleDetail, CircleImage, CircleSummary } from "@/lib/types/domain";
 import type { CirclesSearchParams } from "@/lib/circles/search-params";
+import type { Category } from "@/lib/constants/category";
+import type { OfficialType } from "@/lib/constants/official-type";
+import type { CircleStatus } from "@/lib/constants/circle-status";
 
 /** 페이지당 서클 수 */
 const PAGE_SIZE = 12;
@@ -342,54 +345,6 @@ export async function filterCircles(
 }
 
 /**
- * 카운트 전용 경량 쿼리 — /search 페이지의 「N件のサークルを見る」 카운트 미리보기용.
- *
- * filterCircles와 동일한 WHERE 조건을 applyCircleFilters 헬퍼로 공유하되,
- * `.select("id", { count: "exact", head: true })`로 실제 행을 0개 반환해
- * 네트워크 전송량을 최소화한다. 정렬·페이지네이션은 카운트에 불필요하므로 생략.
- *
- * 태그 필터는 filterCircles(결과 경로)와 동일한 「2단계 distinct id」 방식으로 처리한다.
- * !inner join + count 는 한 서클이 태그를 여러 개 매칭하면 조인 행을 세어 카운트를
- * 부풀릴 수 있어(미리보기 N件 ≠ 결과 페이지 카드 수), 두 경로의 숫자를 구조적으로 일치시킨다.
- *
- * @param params 필터 조건 (filterCircles와 동일 타입)
- * @returns 매칭되는 서클 수
- */
-export async function countFilteredCircles(params: Partial<CirclesSearchParams>): Promise<number> {
-  const supabase = await createClient();
-
-  // 태그 필터가 있으면 먼저 매칭 circle_id 를 distinct 로 확보 (결과 경로와 동일 헬퍼 공유 → 카운트 일치)
-  let tagFilterIds: string[] | null = null;
-  if (params.tags && params.tags.length > 0) {
-    tagFilterIds = await resolveCircleIdsByTags(supabase, params.tags);
-    if (tagFilterIds.length === 0) return 0;
-  }
-
-  // head:true → 실제 행은 0개 반환하고 count 만 받아 전송량 최소화.
-  // 정렬·페이지네이션은 카운트에 불필요하므로 생략.
-  let query = supabase
-    .from("circles")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "approved");
-
-  if (tagFilterIds !== null) {
-    query = query.in("id", tagFilterIds);
-  }
-
-  // 공통 WHERE 조건 적용
-  query = applyCircleFilters(query, params);
-
-  const { count, error } = await query;
-
-  if (error) {
-    console.error("[countFilteredCircles]", error.message);
-    return 0;
-  }
-
-  return count ?? 0;
-}
-
-/**
  * 즐겨찾기 서클 목록 — /favorites 페이지에서 사용.
  * @param userId 인증된 사용자 UUID
  */
@@ -432,4 +387,83 @@ export async function isFavorited(userId: string, circleId: string): Promise<boo
     return false;
   }
   return data !== null;
+}
+
+// ============================================================
+// 마이페이지용 타입 및 fetch 함수 (T-016)
+// ============================================================
+
+/**
+ * 내 서클 목록 한 줄 — 오너 전용 경량 타입.
+ * 심사 상태(status)·반려 이유(rejection_reason)를 포함해
+ * 마이페이지의 서클 관리 카드에서 상태 뱃지·반려 메시지를 표시한다.
+ */
+export type MyCircle = {
+  id: string;
+  name: string;
+  slug: string;
+  category: Category;
+  official_type: OfficialType;
+  status: CircleStatus;
+  rejection_reason: string | null;
+  cover_image_url: string | null;
+  created_at: string;
+};
+
+/**
+ * 사용자 프로필 조회 — 마이페이지 헤더(표시 이름·慶應 인증 뱃지)에서 사용.
+ * @param userId 인증된 사용자 UUID
+ */
+export async function getMyProfile(
+  userId: string
+): Promise<{ display_name: string | null; keio_verified: boolean } | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("display_name, keio_verified")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error) {
+    console.error("[getMyProfile]", error.message);
+    return null;
+  }
+  if (!data) return null;
+  return {
+    display_name: (data.display_name as string | null) ?? null,
+    keio_verified: Boolean(data.keio_verified),
+  };
+}
+
+/**
+ * 내 서클 목록 — owner_id 기준, status 무관 전체 조회.
+ * RLS circles_select_public_or_owner_or_admin 정책에 의해 owner 본인 행은 통과된다.
+ * @param userId 인증된 사용자 UUID
+ */
+export async function getMyCircles(userId: string): Promise<MyCircle[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("circles")
+    .select(
+      "id, name, slug, category, official_type, status, rejection_reason, cover_image_url, created_at"
+    )
+    .eq("owner_id", userId)
+    .order("created_at", { ascending: false });
+  if (error) {
+    console.error("[getMyCircles]", error.message);
+    return [];
+  }
+  return (data ?? []).map((row) => {
+    const r = row as Record<string, unknown>;
+    return {
+      id: r.id as string,
+      name: r.name as string,
+      slug: r.slug as string,
+      category: r.category as MyCircle["category"],
+      official_type: r.official_type as MyCircle["official_type"],
+      status: r.status as MyCircle["status"],
+      rejection_reason: (r.rejection_reason as string | null) ?? null,
+      cover_image_url: (r.cover_image_url as string | null) ?? null,
+      created_at: r.created_at as string,
+    };
+  });
 }
