@@ -162,6 +162,9 @@ async function Results({ params }: { params: CirclesSearchParams }) {
     memberSize: params.memberSize,
     recruitmentStatus: params.recruitmentStatus,
     activityTimeBand: params.activityTimeBand,
+    // 활동 요일 필터 — URL의 activity_days 파라미터를 filterCircles에 전달 (버그 수정)
+    // 이전에는 이 줄이 없어 요일 필터가 URL에 실려도 서버에서 무시됐다
+    activityDays: params.activityDays,
     sort: params.sort,
   });
 
