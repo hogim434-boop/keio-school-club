@@ -6,6 +6,7 @@ import { CircleCard } from "@/components/circles/circle-card";
 import { CirclesPageShell } from "@/components/circles/circles-page-shell";
 import { FilterPanel } from "@/components/circles/filter-panel";
 import { HomeCategoryGrid } from "@/components/circles/home-category-grid";
+import { HomeSearchBar } from "@/components/circles/home-search-bar";
 import { HorizontalCircleStrip } from "@/components/circles/horizontal-circle-strip";
 import { HourlyCategoryStrip } from "@/components/circles/hourly-category-strip";
 import { PromoTileCarousel } from "@/components/circles/promo-tile-carousel";
@@ -86,7 +87,10 @@ async function DiscoverContent() {
 
   return (
     <div className="container mx-auto max-w-6xl space-y-8 px-4 py-6">
-      {/* 카테고리 그리드 — 헤더 직하 entry point. 8개 카테고리 4×2 표시, 칩 클릭 시 결과 모드 즉시 진입 */}
+      {/* 헤더 직하 검색 진입 바 — 탭 시 /search. 헤더↔카테고리 빈 공간을 채우고 검색 발견성↑ */}
+      <HomeSearchBar />
+
+      {/* 카테고리 그리드 — 8개 카테고리 4×2 표시, 칩 클릭 시 결과 모드 즉시 진입 */}
       <HomeCategoryGrid />
 
       {/* Promotional 타일 자동 회전 캐러셀 — 셔플 / お気に入り / 검색 안내 7 초 회전.
