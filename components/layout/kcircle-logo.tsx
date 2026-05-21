@@ -1,102 +1,283 @@
 "use client";
 
+/**
+ * KCircleLogo — "K CLUB" 선 그리기(self-drawing) 워드마크 애니메이션
+ *
+ * 모션 컨셉:
+ *   SVG <text> 요소에 stroke-dashoffset 애니메이션을 걸어 글자 외곽선이
+ *   왼쪽(K)에서 오른쪽(B)으로 순차적으로 "그려지는" handwriting 효과.
+ *   외곽선이 완성된 직후 fill-opacity 0→1 로 솔리드 마무리 (가독성 확보).
+ *
+ * 구현 기법: SVG stroke-dasharray + stroke-dashoffset
+ *   - strokeDasharray: 글자 외곽선의 전체 길이 (넉넉하게 큰 값 사용 — 정확한 길이 불필요)
+ *   - strokeDashoffset: 이 값이 0→길이로 줄어들면 선이 그려지는 것처럼 보임
+ *   - motion의 animate()로 각 글자(<text>)를 0.12s stagger로 순차 제어
+ *
+ * 레이아웃 안정성:
+ *   SVG의 viewBox와 width/height를 고정해 그리는 도중 헤더가 reflow되지 않음.
+ *   fill="transparent" + stroke로 시작해도 공간은 처음부터 점유됨.
+ *
+ * 색 체계:
+ *   "K"    → foreground (oklch(0.145 0 0) — 진한 먹색)
+ *   "CLUB" → keio-navy (var(--keio-navy) — 慶應 濃紺)
+ *
+ * 접근성:
+ *   useReducedMotion() → sm 사이즈와 마찬가지로 즉시 솔리드 "K CLUB" 정적 표시
+ *   SVG aria-hidden → 장식. 의미는 부모 Link의 aria-label이 담당.
+ */
+
+import { useEffect, useRef, useState } from "react";
 import { LazyMotion, domAnimation, m, useReducedMotion } from "motion/react";
 
 import { cn } from "@/lib/utils";
 
+// ─── props 타입 정의 ───────────────────────────────────────────────────────────
+
 interface KCircleLogoProps {
   /**
-   * 심볼 크기 — 헤더 기본 md, favicon 단독은 sm, OG/로그인은 lg.
-   * 워드마크 없이 심볼 단독 사용이라 시각적 무게 보강용 큰 사이즈.
-   * - sm: 28px (favicon, BottomNav 인라인)
-   * - md: 48px (헤더 표준 — h-20 헤더에서 사방 16px 정사각 padding)
-   * - lg: 64px (로그인 페이지, OG 이미지)
+   * 워드마크 크기.
+   * - sm: 소형 — 정적 솔리드 "K CLUB" 즉시 렌더 (애니메이션 없음)
+   * - md: 헤더 표준 (h-20 헤더 안에서 읽히는 크기)
+   * - lg: 로그인/회원가입 페이지 (큼직하게 브랜드 임팩트)
    */
   size?: "sm" | "md" | "lg";
-  /** 외부 클래스 (Tailwind merge) */
+  /** 외부 클래스 (Tailwind merge 적용) */
   className?: string;
 }
 
-/** size prop → tailwind wrapper 크기 + K 글자 크기 + 원 두께 매핑.
- *  strokeWidth 1.5 — lucide-react 의 default 2 보다 한 단계 얇게 (circle 은 둘레가 단순해서 같은 두께라도 더 두꺼워 보임). */
-const SIZE_MAP = {
-  sm: { wrapper: "size-7", k: "text-sm", strokeWidth: 1 },
-  md: { wrapper: "size-12", k: "text-xl", strokeWidth: 1 },
-  lg: { wrapper: "size-16", k: "text-2xl", strokeWidth: 1 },
-} as const;
-
-/** 원의 둘레 = 2π × r = 2π × 12 ≈ 75.4 (viewBox 0-28 기준).
- *  strokeDasharray + strokeDashoffset 으로 그리기 애니메이션 제어 시 사용. */
-const CIRCLE_CIRCUMFERENCE = 75.4;
+// ─── 사이즈별 SVG 파라미터 테이블 ─────────────────────────────────────────────
 
 /**
- * KCircle 로고 — K-Ring 디자인 + Mount 「Ring Draw」 애니메이션 (2026 모던 SaaS 트렌드).
+ * 각 사이즈별 SVG 렌더링 파라미터.
  *
- * 구조: 얇은 원 안에 Bold K. 워드마크 없이 심볼 단독.
- * - Circle = 동아리 (서클) 의미가 심볼에 직접 구현
- * - 크기별 stroke 두께 비례 (sm 2 → lg 2.5) — 작을 때 너무 얇아 보이는 것 회피
+ * fontSize: SVG text 요소의 font-size 속성값 (px 단위)
+ * svgWidth: SVG 요소의 실제 렌더 너비 (viewBox x와 연동)
+ * svgHeight: SVG 요소의 실제 렌더 높이
+ * baseline: text 요소의 y 속성 (baseline 위치 — 대략 fontSize * 0.8)
+ * letterSpacing: SVG letter-spacing (단위 없음, px 기준)
  *
- * Mount Animation (Linear/Notion 풍):
- * - Ring: stroke-dashoffset 으로 12시 방향에서 시계 방향으로 그려짐 (450ms, expo-out)
- * - K: ring 거의 완성 시점에 opacity:0 + scale:0.85 에서 페이드+스케일 인 (delay 300ms, 250ms)
- * - 총 ~700ms 후 정적 상태
- *
- * 접근성:
- * - `useReducedMotion` 으로 reduced motion 사용자는 즉시 완성 상태 (WCAG SC 2.3.3)
- * - SVG aria-hidden (장식). 의미는 부모 Link 의 aria-label
+ * 폰트 패밀리는 상속(var(--font-sans))으로 받음.
+ * 실제 글자 너비는 폰트마다 달라지므로 svgWidth는 여유 있게 설정.
  */
-export function KCircleLogo({ size = "md", className }: KCircleLogoProps) {
-  const cfg = SIZE_MAP[size];
-  const reducedMotion = useReducedMotion();
+const SIZE_CFG = {
+  sm: {
+    fontSize: 14,
+    svgWidth: 72,
+    svgHeight: 20,
+    baseline: 15,
+    letterSpacing: 0.4,
+    fontWeight: 700,
+  },
+  md: {
+    fontSize: 20,
+    svgWidth: 102,
+    svgHeight: 28,
+    baseline: 22,
+    letterSpacing: 0.6,
+    fontWeight: 700,
+  },
+  lg: {
+    fontSize: 28,
+    svgWidth: 142,
+    svgHeight: 38,
+    baseline: 30,
+    letterSpacing: 0.8,
+    fontWeight: 700,
+  },
+} as const;
 
-  // reduced motion 사용자는 initial 을 완성 상태로 강제 (애니메이션 skip)
-  const circleInitial = reducedMotion
-    ? { strokeDashoffset: 0 }
-    : { strokeDashoffset: CIRCLE_CIRCUMFERENCE };
-  const kInitial = reducedMotion ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.85 };
+// ─── easing 상수 ─────────────────────────────────────────────────────────────
+
+/**
+ * expo-out 커브: 빠르게 시작해 부드럽게 멈춤.
+ * 선이 그려지는 속도감에 잘 맞음 — 처음엔 빠르게 긋고, 끝에서 자연스럽게 멈춤.
+ */
+const EXPO_OUT = [0.22, 1, 0.36, 1] as const;
+
+/**
+ * 워드마크 텍스트. "K CLUB" 를 **하나의 <text>** 로 렌더한다.
+ * 글자를 개별 x 위치로 두면 폰트 종류(예: Geist vs 폴백)에 따라 자간이 벌어져
+ * "CLUB" 가 한 단어로 안 묶이는 문제가 있어, 폰트의 자연 자간에 맡긴다.
+ * (K 와 CLUB 사이는 공백 1칸 → 단어 구분, CLUB 4글자는 폰트 커닝으로 한 단어처럼 밀착)
+ */
+const WORDMARK = "K CLUB";
+/** 순차 그리기용 글자 배열 (공백 제외). 인덱스 = stagger 순서(K→C→L→U→B). */
+const WORDMARK_LETTERS = ["K", "C", "L", "U", "B"] as const;
+/** "K CLUB" 문자열에서 각 글자의 인덱스 (K=0, 공백=1, C=2, L=3, U=4, B=5). 측정에 사용. */
+const LETTER_CHAR_INDEX = [0, 2, 3, 4, 5] as const;
+/** 측정 전 폴백 x 위치(fontSize 배수). K(0)는 항상 정확, 나머지는 측정 후 정확값으로 교체. */
+const LETTER_X_FALLBACK = [0, 1.0, 1.65, 2.3, 2.95] as const;
+
+/** 텍스트 색 — 전체 검정(foreground). SVG fill/stroke 는 인라인 var 로 지정. */
+const TEXT_COLOR = "var(--foreground)";
+
+// ─── 정적 워드마크 컴포넌트 (sm + reduced-motion 용) ──────────────────────────
+
+/**
+ * StaticWordmark — 즉시 솔리드로 표시되는 "K CLUB" 워드마크.
+ *
+ * sm 사이즈와 prefers-reduced-motion 사용자 모두 이 컴포넌트로 렌더됨.
+ * SVG text에 stroke 없이 fill만 — 처음부터 완전히 가독성 있는 상태.
+ */
+function StaticWordmark({ size, className }: { size: "sm" | "md" | "lg"; className?: string }) {
+  const cfg = SIZE_CFG[size];
 
   return (
-    <LazyMotion features={domAnimation}>
-      <span
-        className={cn(
-          "relative inline-flex shrink-0 items-center justify-center",
-          cfg.wrapper,
-          className
-        )}
+    <span className={cn("inline-flex shrink-0 items-center", className)}>
+      {/* SVG 워드마크 — 장식이므로 aria-hidden */}
+      <svg
+        width={cfg.svgWidth}
+        height={cfg.svgHeight}
+        viewBox={`0 0 ${cfg.svgWidth} ${cfg.svgHeight}`}
+        aria-hidden="true"
+        xmlns="http://www.w3.org/2000/svg"
+        overflow="visible"
       >
-        <svg
-          className="absolute inset-0"
-          viewBox="0 0 28 28"
+        {/* "K CLUB" 단일 text — 폰트 자간으로 CLUB 가 한 단어처럼 묶임 */}
+        <text
+          x={0}
+          y={cfg.baseline}
+          fontSize={cfg.fontSize}
+          fontWeight={cfg.fontWeight}
+          letterSpacing={cfg.letterSpacing}
+          fill={TEXT_COLOR}
+          stroke="none"
+          fontFamily="var(--font-logo)"
+        >
+          {WORDMARK}
+        </text>
+      </svg>
+    </span>
+  );
+}
+
+// ─── 풀 애니메이션 내부 컴포넌트 ──────────────────────────────────────────────
+
+/**
+ * AnimatedWordmarkInner — 글자별 순차 self-drawing 워드마크.
+ *
+ * "K CLUB" 를 글자별 <m.text> 로 그리되, 각 글자의 x 위치는 측정용 단일 <text> 에서
+ * getStartPositionOfChar() 로 **폰트 자간을 그대로 측정**해 배치한다.
+ * → CLUB 자간은 단어처럼 밀착 유지하면서 K→C→L→U→B **순차** 스트로크가 가능.
+ *
+ * 각 글자: strokeDashoffset(외곽선 그리기) → fillOpacity(채움) 2단계를 STAGGER 간격으로 순차 재생.
+ * (이전엔 단어 전체가 한 번에 그려져 순차감이 없었음)
+ */
+function AnimatedWordmarkInner({ size, className }: { size: "md" | "lg"; className?: string }) {
+  const cfg = SIZE_CFG[size];
+  // 글자당 dash — 한 글자 외곽선 길이보다 "충분히 큰" 단일 값.
+  // (작으면 dash/gap 패턴이 반복돼 글자 외곽선 중간에 공백이 생겨 선이 끊겨 보임 = 깨짐)
+  const dash = cfg.fontSize * 14;
+
+  // 측정용 텍스트 ref + 글자 x 위치 상태 (측정 전엔 폴백 위치)
+  const measureRef = useRef<SVGTextElement>(null);
+  const [xs, setXs] = useState<number[]>(() => LETTER_X_FALLBACK.map((r) => r * cfg.fontSize));
+
+  useEffect(() => {
+    const t = measureRef.current;
+    if (!t) return;
+    try {
+      // "K CLUB" 각 글자의 실제 시작 x (폰트 커닝·letterSpacing 반영)
+      const measured = LETTER_CHAR_INDEX.map((i) => t.getStartPositionOfChar(i).x);
+      setXs(measured);
+    } catch {
+      // 측정 미지원/실패 시 폴백 위치 유지
+    }
+  }, [cfg.fontSize]);
+
+  const DRAW = 0.5; // 글자당 외곽선 그리기
+  const FILL = 0.22; // 글자당 채움
+  const STAGGER = 0.16; // 글자 간 시작 간격 — 순차감의 핵심
+
+  return (
+    <span className={cn("inline-flex shrink-0 items-center", className)}>
+      {/* overflow visible: 폰트 descender 가 viewBox 를 벗어날 수 있음. aria-hidden: 장식. */}
+      <svg
+        width={cfg.svgWidth}
+        height={cfg.svgHeight}
+        viewBox={`0 0 ${cfg.svgWidth} ${cfg.svgHeight}`}
+        aria-hidden="true"
+        xmlns="http://www.w3.org/2000/svg"
+        overflow="visible"
+      >
+        {/* 측정 전용 숨김 텍스트 — getStartPositionOfChar 로 글자 x 측정 (보이지 않음) */}
+        <text
+          ref={measureRef}
+          x={0}
+          y={cfg.baseline}
+          fontSize={cfg.fontSize}
+          fontWeight={cfg.fontWeight}
+          letterSpacing={cfg.letterSpacing}
+          fontFamily="var(--font-logo)"
+          fill="none"
+          stroke="none"
+          style={{ opacity: 0 }}
           aria-hidden="true"
-          xmlns="http://www.w3.org/2000/svg"
         >
-          <m.circle
-            cx="14"
-            cy="14"
-            r="12"
-            fill="none"
-            strokeWidth={cfg.strokeWidth}
-            strokeLinecap="round"
-            strokeDasharray={CIRCLE_CIRCUMFERENCE}
-            // 12시 방향에서 시계방향 시작 — SVG 의 default 시작점 (3시) 을 -90° 회전으로 보정
-            transform="rotate(-90 14 14)"
-            className="stroke-black dark:stroke-black"
-            initial={circleInitial}
-            animate={{ strokeDashoffset: 0 }}
-            // expo out — smooth deceleration (iOS 풍, ui-animation-expert 리서치 추천)
-            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-          />
-        </svg>
-        <m.span
-          className={cn("leading-none font-bold", cfg.k)}
-          initial={kInitial}
-          animate={{ opacity: 1, scale: 1 }}
-          // ring 이 거의 완성될 때(300ms) K 등장 시작 → 700ms 시점에 완전 정착
-          transition={{ delay: 0.3, duration: 0.25, ease: "easeOut" }}
-        >
-          K
-        </m.span>
-      </span>
+          {WORDMARK}
+        </text>
+
+        {/* 글자별 순차 self-draw — start = i*STAGGER 로 K→C→L→U→B 순서 */}
+        {WORDMARK_LETTERS.map((ch, i) => {
+          const start = i * STAGGER;
+          return (
+            <m.text
+              key={ch}
+              x={xs[i]}
+              y={cfg.baseline}
+              fontSize={cfg.fontSize}
+              fontWeight={cfg.fontWeight}
+              fontFamily="var(--font-logo)"
+              fill={TEXT_COLOR}
+              stroke={TEXT_COLOR}
+              strokeWidth={1}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeDasharray={dash}
+              style={{ paintOrder: "stroke fill" }}
+              initial={{ strokeDashoffset: dash, fillOpacity: 0, strokeOpacity: 1 }}
+              animate={{ strokeDashoffset: 0, fillOpacity: 1, strokeOpacity: 0 }}
+              transition={{
+                strokeDashoffset: { duration: DRAW, ease: EXPO_OUT, delay: start },
+                fillOpacity: { duration: FILL, ease: EXPO_OUT, delay: start + DRAW },
+                strokeOpacity: { duration: FILL, ease: EXPO_OUT, delay: start + DRAW },
+              }}
+            >
+              {ch}
+            </m.text>
+          );
+        })}
+      </svg>
+    </span>
+  );
+}
+
+// ─── 메인 컴포넌트 (공개 API) ─────────────────────────────────────────────────
+
+/**
+ * KCircleLogo — 공개 export.
+ *
+ * 호출부 3곳(헤더, 로그인폼, 회원가입폼)이 이 이름과 props 시그니처에 의존.
+ * export 이름과 props({ size?, className? })는 절대 변경 금지.
+ *
+ * 분기:
+ *   sm → StaticWordmark (즉시 솔리드, 애니메이션 없음)
+ *   reduced-motion → StaticWordmark (WCAG SC 2.3.3 준수)
+ *   md / lg → LazyMotion > AnimatedWordmarkInner (self-drawing 풀 시퀀스)
+ */
+export function KCircleLogo({ size = "md", className }: KCircleLogoProps) {
+  const reducedMotion = useReducedMotion();
+
+  // sm 또는 reduced-motion: 즉시 솔리드 워드마크 렌더
+  if (size === "sm" || reducedMotion) {
+    return <StaticWordmark size={size ?? "md"} className={className} />;
+  }
+
+  // md / lg: LazyMotion으로 감싸 번들 분할 적용
+  // LazyMotion + domAnimation: CSS 애니메이션 기능만 로드 (번들 최적화)
+  return (
+    <LazyMotion features={domAnimation}>
+      <AnimatedWordmarkInner size={size} className={className} />
     </LazyMotion>
   );
 }

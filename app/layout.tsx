@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Geist, Noto_Sans_JP } from "next/font/google";
+import { Geist, Noto_Sans_JP, Fredoka } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { Header } from "@/components/layout/header";
@@ -36,6 +36,14 @@ const notoJp = Noto_Sans_JP({
   weight: ["400", "500", "700"],
 });
 
+// 로고 전용 폰트 — 둥글고 통통한 Fredoka (KCircleLogo "K CLUB" 워드마크에만 사용)
+const fredoka = Fredoka({
+  variable: "--font-logo",
+  display: "swap",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+});
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -46,7 +54,7 @@ export default function RootLayout({
     // 다크모드는 제거됨 — 라이트 톤 전용 (next-themes / ThemeProvider 미사용).
     <html lang="ja">
       <body
-        className={`${geistSans.variable} ${notoJp.variable} overflow-x-hidden font-sans antialiased`}
+        className={`${geistSans.variable} ${notoJp.variable} ${fredoka.variable} overflow-x-hidden font-sans antialiased`}
       >
         {/* 모든 페이지 공통 헤더 — sticky top-0, T-002 에서 도입.
             Header 가 cookies() 의존(role 추출)이므로 cacheComponents 모드에서 Suspense 필수.
