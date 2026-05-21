@@ -14,7 +14,10 @@
 import { createClient } from "@/lib/supabase/server";
 import type { CircleDetail, CircleImage, CircleSummary } from "@/lib/types/domain";
 import type { CirclesSearchParams } from "@/lib/circles/search-params";
-import type { RecruitmentStatus } from "@/lib/constants/recruitment-status";
+import {
+  getCurrentRecruitingStatuses,
+  type RecruitmentStatus,
+} from "@/lib/constants/recruitment-status";
 import type { Category } from "@/lib/constants/category";
 import type { OfficialType } from "@/lib/constants/official-type";
 import type { CircleStatus } from "@/lib/constants/circle-status";
@@ -221,19 +224,26 @@ export async function getNewCircles(limit = 10): Promise<CircleSummary[]> {
 }
 
 /**
- * 현재 모집중인 서클 — recruitment_status 가 설정된(모집 중인) 단체.
- * 홈 Discover 「現在募集中のサークル」 가로 스크롤 섹션에서 사용.
+ * 「現在募集中」(지금 가입 가능)인 서클 — 홈 Discover 「現在募集中のサークル」 섹션에서 사용.
  *
- * 정렬: 시급한 모집(open=現在募集中, newcomer_only=新歓限定)을 통년 모집(year_round)보다 앞에,
- * 동일 우선순위 안에서는 인기순(view_count) 정렬해 노출.
+ * 「지금」 의 의미를 시기에 맞게 해석한다 (newcomer_only 데이터는 보존하되, 시즌 밖이면 섹션에서 숨김):
+ * - year_round(通年募集): 언제든 모집 → 항상 포함.
+ * - newcomer_only(新歓シーズン): 4월 신환 시기에만 모집 → 新歓 시즌(3~4월)에만 포함.
+ *   예) 현재 5월이면 新歓 종료 → 섹션엔 通年募集 서클만 노출.
+ *
+ * 정렬: 시급한 모집(newcomer_only)을 통년(year_round)보다 앞에, 동일 우선순위 내 인기순(view_count).
  */
 export async function getRecruitingCircles(limit = 12): Promise<CircleSummary[]> {
   const supabase = await createClient();
+
+  // 시기 기반 「現在募集中」 상태 (新歓 시즌이면 newcomer_only 포함, 아니면 year_round 만)
+  const statuses = getCurrentRecruitingStatuses();
+
   const { data, error } = await supabase
     .from("circles")
     .select("*, circle_tags(tags(slug))")
     .eq("status", "approved")
-    .not("recruitment_status", "is", null)
+    .in("recruitment_status", statuses)
     .order("view_count", { ascending: false })
     .limit(24);
 
@@ -242,11 +252,10 @@ export async function getRecruitingCircles(limit = 12): Promise<CircleSummary[]>
     return [];
   }
 
-  // 모집 상태 우선순위 — open / newcomer_only(시급) 를 year_round(통년) 앞으로
+  // 모집 상태 우선순위 — newcomer_only(新歓シーズン·시급) 를 year_round(통년) 앞으로
   const priority: Record<RecruitmentStatus, number> = {
-    open: 0,
-    newcomer_only: 1,
-    year_round: 2,
+    newcomer_only: 0,
+    year_round: 1,
   };
   return (data ?? [])
     .map((row) => toCircleSummary(row as Record<string, unknown>))

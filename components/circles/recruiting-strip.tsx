@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { RecruitingPosterCard } from "@/components/circles/recruiting-poster-card";
+import { getCurrentRecruitingStatuses } from "@/lib/constants/recruitment-status";
 import type { CircleSummary } from "@/lib/types/domain";
 
 interface RecruitingStripProps {
@@ -14,20 +15,21 @@ interface RecruitingStripProps {
  * 세로형 포스터 카드(RecruitingPosterCard)를 모바일/데스크탑 공통 가로 스크롤로 노출.
  * 원형 아바타 스트립과 구별되는 「추천 포스터」 톤으로, 모집중 동아리를 강조한다.
  *
- * 「もっと見る」 → /search 의 모집 필터(recruit=open,newcomer_only,year_round) 결과로 이동.
+ * 「もっと見る」 → /circles(결과 리스트)에 현재 시기의 모집 필터를 적용해 바로 이동.
+ *   섹션과 동일한 시기 로직(getCurrentRecruitingStatuses)을 써서, 지금(5월)이면 通年募集만 필터링된 목록으로 간다.
  */
 export function RecruitingStrip({ circles }: RecruitingStripProps) {
   if (circles.length === 0) return null;
+
+  // 섹션 노출 기준과 동일한 시기별 모집 상태로 결과 페이지 필터를 구성
+  const seeMoreHref = `/circles?recruit=${getCurrentRecruitingStatuses().join(",")}`;
 
   return (
     <section className="space-y-3">
       {/* 제목 + 「もっと見る」 */}
       <header className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">現在募集中のサークル</h2>
-        <Link
-          href="/search?recruit=open,newcomer_only,year_round"
-          className="text-muted-foreground text-sm"
-        >
+        <Link href={seeMoreHref} className="text-muted-foreground text-sm">
           もっと見る
         </Link>
       </header>
