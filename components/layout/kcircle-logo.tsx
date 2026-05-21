@@ -77,11 +77,11 @@ const SIZE_CFG = {
     fontWeight: 700,
   },
   lg: {
-    fontSize: 28,
-    svgWidth: 142,
-    svgHeight: 38,
-    baseline: 30,
-    letterSpacing: 0.8,
+    fontSize: 42,
+    svgWidth: 300,
+    svgHeight: 56,
+    baseline: 42,
+    letterSpacing: 1.2,
     fontWeight: 700,
   },
 } as const;
@@ -133,10 +133,11 @@ function StaticWordmark({ size, className }: { size: "sm" | "md" | "lg"; classNa
         xmlns="http://www.w3.org/2000/svg"
         overflow="visible"
       >
-        {/* "K CLUB" 단일 text — 폰트 자간으로 CLUB 가 한 단어처럼 묶임 */}
+        {/* "K CLUB" 단일 text — 박스 중앙 정렬(textAnchor middle)로 어긋남 방지 */}
         <text
-          x={0}
+          x={cfg.svgWidth / 2}
           y={cfg.baseline}
+          textAnchor="middle"
           fontSize={cfg.fontSize}
           fontWeight={cfg.fontWeight}
           letterSpacing={cfg.letterSpacing}
@@ -169,9 +170,11 @@ function AnimatedWordmarkInner({ size, className }: { size: "md" | "lg"; classNa
   // (작으면 dash/gap 패턴이 반복돼 글자 외곽선 중간에 공백이 생겨 선이 끊겨 보임 = 깨짐)
   const dash = cfg.fontSize * 14;
 
-  // 측정용 텍스트 ref + 글자 x 위치 상태 (측정 전엔 폴백 위치)
+  // 측정용 텍스트 ref + 글자 x 위치 + SVG 박스 폭 (측정 전엔 폴백)
   const measureRef = useRef<SVGTextElement>(null);
   const [xs, setXs] = useState<number[]>(() => LETTER_X_FALLBACK.map((r) => r * cfg.fontSize));
+  // 박스 폭을 실제 글자 폭에 맞춰야 중앙 컨테이너에서 어긋나지 않음
+  const [boxW, setBoxW] = useState<number>(cfg.svgWidth);
 
   useEffect(() => {
     const t = measureRef.current;
@@ -180,8 +183,11 @@ function AnimatedWordmarkInner({ size, className }: { size: "md" | "lg"; classNa
       // "K CLUB" 각 글자의 실제 시작 x (폰트 커닝·letterSpacing 반영)
       const measured = LETTER_CHAR_INDEX.map((i) => t.getStartPositionOfChar(i).x);
       setXs(measured);
+      // 실제 워드마크 폭 → SVG 박스 폭으로 사용 (좌측 여백 제거 → flex 중앙정렬 정확)
+      const w = t.getComputedTextLength();
+      if (w > 0) setBoxW(Math.ceil(w) + Math.ceil(cfg.fontSize * 0.12));
     } catch {
-      // 측정 미지원/실패 시 폴백 위치 유지
+      // 측정 미지원/실패 시 폴백 유지
     }
   }, [cfg.fontSize]);
 
@@ -191,11 +197,12 @@ function AnimatedWordmarkInner({ size, className }: { size: "md" | "lg"; classNa
 
   return (
     <span className={cn("inline-flex shrink-0 items-center", className)}>
-      {/* overflow visible: 폰트 descender 가 viewBox 를 벗어날 수 있음. aria-hidden: 장식. */}
+      {/* overflow visible: 폰트 descender 가 viewBox 를 벗어날 수 있음. aria-hidden: 장식.
+          width/viewBox 는 측정된 실제 글자 폭(boxW) — 좌측 여백 없이 flex 중앙정렬 정확. */}
       <svg
-        width={cfg.svgWidth}
+        width={boxW}
         height={cfg.svgHeight}
-        viewBox={`0 0 ${cfg.svgWidth} ${cfg.svgHeight}`}
+        viewBox={`0 0 ${boxW} ${cfg.svgHeight}`}
         aria-hidden="true"
         xmlns="http://www.w3.org/2000/svg"
         overflow="visible"
