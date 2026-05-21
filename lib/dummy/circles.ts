@@ -73,13 +73,13 @@ function assets(seed: string): { cover_image_url: string; images: CircleImage[] 
 }
 
 /**
- * seq(1~30) 기반 결정론적 recruitment_status 시드
- * - seq 1~18 → open (18건)
- * - seq 19~26 → newcomer_only (8건)
+ * seq(1~30) 기반 결정론적 recruitment_status 시드 (2026-05 개편: open 제거 → 2분류)
+ * - seq 1~18 → year_round (18건, 기존 open 을 year_round 로 이관한 것과 일관)
+ * - seq 19~26 → newcomer_only(新歓シーズン) (8건)
  * - seq 27~30 → year_round (4건)
  */
 function seedRecruitmentStatus(seq: number): RecruitmentStatus {
-  if (seq <= 18) return "open";
+  if (seq <= 18) return "year_round";
   if (seq <= 26) return "newcomer_only";
   return "year_round";
 }
