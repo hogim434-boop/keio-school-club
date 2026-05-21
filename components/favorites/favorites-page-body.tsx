@@ -195,7 +195,7 @@ export function FavoritesPageBody() {
     // 기존 타이머가 있으면 교체
     const existing = timersRef.current.get(id);
     if (existing) clearTimeout(existing);
-    const t = setTimeout(() => commitRemove(id), 3000);
+    const t = setTimeout(() => commitRemove(id), 2000);
     timersRef.current.set(id, t);
   };
 
