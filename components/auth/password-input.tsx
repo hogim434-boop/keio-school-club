@@ -37,6 +37,8 @@ interface PasswordInputProps {
   autoComplete?: string;
   /** Input에 병합할 추가 Tailwind 클래스 */
   className?: string;
+  /** 시각적 라벨이 없을 때 스크린리더용 라벨 */
+  ariaLabel?: string;
 }
 
 /**
@@ -50,6 +52,7 @@ export function PasswordInput({
   placeholder,
   autoComplete,
   className,
+  ariaLabel,
 }: PasswordInputProps) {
   // 비밀번호 표시 여부 — false(숨김)가 기본값
   const [show, setShow] = useState(false);
@@ -68,6 +71,7 @@ export function PasswordInput({
         onChange={onChange}
         placeholder={placeholder}
         autoComplete={autoComplete}
+        aria-label={ariaLabel}
         className={cn(AUTH_INPUT_CLS, "pr-11", className)}
       />
 

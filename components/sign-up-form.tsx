@@ -36,7 +36,6 @@ import { PasswordInput } from "@/components/auth/password-input";
 import { KCircleLogo } from "@/components/layout/kcircle-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { AUTH_INPUT_CLS } from "@/lib/auth/input-class";
 
@@ -269,37 +268,31 @@ export function SignUpForm() {
               animate="visible"
               transition={makeFadeTransition(0.22)}
             >
-              {/* 비밀번호 필드 — PasswordInput으로 show/hide 토글 추가 */}
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="password">パスワード</Label>
-                <PasswordInput
-                  id="password"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    // 입력 중에는 에러 메시지 초기화
-                    if (pwError) setPwError(null);
-                  }}
-                  placeholder="8文字以上"
-                  autoComplete="new-password"
-                />
-              </div>
+              {/* 비밀번호 필드 — 라벨 제거(placeholder + aria-label), show/hide 토글 */}
+              <PasswordInput
+                id="password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (pwError) setPwError(null);
+                }}
+                placeholder="パスワード"
+                ariaLabel="パスワード"
+                autoComplete="new-password"
+              />
 
-              {/* 비밀번호 확인 필드 — PasswordInput으로 show/hide 토글 추가 */}
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="confirm">パスワード（確認）</Label>
-                <PasswordInput
-                  id="confirm"
-                  value={confirm}
-                  onChange={(e) => {
-                    setConfirm(e.target.value);
-                    // 입력 중에는 에러 메시지 초기화
-                    if (pwError) setPwError(null);
-                  }}
-                  placeholder="もう一度入力してください"
-                  autoComplete="new-password"
-                />
-              </div>
+              {/* 비밀번호 확인 필드 */}
+              <PasswordInput
+                id="confirm"
+                value={confirm}
+                onChange={(e) => {
+                  setConfirm(e.target.value);
+                  if (pwError) setPwError(null);
+                }}
+                placeholder="パスワード（確認）"
+                ariaLabel="パスワード（確認）"
+                autoComplete="new-password"
+              />
 
               {/* 인라인 에러 메시지 */}
               {pwError && (
@@ -397,16 +390,15 @@ export function SignUpForm() {
               animate="visible"
               transition={makeFadeTransition(0.2)}
             >
-              <Label htmlFor="nickname">ニックネーム</Label>
-              {/* 프리미엄 스타일 적용 — 닉네임은 일반 텍스트 입력이므로 Input 유지 */}
+              {/* 라벨 제거 → placeholder + aria-label. 하단 중복 힌트(1〜20文字) 제거(maxLength·에러로 충분) */}
               <Input
                 id="nickname"
                 type="text"
-                placeholder="例: 慶太"
+                placeholder="ニックネーム（例: 慶太）"
+                aria-label="ニックネーム"
                 value={nickname}
                 onChange={(e) => {
                   setNickname(e.target.value);
-                  // 입력 중에는 에러 메시지 초기화
                   if (nicknameError) setNicknameError(null);
                 }}
                 maxLength={20}
@@ -420,7 +412,6 @@ export function SignUpForm() {
                   {nicknameError}
                 </p>
               )}
-              <p className="text-muted-foreground text-xs">1〜20文字で入力してください</p>
             </m.div>
           </div>
         </AuthScreen>
@@ -475,9 +466,7 @@ export function SignUpForm() {
               {/* 완료 타이틀 — 1.75rem으로 다른 화면과 통일감 */}
               <h1 className="text-[1.75rem] font-bold tracking-tight">ようこそ! 🎉</h1>
               <p className="text-muted-foreground text-sm leading-relaxed">
-                KCircle へようこそ！
-                <br />
-                あなたにぴったりのサークルを見つけましょう
+                マイページからサークルの登録・管理を始めましょう
               </p>
             </m.div>
 
@@ -498,10 +487,10 @@ export function SignUpForm() {
               transition={makeFadeTransition(0.25)}
               whileTap={reducedMotion ? undefined : { scale: 0.98, transition: { duration: 0.1 } }}
             >
-              {/* CTA 스타일 + 화살표 아이콘 */}
-              <Button type="button" onClick={() => router.push("/circles")} className={CTA_BTN_CLS}>
+              {/* 운영자 가입 완료 → 마이페이지(서클 등록·관리)로 이동 */}
+              <Button type="button" onClick={() => router.push("/mypage")} className={CTA_BTN_CLS}>
                 <span className="flex items-center justify-center gap-2">
-                  サークルを探す
+                  マイページへ
                   <ArrowRight className="size-4" aria-hidden="true" />
                 </span>
               </Button>
@@ -572,7 +561,7 @@ export function SignUpForm() {
             始めましょう
           </m.h1>
 
-          {/* 서브카피: delay 0.21s (0.06s stagger 간격) */}
+          {/* 서브카피: 1줄로 압축 (운영자용 + keio.jp 인증) */}
           <m.p
             className="text-muted-foreground text-sm leading-relaxed"
             variants={FADE_UP_VARIANTS}
@@ -580,9 +569,7 @@ export function SignUpForm() {
             animate="visible"
             transition={makeFadeTransition(0.21)}
           >
-            サークルを運営する代表者向けの登録です。
-            <br />
-            @keio.jp で慶應生として認証されます。
+            サークル運営者向けの登録です（@keio.jp で認証）
           </m.p>
 
           {/*

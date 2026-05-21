@@ -28,7 +28,6 @@ import { PasswordInput } from "@/components/auth/password-input";
 import { KCircleLogo } from "@/components/layout/kcircle-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { sanitizeNext } from "@/lib/auth/sanitize-next";
 import { AUTH_INPUT_CLS } from "@/lib/auth/input-class";
@@ -99,36 +98,14 @@ export function LoginForm() {
     <LazyMotion features={domAnimation}>
       <AuthScreen align="center" backHref="/">
         {/* ── 중앙 집약 그룹 ── 로고·타이틀·폼·신규가입 링크를 한 덩어리로 */}
-        <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-6">
+        <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-5">
           {/*
             KCircleLogo는 자체 Ring Draw 애니메이션을 보유하므로
             별도 모션 래퍼 없이 그대로 사용 (중복 방지).
           */}
           <KCircleLogo size="lg" />
 
-          {/* 타이틀 + 운영자 안내 — 한 블록으로 묶어 좁은 간격(서브타이틀처럼 보이게) */}
-          <div className="flex flex-col items-center gap-1.5 text-center">
-            {/* 타이틀: delay 0.15s — 로고 애니메이션 완료 후 자연스럽게 이어짐 */}
-            <m.h1
-              className="text-[1.75rem] font-bold tracking-tight"
-              variants={FADE_UP_VARIANTS}
-              initial={initial}
-              animate="visible"
-              transition={makeTransition(0.15)}
-            >
-              ログイン
-            </m.h1>
-            {/* Direction A: 계정은 서클 대표(운영자)/관리자용임을 명시 */}
-            <m.p
-              className="text-muted-foreground text-sm"
-              variants={FADE_UP_VARIANTS}
-              initial={initial}
-              animate="visible"
-              transition={makeTransition(0.18)}
-            >
-              サークル運営者向けのログインです
-            </m.p>
-          </div>
+          {/* 제목 제거 — 로그인 버튼이 페이지 목적을 라벨링하므로 중복 */}
 
           {/* ── 로그인 폼 — 엔터 제출 지원을 위해 <form>으로 감쌈 ── */}
           <form onSubmit={handleLogin} className="flex w-full flex-col gap-4">
@@ -140,12 +117,12 @@ export function LoginForm() {
               animate="visible"
               transition={makeTransition(0.21)}
             >
-              <Label htmlFor="email">メールアドレス</Label>
-              {/* 프리미엄 스타일 오버라이드 — globals.css의 Input 기본값 위에 덮어씀 */}
+              {/* 라벨 제거 → placeholder 가 라벨 역할 + aria-label 로 접근성 보완 */}
               <Input
                 id="email"
                 type="email"
-                placeholder="taro@keio.jp"
+                placeholder="メールアドレス"
+                aria-label="メールアドレス"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
@@ -161,13 +138,13 @@ export function LoginForm() {
               animate="visible"
               transition={makeTransition(0.27)}
             >
-              <Label htmlFor="password">パスワード</Label>
-              {/* PasswordInput: show/hide 토글 내장 — 기존 Input type="password"를 대체 */}
+              {/* 라벨 제거 → placeholder + aria-label. show/hide 토글 내장 */}
               <PasswordInput
                 id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="パスワードを入力"
+                placeholder="パスワード"
+                ariaLabel="パスワード"
                 autoComplete="current-password"
               />
             </m.div>
