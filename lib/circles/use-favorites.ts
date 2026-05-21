@@ -52,6 +52,13 @@ export function addFavoriteLocal(circleId: string): void {
   writeIds(ids);
 }
 
+/** 즐겨찾기 제거 (hook 없이 호출 — 즐겨찾기 페이지의 인라인 Undo 커밋 등에서 사용) */
+export function removeFavoriteLocal(circleId: string): void {
+  const ids = readIds();
+  ids.delete(circleId);
+  writeIds(ids);
+}
+
 /** 현재 즐겨찾기 여부 */
 export function isFavoriteLocal(circleId: string): boolean {
   return readIds().has(circleId);
