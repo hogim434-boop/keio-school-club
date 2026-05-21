@@ -30,7 +30,7 @@ export interface CircleSummary {
    */
   description: string;
   /**
-   * 모집 상태 — open(現在募集中) / newcomer_only(新歓限定) / year_round(通年募集).
+   * 모집 상태 — newcomer_only(新歓シーズン) / year_round(通年募集). 둘 다 「지금 가입 가능」.
    * 「現在募集中のサークル」 섹션의 모집 뱃지에서 사용. 값이 없으면 null.
    */
   recruitment_status: RecruitmentStatus | null;

@@ -400,7 +400,7 @@ export type Database = {
         | "media";
       circle_status_enum: "pending" | "approved" | "rejected";
       official_type_enum: "athletics" | "official" | "unofficial" | "intercollegiate" | "other";
-      recruitment_status_enum: "open" | "newcomer_only" | "year_round";
+      recruitment_status_enum: "newcomer_only" | "year_round";
       tag_kind_enum: "atmosphere" | "cost" | "frequency" | "gender";
     };
     CompositeTypes: {
@@ -542,7 +542,7 @@ export const Constants = {
       ],
       circle_status_enum: ["pending", "approved", "rejected"],
       official_type_enum: ["athletics", "official", "unofficial", "intercollegiate", "other"],
-      recruitment_status_enum: ["open", "newcomer_only", "year_round"],
+      recruitment_status_enum: ["newcomer_only", "year_round"],
       tag_kind_enum: ["atmosphere", "cost", "frequency", "gender"],
     },
   },
