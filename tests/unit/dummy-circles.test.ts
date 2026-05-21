@@ -125,15 +125,13 @@ describe("DUMMY_CIRCLES 신규 필드 분포 (recruitment_status · activity_tim
     }
   });
 
-  it("recruitment_status 분포: open 18 + newcomer_only 8 + year_round 4 = 30", () => {
-    const open = DUMMY_CIRCLES.filter((c) => c.recruitment_status === "open").length;
+  it("recruitment_status 분포: newcomer_only 8 + year_round 22 = 30 (open 폐기)", () => {
     const newcomer = DUMMY_CIRCLES.filter((c) => c.recruitment_status === "newcomer_only").length;
     const yearRound = DUMMY_CIRCLES.filter((c) => c.recruitment_status === "year_round").length;
 
-    expect(open).toBe(18);
     expect(newcomer).toBe(8);
-    expect(yearRound).toBe(4);
-    expect(open + newcomer + yearRound).toBe(DUMMY_CIRCLES_DISTRIBUTION.total);
+    expect(yearRound).toBe(22);
+    expect(newcomer + yearRound).toBe(DUMMY_CIRCLES_DISTRIBUTION.total);
   });
 
   it("모든 단체에 activity_time_band 가 정의되어 있고 1개 이상이다", () => {

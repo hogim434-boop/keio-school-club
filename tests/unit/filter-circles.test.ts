@@ -106,19 +106,21 @@ describe("filterCircles — 신규 5종 필터", () => {
     }
   });
 
-  it("recruitmentStatus=['open'] → recruitment_status=open 인 단체만 (OR 매칭)", async () => {
-    // 시드 분포: seq 1~18 → open (18건)
-    const expectedCount = DUMMY_CIRCLES.filter((c) => c.recruitment_status === "open").length;
-    expect(expectedCount).toBe(18);
+  it("recruitmentStatus=['newcomer_only'] → recruitment_status=newcomer_only 인 단체만 (OR 매칭)", async () => {
+    // 시드 분포: seq 19~26 → newcomer_only (8건)
+    const expectedCount = DUMMY_CIRCLES.filter(
+      (c) => c.recruitment_status === "newcomer_only"
+    ).length;
+    expect(expectedCount).toBe(8);
 
-    const r = await filterCircles({ recruitmentStatus: ["open"] });
-    expect(r.total).toBe(18);
+    const r = await filterCircles({ recruitmentStatus: ["newcomer_only"] });
+    expect(r.total).toBe(8);
 
-    // 결과 단체의 recruitment_status 가 모두 open 인지 확인
+    // 결과 단체의 recruitment_status 가 모두 newcomer_only 인지 확인
     const resultIds = new Set(r.items.map((c) => c.id));
     for (const circle of DUMMY_CIRCLES) {
       if (resultIds.has(circle.id)) {
-        expect(circle.recruitment_status, `circle ${circle.id}`).toBe("open");
+        expect(circle.recruitment_status, `circle ${circle.id}`).toBe("newcomer_only");
       }
     }
   });
