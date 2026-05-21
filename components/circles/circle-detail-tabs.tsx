@@ -106,7 +106,14 @@ export function CircleDetailTabs({ circleId, reports, homeContent }: CircleDetai
   // 덕분에 캐러셀 위 포인터는 dragControls.start() 를 호출하지 않아 native 스크롤로 fallback.
   const dragControls = useDragControls();
 
-  // ── ResizeObserver — 뷰포트 너비 측정 ────────────────────────────────────
+  // 각 패널의 높이 — 두 패널 콘텐츠 길이가 다르므로(home: 요약+설명+캐러셀 / board: 리스트)
+  // 뷰포트 높이를 활성 패널 높이에 맞춰야 한다. 안 그러면 짧은 board 탭에서도 뷰포트가
+  // 긴 home 높이를 유지해 그 빈 영역에 home 패널 캐러셀이 삐져나와 보인다.
+  const homePanelRef = useRef<HTMLDivElement | null>(null);
+  const boardPanelRef = useRef<HTMLDivElement | null>(null);
+  const [panelHeights, setPanelHeights] = useState({ home: 0, board: 0 });
+
+  // ── ResizeObserver — 뷰포트 너비 + 패널 높이 측정 ────────────────────────
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -121,6 +128,24 @@ export function CircleDetailTabs({ circleId, reports, homeContent }: CircleDetai
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  // 패널 높이 측정 — 두 패널을 함께 관찰하다 콘텐츠 변동(이미지 로드 등) 시 갱신.
+  useEffect(() => {
+    const homeEl = homePanelRef.current;
+    const boardEl = boardPanelRef.current;
+    if (!homeEl || !boardEl) return;
+
+    const ro = new ResizeObserver(() => {
+      setPanelHeights({ home: homeEl.offsetHeight, board: boardEl.offsetHeight });
+    });
+
+    ro.observe(homeEl);
+    ro.observe(boardEl);
+    return () => ro.disconnect();
+  }, []);
+
+  // 활성 패널 높이 — 뷰포트 height 에 적용. 측정 전(0)이면 undefined → auto 높이 fallback.
+  const activeHeight = tab === "home" ? panelHeights.home : panelHeights.board;
 
   // ── tab ↔ x 동기화 ────────────────────────────────────────────────────────
   // tab 또는 width 가 바뀔 때마다 x 를 target 위치로 이동.
@@ -246,9 +271,22 @@ export function CircleDetailTabs({ circleId, reports, homeContent }: CircleDetai
        *   onPointerDown 에서 캐러셀 게이팅 후 dragControls.start(e) 로 수동 시작.
        *
        * touch-action 미설정(auto): 자식 캐러셀의 가로 스크롤을 막지 않기 위함 (상단 docstring 참조).
+       *
+       * height: 활성 패널 높이로 고정 + overflow-hidden. 짧은 board 탭에서 긴 home 패널의
+       *   캐러셀이 빈 영역으로 삐져나오는 것을 클립한다. 탭 전환 시 슬라이드(x)와 같은 곡선/시간으로
+       *   height 도 transition 시켜 자연스럽게 늘었다 줄었다 하게 한다.
        */}
       <LazyMotion features={domMax}>
-        <div ref={containerRef} className="overflow-hidden">
+        <div
+          ref={containerRef}
+          className="overflow-hidden"
+          style={{
+            height: activeHeight > 0 ? activeHeight : undefined,
+            transition: prefersReducedMotion
+              ? undefined
+              : "height 0.35s cubic-bezier(0.32, 0.72, 0, 1)",
+          }}
+        >
           <m.div
             className="flex items-start"
             style={{ x, width: width > 0 ? width * 2 : "200%" }}
@@ -268,6 +306,7 @@ export function CircleDetailTabs({ circleId, reports, homeContent }: CircleDetai
              * 비활성 패널의 키보드 포커스·보조기술 접근을 차단. aria-hidden 과 병행해 호환성 확보.
              */}
             <div
+              ref={homePanelRef}
               className="w-1/2 shrink-0"
               inert={tab !== "home" || undefined}
               aria-hidden={tab !== "home"}
@@ -286,6 +325,7 @@ export function CircleDetailTabs({ circleId, reports, homeContent }: CircleDetai
              * 掲示板 패널 — 비활성 시 inert + aria-hidden 으로 AT·포커스 차단.
              */}
             <div
+              ref={boardPanelRef}
               className="w-1/2 shrink-0"
               inert={tab !== "board" || undefined}
               aria-hidden={tab !== "board"}
