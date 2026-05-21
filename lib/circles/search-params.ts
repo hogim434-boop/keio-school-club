@@ -107,7 +107,7 @@ export function parseCirclesSearchParams(raw: RawSearchParams): CirclesSearchPar
     ? (memberSizeRaw as MemberSize)
     : undefined;
 
-  // 모집 상태: recruit=open,newcomer_only
+  // 모집 상태: recruit=newcomer_only,year_round
   const recruitmentAllow = new Set<string>(RECRUITMENT_STATUSES);
   const recruitmentStatus = splitCsv(pickString(raw, "recruit")).filter((v) =>
     recruitmentAllow.has(v)

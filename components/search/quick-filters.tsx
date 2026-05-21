@@ -25,16 +25,9 @@ interface QuickFilter {
   toggle: (p: CirclesSearchParams) => Partial<CirclesSearchParams>;
 }
 
+// 자주 쓰는 칩 3개만 노출 — 「もっと絞り込む」 가 첫 화면에서 보이도록 개수를 줄임.
+// 모집 상태(新歓シーズン/通年募集) 등 나머지 필터는 「もっと絞り込む」 시트에서 제공.
 const QUICK_FILTERS: QuickFilter[] = [
-  {
-    label: "募集中",
-    isActive: (p) => p.recruitmentStatus.includes("open"),
-    toggle: (p) => ({
-      recruitmentStatus: p.recruitmentStatus.includes("open")
-        ? p.recruitmentStatus.filter((s) => s !== "open")
-        : [...p.recruitmentStatus, "open"],
-    }),
-  },
   {
     label: "初心者歓迎",
     isActive: (p) => p.tags.includes("beginner_ok"),
