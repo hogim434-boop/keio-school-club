@@ -1,12 +1,18 @@
-import { ComingSoon } from "@/components/layout/coming-soon";
+import { Suspense } from "react";
 
-// Phase 1.3 T-018 에서 RHF + Zod + URL 호스트 화이트리스트 검증으로 실제 구현 예정
+import { CircleRegistrationForm } from "@/components/circles/new/circle-registration-form";
+
+/**
+ * 서클 등록 페이지 (T-018) — 3단계 풀스크린 멀티스텝 플로우.
+ *
+ * CircleRegistrationForm 이 useSearchParams() 로 단계(?step=)를 읽으므로,
+ * cacheComponents:true 환경에서는 반드시 <Suspense> 로 감싸야 한다.
+ * 라우트 보호는 proxy.ts 에서 처리(미인증 시 /auth/login?next=/circles/new).
+ */
 export default function NewCirclePage() {
   return (
-    <ComingSoon
-      title="サークル登録"
-      description="サークル代表者が新しい公認サークルを申請するフォーム"
-      plannedPhase="Phase 1.3 (T-018)"
-    />
+    <Suspense fallback={null}>
+      <CircleRegistrationForm />
+    </Suspense>
   );
 }

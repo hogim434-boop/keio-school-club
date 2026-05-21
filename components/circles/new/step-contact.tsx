@@ -1,0 +1,383 @@
+"use client";
+
+/**
+ * StepContact — 서클 등록 3단계: SNS 연락처 + 서약 입력 + 최종 제출
+ *
+ * 담당 필드: contact_instagram, contact_x, contact_line, pledge1, pledge2
+ *
+ * 폼 제출 구조 (방법 a — form id 연결):
+ *  - 이 컴포넌트가 <form id={CIRCLE_REGISTRATION_FORM_ID}> 로 본문을 감싼다.
+ *  - 실제 제출 버튼은 컨테이너(CircleRegistrationForm) 의 sticky footer 에 위치.
+ *    → <Button type="submit" form={CIRCLE_REGISTRATION_FORM_ID}>
+ *  - 이 방식으로 제출 버튼이 AuthScreen 하단에 고정되면서
+ *    폼 필드와 버튼이 HTML 표준(form 속성)으로 연결된다.
+ *
+ * 커버 이미지 규약:
+ *  - 이 컴포넌트가 getValues("cover") 로 커버 File 을 꺼내 submitRegistration 에 전달한다.
+ *  - cover 저장은 StepBasic 에서 setValue("cover", file) 로 이루어진다.
+ *  - (다음 에이전트가 StepBasic 커버 입력을 구현할 때 이 규약을 따를 것)
+ *
+ * 제출 흐름:
+ *  1. RHF handleSubmit → zod 가 화이트리스트·서약·SNS최소1 자동 검증
+ *  2. 검증 통과 시 submitRegistration(values, coverFile) 호출
+ *  3. 성공: onRegistered() → 컨테이너가 "done" 단계로 전환
+ *  4. 실패: submitError 상태에 메시지 저장 → 폼 위에 role="alert" 표시
+ *
+ * 애니메이션: sign-up-form FADE_UP stagger 패턴 (타이틀→안내→필드3개→서약→에러)
+ *
+ * 상위 컴포넌트 CircleRegistrationForm 의 FormProvider 아래에서
+ * useFormContext<RegistrationValues>() 로 폼 상태에 접근합니다.
+ */
+
+import { useState } from "react";
+import { useFormContext, Controller } from "react-hook-form";
+import { LazyMotion, domAnimation, m, useReducedMotion } from "motion/react";
+
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AUTH_INPUT_CLS } from "@/lib/auth/input-class";
+import { submitRegistration } from "@/lib/circles/submit-registration";
+import type { RegistrationValues } from "@/lib/circles/registration-schema";
+import { cn } from "@/lib/utils";
+
+// ── form id 상수 ────────────────────────────────────────────────────────────
+/**
+ * 본문 <form> 과 컨테이너 footer 의 <Button type="submit"> 을 연결하는 id.
+ * CircleRegistrationForm 에서 import 해서 form 속성에 사용한다.
+ */
+export const CIRCLE_REGISTRATION_FORM_ID = "circle-registration";
+
+// ── Props ──────────────────────────────────────────────────────────────────
+export interface StepContactProps {
+  /**
+   * 등록 성공 후 호출되는 콜백.
+   * CircleRegistrationForm 이 전달하며, 호출 시 step=done 으로 전환한다.
+   */
+  onRegistered: () => void;
+}
+
+// ── 스타일 토큰 ──────────────────────────────────────────────────────────────
+// 프로젝트 표준 expo-out easing
+const EASE_EXPO_OUT = [0.22, 1, 0.36, 1] as const;
+
+// 표준 페이드+슬라이드업 variants (sign-up-form 와 동일)
+const FADE_UP_VARIANTS = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0 },
+} as const;
+
+// ── 라벨 스타일 ──────────────────────────────────────────────────────────────
+// 각 SNS 필드 위에 표시되는 라벨 텍스트 스타일
+const FIELD_LABEL_CLS = "text-sm font-medium text-foreground";
+
+// 에러 메시지 스타일 (인라인 표시)
+const ERROR_MSG_CLS = "text-xs text-red-500";
+
+/**
+ * SNS 연락처 + 서약 입력 스텝.
+ *
+ * form id 패턴:
+ *  - 본문: <form id={CIRCLE_REGISTRATION_FORM_ID} onSubmit={handleSubmit(onSubmit)}>
+ *  - 제출 버튼: 컨테이너 footer 의 <Button type="submit" form={CIRCLE_REGISTRATION_FORM_ID}>
+ */
+export function StepContact({ onRegistered }: StepContactProps) {
+  // ── FormContext 접근 ─────────────────────────────────────────────────────
+  const {
+    register,
+    control,
+    handleSubmit,
+    getValues,
+    formState: { errors, isSubmitting },
+  } = useFormContext<RegistrationValues>();
+
+  // ── 제출 에러 상태 ───────────────────────────────────────────────────────
+  // submitRegistration 이 { error: string } 을 반환할 때 표시
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // ── 접근성: 감소된 모션 사용자 대응 ─────────────────────────────────────
+  const reducedMotion = useReducedMotion();
+  const initial = reducedMotion ? "visible" : "hidden";
+
+  // stagger delay 헬퍼
+  const makeFadeTransition = (delay: number) =>
+    reducedMotion ? { duration: 0 } : { duration: 0.42, ease: EASE_EXPO_OUT, delay };
+
+  // ── 폼 제출 핸들러 ───────────────────────────────────────────────────────
+  /**
+   * RHF handleSubmit 래퍼.
+   * zod 검증(화이트리스트·서약·SNS최소1) 을 통과한 values 만 여기 도달한다.
+   */
+  const onSubmit = async (values: RegistrationValues) => {
+    setSubmitError(null);
+
+    // 커버 이미지: StepBasic 에서 setValue("cover", file) 로 저장된 값을 꺼냄
+    // cover 필드는 z.any().optional() 이므로 File 여부를 직접 확인
+    const rawCover = getValues("cover");
+    const coverFile = rawCover instanceof File ? rawCover : null;
+
+    const result = await submitRegistration(values, coverFile);
+
+    if ("error" in result) {
+      // circles INSERT 실패 — 에러 메시지 표시 후 재시도 가능 상태로 복원
+      setSubmitError(result.error);
+      return;
+    }
+
+    // 성공 → 컨테이너가 "done" 단계로 전환
+    onRegistered();
+  };
+
+  return (
+    <LazyMotion features={domAnimation}>
+      {/*
+        form id 연결:
+         - id={CIRCLE_REGISTRATION_FORM_ID} 로 컨테이너 footer 버튼과 연결
+         - onSubmit: RHF handleSubmit 을 통해 zod 검증 후 onSubmit 호출
+         - noValidate: 브라우저 기본 HTML5 검증 비활성 (zod 가 담당)
+      */}
+      <form
+        id={CIRCLE_REGISTRATION_FORM_ID}
+        onSubmit={handleSubmit(onSubmit)}
+        noValidate
+        className="flex flex-col gap-8 pt-12"
+      >
+        {/* ── 타이틀 블록 ─────────────────────────────────────────────── */}
+        <m.div
+          className="flex flex-col gap-2"
+          variants={FADE_UP_VARIANTS}
+          initial={initial}
+          animate="visible"
+          transition={makeFadeTransition(0.05)}
+        >
+          <h1 className="text-[1.75rem] leading-snug font-bold tracking-tight">
+            連絡先・規約への同意
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            公式 SNS の URL を入力し、利用規約に同意してください
+          </p>
+        </m.div>
+
+        {/* ── SNS 연락처 필드 그룹 ──────────────────────────────────── */}
+        <m.div
+          className="flex flex-col gap-5"
+          variants={FADE_UP_VARIANTS}
+          initial={initial}
+          animate="visible"
+          transition={makeFadeTransition(0.12)}
+        >
+          {/* 공식 계정 안내 문구 */}
+          <p className="text-muted-foreground rounded-lg bg-neutral-100 px-4 py-3 text-sm leading-relaxed dark:bg-neutral-800">
+            個人アカウントではなく、サークル公式アカウントのURLを入力してください。
+            <br />
+            Instagram・X・LINE のいずれか1つ以上が必須です。
+          </p>
+
+          {/* Instagram URL 필드 */}
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="contact_instagram" className={FIELD_LABEL_CLS}>
+              Instagram の URL
+            </label>
+            <Input
+              id="contact_instagram"
+              type="url"
+              inputMode="url"
+              placeholder="https://www.instagram.com/your_circle"
+              autoComplete="off"
+              className={cn(
+                AUTH_INPUT_CLS,
+                // 에러 시 붉은 ring 으로 시각적 피드백
+                errors.contact_instagram && "ring-2 ring-red-400 focus-visible:ring-red-400"
+              )}
+              aria-invalid={!!errors.contact_instagram}
+              aria-describedby={errors.contact_instagram ? "error-instagram" : undefined}
+              {...register("contact_instagram")}
+            />
+            {/*
+              SNS 최소1 에러는 superRefine 에 의해 contact_instagram path 에 붙음.
+              화이트리스트 에러와 동일 위치에 표시된다.
+            */}
+            {errors.contact_instagram && (
+              <p id="error-instagram" role="alert" className={ERROR_MSG_CLS}>
+                {errors.contact_instagram.message}
+              </p>
+            )}
+          </div>
+
+          {/* X (구 Twitter) URL 필드 */}
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="contact_x" className={FIELD_LABEL_CLS}>
+              X（旧 Twitter）の URL
+            </label>
+            <Input
+              id="contact_x"
+              type="url"
+              inputMode="url"
+              placeholder="https://x.com/your_circle"
+              autoComplete="off"
+              className={cn(
+                AUTH_INPUT_CLS,
+                errors.contact_x && "ring-2 ring-red-400 focus-visible:ring-red-400"
+              )}
+              aria-invalid={!!errors.contact_x}
+              aria-describedby={errors.contact_x ? "error-x" : undefined}
+              {...register("contact_x")}
+            />
+            {errors.contact_x && (
+              <p id="error-x" role="alert" className={ERROR_MSG_CLS}>
+                {errors.contact_x.message}
+              </p>
+            )}
+          </div>
+
+          {/* LINE URL 필드 */}
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="contact_line" className={FIELD_LABEL_CLS}>
+              LINE オープンチャット / 公式アカウントの URL
+            </label>
+            <Input
+              id="contact_line"
+              type="url"
+              inputMode="url"
+              placeholder="https://line.me/ti/g2/xxxxxxxxxx"
+              autoComplete="off"
+              className={cn(
+                AUTH_INPUT_CLS,
+                errors.contact_line && "ring-2 ring-red-400 focus-visible:ring-red-400"
+              )}
+              aria-invalid={!!errors.contact_line}
+              aria-describedby={errors.contact_line ? "error-line" : undefined}
+              {...register("contact_line")}
+            />
+            {errors.contact_line && (
+              <p id="error-line" role="alert" className={ERROR_MSG_CLS}>
+                {errors.contact_line.message}
+              </p>
+            )}
+          </div>
+        </m.div>
+
+        {/* ── 서약 체크박스 그룹 ──────────────────────────────────────── */}
+        <m.div
+          className="flex flex-col gap-4"
+          variants={FADE_UP_VARIANTS}
+          initial={initial}
+          animate="visible"
+          transition={makeFadeTransition(0.2)}
+        >
+          <p className={cn(FIELD_LABEL_CLS, "text-base")}>規約への同意</p>
+
+          {/* 서약 1: 실재 단체 + 학칙 준수 선언 */}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-start gap-3">
+              {/*
+                Controller 사용 이유:
+                shadcn Checkbox(Radix UI) 는 checked/onCheckedChange API 사용.
+                RHF register 는 onChange/value API 이므로 Controller 로 브릿지.
+                checked: !!value 로 boolean 강제 변환 (defaultValues 의 false 대응).
+              */}
+              <Controller
+                control={control}
+                name="pledge1"
+                render={({ field }) => (
+                  <Checkbox
+                    id="pledge1"
+                    checked={!!field.value}
+                    onCheckedChange={(checked) => {
+                      // Radix UI onCheckedChange 는 boolean | "indeterminate" 반환
+                      // indeterminate 는 false 로 처리
+                      field.onChange(checked === true);
+                    }}
+                    aria-invalid={!!errors.pledge1}
+                    aria-describedby={errors.pledge1 ? "error-pledge1" : undefined}
+                    // 체크박스는 form submit 시 Radix 가 hidden input 처리 — name 불필요
+                    className={cn(
+                      "mt-0.5 shrink-0",
+                      // 에러 시 border 붉게
+                      errors.pledge1 && "border-red-400"
+                    )}
+                  />
+                )}
+              />
+              <label htmlFor="pledge1" className="cursor-pointer text-sm leading-relaxed">
+                本団体は実在し、慶應義塾大学の学則に違反しないことを誓約します
+              </label>
+            </div>
+            {errors.pledge1 && (
+              <p id="error-pledge1" role="alert" className={cn(ERROR_MSG_CLS, "pl-7")}>
+                {errors.pledge1.message}
+              </p>
+            )}
+          </div>
+
+          {/* 서약 2: 비공식 서비스 + 책임 인지 */}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-start gap-3">
+              <Controller
+                control={control}
+                name="pledge2"
+                render={({ field }) => (
+                  <Checkbox
+                    id="pledge2"
+                    checked={!!field.value}
+                    onCheckedChange={(checked) => {
+                      field.onChange(checked === true);
+                    }}
+                    aria-invalid={!!errors.pledge2}
+                    aria-describedby={errors.pledge2 ? "error-pledge2" : undefined}
+                    className={cn("mt-0.5 shrink-0", errors.pledge2 && "border-red-400")}
+                  />
+                )}
+              />
+              <label htmlFor="pledge2" className="cursor-pointer text-sm leading-relaxed">
+                本サービスは慶應義塾大学公式の認証とは無関係であり、登録内容の責任は本人に帰属することを理解しました
+              </label>
+            </div>
+            {errors.pledge2 && (
+              <p id="error-pledge2" role="alert" className={cn(ERROR_MSG_CLS, "pl-7")}>
+                {errors.pledge2.message}
+              </p>
+            )}
+          </div>
+        </m.div>
+
+        {/* ── 제출 에러 + isSubmitting 상태 표시 ─────────────────────── */}
+        <m.div
+          className="flex flex-col gap-3"
+          variants={FADE_UP_VARIANTS}
+          initial={initial}
+          animate="visible"
+          transition={makeFadeTransition(0.28)}
+        >
+          {/* submitRegistration 이 { error } 를 반환했을 때 표시 */}
+          {submitError && (
+            <p
+              role="alert"
+              className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-950/30 dark:text-red-400"
+            >
+              {submitError}
+            </p>
+          )}
+
+          {/*
+            isSubmitting 중 진행 안내:
+            footer 버튼은 컨테이너가 소유하므로 직접 disabled 제어 불가.
+            대신 본문에 "送信中…" 텍스트를 표시해 사용자에게 진행 상태를 알림.
+            (footer 버튼 비활성화는 향후 컨텍스트 공유 또는 data attribute 로 개선 가능)
+          */}
+          {isSubmitting && (
+            <p className="text-muted-foreground text-center text-sm" aria-live="polite">
+              送信中…
+            </p>
+          )}
+        </m.div>
+
+        {/*
+          하단 여백:
+          AuthScreen footer 가 fixed/sticky 일 경우 버튼에 콘텐츠가 가리지 않도록
+          충분한 하단 패딩을 준다.
+        */}
+        <div className="pb-4" aria-hidden="true" />
+      </form>
+    </LazyMotion>
+  );
+}
