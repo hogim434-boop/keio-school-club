@@ -40,11 +40,10 @@ export async function Header() {
     "hover:bg-muted focus-visible:ring-ring inline-flex size-10 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:outline-none";
 
   return (
-    <header className="bg-background/80 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-40 backdrop-blur">
-      {/* h-20 (80px) + px-4 (16px) — K 로고 size-12 (48px) 기준:
-          상단 padding = (80-48)/2 = 16px, 좌측 padding = px-4 = 16px → 사방 정사각 균등.
-          이전 ml-2 보정은 헤더 좌우 균형용이었으나, 사용자 요구는 K 의 좌측-상단 거리 매치라 제거. */}
-      <div className="container mx-auto flex h-20 max-w-6xl items-center px-4">
+    // 배경 불투명(opacity 1) — 기존 반투명 + backdrop-blur 제거. 경계선 없음.
+    <header className="bg-background sticky top-0 z-40">
+      {/* 슬림 헤더: h-14(56px). 좌측 로고 + 우측 아이콘. */}
+      <div className="container mx-auto flex h-14 max-w-6xl items-center px-4">
         <Link
           href="/"
           aria-label="KCircle ホーム"

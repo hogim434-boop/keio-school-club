@@ -21,6 +21,7 @@ export function MainPaddingGate({ children }: { children: ReactNode }) {
   const isAuth = pathname.startsWith("/auth");
   const hideNav = isCircleDetail || isShuffle || isAuth;
 
-  // 네비가 보일 때만 모바일 하단 패딩(pb-16) 적용. 데스크탑은 네비 미노출이라 항상 패딩 불필요.
+  // 네비가 보일 때만 모바일 하단 패딩 적용 (네비 h-14=56px 에 맞춰 pb-16).
+  // 데스크탑은 네비 미노출이라 항상 패딩 불필요.
   return <div className={cn(!hideNav && "pb-16 md:pb-0")}>{children}</div>;
 }
