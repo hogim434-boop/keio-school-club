@@ -16,7 +16,7 @@
  * - 서클 페이지 좌측 슬라이드 아웃 + 활동 상세 페이드 인.
  */
 
-import { useContext } from "react";
+import { useContext, useRef } from "react";
 import Image from "next/image";
 import { ChevronRight, Construction } from "lucide-react";
 
@@ -62,8 +62,13 @@ export function ActivityReportsPreview({
       {/*
        * 가로 캐러셀 — 풀블리드 (-mx-4 px-4) + snap.
        * gap-3 + 카드 폭 w-36 / md:w-44 → 모바일 약 2-3장 / 데스크탑 약 4-5장 보임.
+       *
+       * data-tab-carousel: 부모 circle-detail-tabs 의 onPointerDown 게이팅에 사용.
+       * 이 속성이 있는 영역 위에서 시작된 포인터 이벤트는 탭 트랙 드래그를 활성화하지 않아
+       * native 가로 스크롤이 그대로 동작한다.
        */}
       <div
+        data-tab-carousel
         className={cn(
           "-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1",
           "[scroll-padding-inline:1rem] [overscroll-behavior-x:contain]"
@@ -84,13 +89,30 @@ export function ActivityReportsPreview({
 function ReportPreviewCard({ circleId, report }: { circleId: string; report: ActivityReport }) {
   const slideOut = useContext(SlideOutContext);
 
-  function handleClick() {
+  /**
+   * pointerdown 시점의 좌표를 저장해 click 시 이동거리를 계산한다.
+   * 스크롤/스와이프 후 손가락을 떼는 순간 click 이벤트가 발화되어 카드 상세로 이동하는 문제 방지.
+   * Math.hypot(dx, dy) > 10px이면 스크롤로 간주하고 navigate를 억제한다.
+   */
+  const downRef = useRef<{ x: number; y: number } | null>(null);
+
+  function handlePointerDown(e: React.PointerEvent<HTMLButtonElement>) {
+    downRef.current = { x: e.clientX, y: e.clientY };
+  }
+
+  function handleClick(e: React.MouseEvent<HTMLButtonElement>) {
+    const d = downRef.current;
+    if (d && Math.hypot(e.clientX - d.x, e.clientY - d.y) > 10) {
+      // 이동거리 10px 초과 → 스크롤/스와이프로 간주, 상세 이동 억제
+      return;
+    }
     slideOut({ kind: "navigate", url: `/circles/${circleId}/reports/${report.id}` });
   }
 
   return (
     <button
       type="button"
+      onPointerDown={handlePointerDown}
       onClick={handleClick}
       className={cn(
         "w-36 shrink-0 snap-start space-y-2 text-left md:w-44",
