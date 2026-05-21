@@ -45,7 +45,9 @@ export function BottomNav() {
   const isShuffle = pathname === "/shuffle";
   // /auth/* — 풀스크린 인증 플로우. AuthScreen footer에 CTA가 있으므로 BottomNav 미노출
   const isAuth = pathname.startsWith("/auth");
-  if (isCircleDetail || isShuffle || isAuth) return null;
+  // /circles/new — 풀스크린 등록 플로우(AuthScreen). 회원가입과 동일하게 BottomNav 미노출
+  const isRegister = pathname === "/circles/new";
+  if (isCircleDetail || isShuffle || isAuth || isRegister) return null;
 
   return (
     <nav

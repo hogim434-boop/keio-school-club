@@ -24,6 +24,9 @@ export function HeaderClientGate({ children }: { children: ReactNode }) {
   const isShuffle = pathname === "/shuffle";
   // /auth/* — AuthScreen fixed inset-0 풀스크린이 헤더를 완전히 덮음
   const isAuth = pathname.startsWith("/auth");
-  if (isCircleDetail || isCircleReportDetail || isSearch || isShuffle || isAuth) return null;
+  // /circles/new — 풀스크린 등록 플로우(AuthScreen). 회원가입과 동일하게 헤더 미노출
+  const isRegister = pathname === "/circles/new";
+  if (isCircleDetail || isCircleReportDetail || isSearch || isShuffle || isAuth || isRegister)
+    return null;
   return <>{children}</>;
 }
