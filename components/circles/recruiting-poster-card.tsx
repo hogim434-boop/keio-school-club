@@ -17,14 +17,13 @@ interface RecruitingPosterCardProps {
 
 /**
  * 모집 상태별 뱃지 스타일 — 사진 위에 얹히므로 가독성을 위해 솔리드 배경 + 흰 텍스트.
- * - open(現在募集中): 가장 시급 → emerald + NEW 뱃지처럼 pulse 로 시선 유도
- * - newcomer_only(新歓限定): 기간 한정 → amber
- * - year_round(通年募集): 차분한 통년 → slate
+ * 둘 다 「지금 가입 가능」 이므로 NEW 뱃지처럼 pulse 모션으로 살아있는 느낌을 준다.
+ * - newcomer_only(新歓シーズン): 4월 한정·시급 → emerald + pulse
+ * - year_round(通年募集): 언제든 가입 OK → 브랜드 네이비 + pulse
  */
 const RECRUITMENT_BADGE_CLS: Record<RecruitmentStatus, string> = {
-  open: "bg-emerald-500 motion-safe:animate-pulse",
-  newcomer_only: "bg-amber-500",
-  year_round: "bg-slate-600/90",
+  newcomer_only: "bg-emerald-500 motion-safe:animate-pulse",
+  year_round: "bg-keio-navy motion-safe:animate-pulse",
 };
 
 /**
