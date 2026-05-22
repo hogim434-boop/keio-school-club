@@ -65,7 +65,7 @@ export function RecruitmentToggle({ circleId, current }: RecruitmentToggleProps)
       <div
         role="group"
         aria-label="募集状況の切り替え"
-        className="bg-muted/60 grid grid-cols-2 gap-1 rounded-lg p-1"
+        className="bg-muted/60 grid grid-cols-3 gap-1 rounded-lg p-1"
       >
         {RECRUITMENT_STATUSES.map((s) => {
           const active = s === status;

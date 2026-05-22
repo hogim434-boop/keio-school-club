@@ -2,7 +2,10 @@ import { ACTIVITY_FREQUENCIES, type ActivityFrequency } from "@/lib/constants/ac
 import { ACTIVITY_TIME_BANDS, type ActivityTimeBand } from "@/lib/constants/activity-time-band";
 import { CATEGORIES, type Category } from "@/lib/constants/category";
 import { OFFICIAL_TYPES, type OfficialType } from "@/lib/constants/official-type";
-import { RECRUITMENT_STATUSES, type RecruitmentStatus } from "@/lib/constants/recruitment-status";
+import {
+  RECRUITMENT_FILTER_STATUSES,
+  type RecruitmentStatus,
+} from "@/lib/constants/recruitment-status";
 import type { MemberSize } from "@/lib/types/domain";
 
 /**
@@ -108,7 +111,7 @@ export function parseCirclesSearchParams(raw: RawSearchParams): CirclesSearchPar
     : undefined;
 
   // 모집 상태: recruit=newcomer_only,year_round
-  const recruitmentAllow = new Set<string>(RECRUITMENT_STATUSES);
+  const recruitmentAllow = new Set<string>(RECRUITMENT_FILTER_STATUSES);
   const recruitmentStatus = splitCsv(pickString(raw, "recruit")).filter((v) =>
     recruitmentAllow.has(v)
   ) as RecruitmentStatus[];

@@ -21,7 +21,7 @@ import {
   type OfficialType,
 } from "@/lib/constants/official-type";
 import {
-  RECRUITMENT_STATUSES,
+  RECRUITMENT_FILTER_STATUSES,
   RECRUITMENT_STATUS_LABELS,
   type RecruitmentStatus,
 } from "@/lib/constants/recruitment-status";
@@ -196,7 +196,7 @@ export function FilterPanel({ initial, mode, onApply }: FilterPanelProps) {
         <section className="space-y-2">
           <h3 className="text-sm font-semibold">募集状態</h3>
           <div className="-mx-4 flex snap-x snap-mandatory [scroll-padding-inline:1.25rem] gap-3 overflow-x-auto [overscroll-behavior-x:contain] px-5 pb-1">
-            {RECRUITMENT_STATUSES.map((status) => (
+            {RECRUITMENT_FILTER_STATUSES.map((status) => (
               <SegmentedOption
                 key={status}
                 label={RECRUITMENT_STATUS_LABELS[status]}

@@ -258,6 +258,7 @@ export async function getRecruitingCircles(limit = 12): Promise<CircleSummary[]>
   const priority: Record<RecruitmentStatus, number> = {
     newcomer_only: 0,
     year_round: 1,
+    not_recruiting: 2,
   };
   return (data ?? [])
     .map((row) => toCircleSummary(row as Record<string, unknown>))

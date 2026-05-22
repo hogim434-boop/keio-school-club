@@ -24,6 +24,8 @@ interface RecruitingPosterCardProps {
 const RECRUITMENT_BADGE_CLS: Record<RecruitmentStatus, string> = {
   newcomer_only: "bg-emerald-500 motion-safe:animate-pulse",
   year_round: "bg-keio-navy motion-safe:animate-pulse",
+  // not_recruiting 은 「現在募集中」 섹션에 노출되지 않지만 타입 만족을 위해 정의(회색, pulse 없음).
+  not_recruiting: "bg-neutral-400",
 };
 
 /**

@@ -413,7 +413,7 @@ export type Database = {
         | "from_51_to_100"
         | "over_100";
       official_type_enum: "athletics" | "official" | "unofficial" | "intercollegiate" | "other";
-      recruitment_status_enum: "newcomer_only" | "year_round";
+      recruitment_status_enum: "newcomer_only" | "year_round" | "not_recruiting";
       tag_kind_enum: "atmosphere" | "cost" | "frequency" | "gender";
     };
     CompositeTypes: {
@@ -563,7 +563,7 @@ export const Constants = {
         "over_100",
       ],
       official_type_enum: ["athletics", "official", "unofficial", "intercollegiate", "other"],
-      recruitment_status_enum: ["newcomer_only", "year_round"],
+      recruitment_status_enum: ["newcomer_only", "year_round", "not_recruiting"],
       tag_kind_enum: ["atmosphere", "cost", "frequency", "gender"],
     },
   },
