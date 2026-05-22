@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LazyMotion, domAnimation, m } from "motion/react";
 
 import { CIRCLE_REENTER_EVENT } from "@/components/circles/circle-card-link";
@@ -37,6 +37,7 @@ export const SlideOutContext = createContext<(action: DetailExitAction) => void>
  */
 export default function CircleDetailTemplate({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [animationEnabled, setAnimationEnabled] = useState(true);
   const [exiting, setExiting] = useState(false);
   const [animKey, setAnimKey] = useState(0);
@@ -82,6 +83,14 @@ export default function CircleDetailTemplate({ children }: { children: ReactNode
     window.addEventListener(CIRCLE_REENTER_EVENT, handler);
     return () => window.removeEventListener(CIRCLE_REENTER_EVENT, handler);
   }, []);
+
+  // 편집 페이지(/circles/{id}/edit)는 AuthScreen `fixed inset-0` 풀스크린 폼이다.
+  // 상세 전환 모션의 `will-change-transform` + transform 래퍼가 fixed 의 containing block 을
+  // 만들어 폼이 0높이로 붕괴되므로, 편집 경로에서는 모션 래퍼 없이 children 만 그대로 렌더한다.
+  // (hooks 는 위에서 모두 호출했으므로 이 조건부 return 은 hooks 규칙을 위반하지 않는다)
+  if (pathname?.endsWith("/edit")) {
+    return <>{children}</>;
+  }
 
   if (!animationEnabled) {
     return (

@@ -218,12 +218,11 @@ export function CircleRegistrationForm({
   }, [router, isEdit, basePath]);
 
   // ── 단계별 backHref (뒤로가기 링크) ──
-  // edit 첫 단계는 상세(/circles/{id})로, create 첫 단계는 마이페이지로 복귀.
+  // 첫 단계(basic)는 create·edit 모두 마이페이지로 복귀.
+  // (편집 진입 출처가 마이페이지이고, 상세 페이지로 보내면 "플레이뷰로 들어가는" 혼란이 생김)
   const backHref =
     step === "basic"
-      ? isEdit && circleId
-        ? `/circles/${circleId}`
-        : "/mypage"
+      ? "/mypage"
       : step === "tags"
         ? `${basePath}?step=basic`
         : step === "contact"
