@@ -82,8 +82,23 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    /* iOS 탭 하이라이트 제거 — 네이티브 앱 느낌 */
+    -webkit-tap-highlight-color: transparent;
   }
   body {
     @apply bg-background text-foreground;
+    /* 과도한 세로 바운스 방지 — 네이티브 앱 스크롤 느낌 */
+    overscroll-behavior-y: none;
+  }
+  /* 버튼·링크: 터치 딜레이 300ms 제거 + 텍스트 선택 방지 */
+  button,
+  a,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+  button,
+  [role="button"] {
+    user-select: none;
+    -webkit-user-select: none;
   }
 }

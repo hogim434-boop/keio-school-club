@@ -109,23 +109,32 @@ export function CircleActions({ circle }: CircleActionsProps) {
          * 통합 pill — 외곽 rounded-full + overflow-hidden 으로 두 영역 모서리 잘라냄.
          * 자식 두 button 이 각자 배경색을 가짐 (시각적 분리는 색상 차이로 자연 발생).
          */}
-        <div className="flex h-14 items-stretch overflow-hidden rounded-full shadow-lg">
+        {/*
+         * 통합 pill — h-16 (기존 h-14 에서 높임), shadow-xl + keio-navy/25 글로우로 floating 강조.
+         * 두 버튼은 motion.button 으로 감싸 whileTap spring 피드백 추가.
+         */}
+        <div className="shadow-keio-navy/25 flex h-16 items-stretch overflow-hidden rounded-full shadow-xl">
           {/*
-           * 좋아요 영역 — light 배경 (bg-background) + keio-navy 하트
-           * active 시 하트 fill (keio-navy 채움)
+           * 좋아요 영역 — w-16 (기존 w-14 에서 넓힘), border-r 로 오른쪽 구분선.
+           * motion.button + whileTap: 누르는 순간 scale 0.85 → spring 복귀 (하트 strong 느낌).
+           * active:scale 은 motion whileTap 이 우선이므로 제거.
+           * prefersReducedMotion 시 whileTap 비활성.
            */}
-          <button
+          <motion.button
             type="button"
             onClick={handleFavoriteToggle}
             aria-pressed={favorited}
             aria-label={favorited ? "お気に入りから削除" : "お気に入りに追加"}
             disabled={isPending}
+            whileTap={prefersReducedMotion ? undefined : { scale: 0.85 }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
+            style={{ WebkitTapHighlightColor: "transparent" }}
             className={cn(
-              "flex w-14 shrink-0 items-center justify-center transition-colors",
+              "border-keio-navy/15 flex w-16 shrink-0 items-center justify-center border-r transition-colors",
               "bg-background text-keio-navy hover:bg-muted",
-              "active:scale-95 motion-reduce:transform-none",
               "focus-visible:ring-keio-navy/40 focus-visible:ring-2 focus-visible:outline-none",
-              "disabled:pointer-events-none disabled:opacity-70"
+              "disabled:pointer-events-none disabled:opacity-70",
+              "touch-manipulation select-none"
             )}
           >
             {/*
@@ -134,24 +143,28 @@ export function CircleActions({ circle }: CircleActionsProps) {
              * 링도 border-current 로 동일 색 상속.
              */}
             <AnimatedHeart active={favorited} className="size-5" colorClassName="text-keio-navy" />
-          </button>
+          </motion.button>
 
           {/*
-           * 가입하기 영역 — keio-navy 배경 + 흰 텍스트
-           * flex-1 로 좋아요 옆 나머지 폭 모두 차지
+           * 가입하기 영역 — keio-navy 배경 + 흰 텍스트, font-bold + tracking-wide 로 강조.
+           * motion.button + whileTap: 누르는 순간 scale 0.97 → spring 복귀 (normal 강도).
+           * active:scale 은 motion whileTap 이 우선이므로 제거.
            */}
-          <button
+          <motion.button
             type="button"
             onClick={handleJoin}
+            whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
+            transition={{ type: "spring", stiffness: 400, damping: 15 }}
+            style={{ WebkitTapHighlightColor: "transparent" }}
             className={cn(
-              "flex flex-1 items-center justify-center text-base font-semibold transition-colors",
+              "flex flex-1 items-center justify-center text-base font-bold tracking-wide transition-colors",
               "bg-keio-navy text-keio-navy-foreground hover:bg-keio-navy/90",
-              "active:scale-95 motion-reduce:transform-none",
-              "focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:outline-none"
+              "focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:outline-none",
+              "touch-manipulation select-none"
             )}
           >
             {ctaText}
-          </button>
+          </motion.button>
         </div>
       </div>
     </motion.div>

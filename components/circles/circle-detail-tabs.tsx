@@ -61,6 +61,7 @@ import { ActivityReportsList } from "@/components/circles/activity-reports-list"
 import { ActivityReportsPreview } from "@/components/circles/activity-reports-preview";
 import { ReportComposeSheet } from "@/components/circles/report-compose-sheet";
 import type { ActivityReport } from "@/lib/types/domain";
+import { cn } from "@/lib/utils";
 
 interface CircleDetailTabsProps {
   /** 서클 ID — ActivityReportsList + ActivityReportsPreview 에 전달 */
@@ -69,6 +70,8 @@ interface CircleDetailTabsProps {
   reports: ActivityReport[];
   /** 「ホーム」 탭에 표시할 콘텐츠 — SummaryGrid + Description (Server Component children) */
   homeContent: React.ReactNode;
+  /** 「ホーム」 탭 맨 아래(활동 리포트 미리보기 뒤)에 표시할 콘텐츠 — 관련 동아리 등 */
+  relatedContent?: React.ReactNode;
   /**
    * 소유자 여부 — true 이면 「掲示板」 탭 상단에 「＋ 投稿する」 버튼 표시.
    * 서버에서 getClaims() + owner_id 비교로 계산 후 전달.
@@ -93,6 +96,7 @@ export function CircleDetailTabs({
   circleId,
   reports,
   homeContent,
+  relatedContent,
   isOwner = false,
 }: CircleDetailTabsProps) {
   const [tab, setTab] = useState<TabValue>("home");
@@ -253,16 +257,36 @@ export function CircleDetailTabs({
 
   return (
     <Tabs value={tab} onValueChange={handleValueChange} className="w-full">
+      {/*
+       * TabsList 스타일 개선 — 트랙/드래그 로직은 아래 LazyMotion 블록에서 완전히 분리되므로 영향 없음.
+       * - 활성 탭: text-keio-navy + 굵은 언더라인(h-[3px], rounded-full)
+       * - 비활성 탭: text-muted-foreground
+       * - font-semibold + px-5 pb-3 으로 탭 패딩/굵기 강화
+       * after:h-[3px]: 기본 after:h-0.5(2px) 를 3px 로 오버라이드해 언더라인 두껍게
+       * after:rounded-full: 언더라인 양 끝 둥글게
+       */}
       <TabsList variant="line" className="w-full justify-start border-b">
         <TabsTrigger
           value="home"
-          className="data-[state=active]:text-keio-navy data-[state=active]:after:bg-keio-navy"
+          className={cn(
+            "px-5 pb-3 font-semibold",
+            // 비활성: muted 색
+            "text-muted-foreground",
+            // 활성: keio-navy 텍스트 + keio-navy 언더라인(3px, rounded)
+            "data-[state=active]:text-keio-navy",
+            "data-[state=active]:after:bg-keio-navy data-[state=active]:after:h-[3px] data-[state=active]:after:rounded-full"
+          )}
         >
           ホーム
         </TabsTrigger>
         <TabsTrigger
           value="board"
-          className="data-[state=active]:text-keio-navy data-[state=active]:after:bg-keio-navy"
+          className={cn(
+            "px-5 pb-3 font-semibold",
+            "text-muted-foreground",
+            "data-[state=active]:text-keio-navy",
+            "data-[state=active]:after:bg-keio-navy data-[state=active]:after:h-[3px] data-[state=active]:after:rounded-full"
+          )}
         >
           掲示板
         </TabsTrigger>
@@ -328,7 +352,10 @@ export function CircleDetailTabs({
                   circleId={circleId}
                   reports={reports.slice(0, 5)}
                   onMoreClick={handleMoreClick}
+                  isOwner={isOwner}
                 />
+                {/* 관련 동아리 — 「ホーム」 탭 맨 아래(활동 리포트 미리보기 뒤) */}
+                {relatedContent}
               </TabsContent>
             </div>
 
@@ -343,16 +370,17 @@ export function CircleDetailTabs({
             >
               <TabsContent value="board" forceMount className="pt-6">
                 {/*
-                 * 소유자 전용 「＋ 投稿する」 버튼 — ActivityReportsList 상단에 우측 정렬.
+                 * 소유자 전용 투고 박스 — ActivityReportsList 상단에 풀폭 점선 박스.
                  * ReportComposeSheet 가 자체적으로 SheetTrigger 를 포함하므로
                  * 외부 open state 없이 독립적으로 동작.
                  */}
                 {isOwner && (
-                  <div className="mb-3 flex justify-end">
+                  <div className="mb-4">
                     <ReportComposeSheet circleId={circleId} />
                   </div>
                 )}
-                <ActivityReportsList circleId={circleId} reports={reports} />
+                {/* isOwner 를 전달해 각 row 에 ⋯ 수정·삭제 메뉴를 표시 */}
+                <ActivityReportsList circleId={circleId} reports={reports} isOwner={isOwner} />
               </TabsContent>
             </div>
           </m.div>
