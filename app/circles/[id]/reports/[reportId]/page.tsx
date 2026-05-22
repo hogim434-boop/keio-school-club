@@ -135,7 +135,8 @@ function ReportGallery({ images, title }: { images: ActivityReport["images"]; ti
  * timezone shift 방지를 위해 split 후 직접 파싱.
  */
 function formatJpDateLong(iso: string): string {
-  const [, monthStr, dayStr] = iso.split("-");
+  // created_at 은 timestamptz("YYYY-MM-DDTHH:mm:..")이므로 날짜 부분(T 이전)만 분리해 파싱.
+  const [, monthStr, dayStr] = iso.split("T")[0].split("-");
   const month = Number(monthStr);
   const day = Number(dayStr);
   if (Number.isNaN(month) || Number.isNaN(day)) return iso;

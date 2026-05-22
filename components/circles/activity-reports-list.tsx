@@ -116,7 +116,9 @@ function ReportListRow({ circleId, report }: { circleId: string; report: Activit
  * UTC 파싱 시 timezone shift 우려가 있어 split 후 직접 Date 생성.
  */
 function formatJpDate(isoDate: string): string {
-  const [, monthStr, dayStr] = isoDate.split("-");
+  // created_at 은 timestamptz("YYYY-MM-DDTHH:mm:..")이므로 날짜 부분(T 이전)만 분리해 파싱.
+  // (split("-") 만 하면 dayStr 이 "22T12:.." 가 되어 Number() → NaN → raw 노출되는 버그)
+  const [, monthStr, dayStr] = isoDate.split("T")[0].split("-");
   const month = Number(monthStr);
   const day = Number(dayStr);
   if (Number.isNaN(month) || Number.isNaN(day)) return isoDate;
