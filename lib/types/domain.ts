@@ -2,6 +2,7 @@ import type { ActivityFrequency } from "@/lib/constants/activity-frequency";
 import type { ActivityTimeBand } from "@/lib/constants/activity-time-band";
 import type { Category } from "@/lib/constants/category";
 import type { CircleStatus } from "@/lib/constants/circle-status";
+import type { MemberBand } from "@/lib/constants/member-band";
 import type { OfficialType } from "@/lib/constants/official-type";
 import type { RecruitmentStatus } from "@/lib/constants/recruitment-status";
 import type { ActivityReportType } from "@/lib/constants/activity-report-type";
@@ -45,8 +46,11 @@ export interface CircleSummary {
 export interface CircleDetail extends CircleSummary {
   /** 활동 요일 — 「火・木」 같은 일본어 free text (요약 카드 표시용, T-012) */
   activity_days: string;
-  /** 회원 수 — 「30名」 같이 표시. T-018 등록 폼에서 입력 받음 */
-  member_count: number;
+  /**
+   * 부원 수 범위 — 5구간 enum (마이그레이션 008).
+   * 값 없으면 null (任意 필드). 표시 시 MEMBER_BAND_LABELS[member_band] 사용.
+   */
+  member_band: MemberBand | null;
   contact_instagram: string | null;
   contact_x: string | null;
   contact_line: string | null;

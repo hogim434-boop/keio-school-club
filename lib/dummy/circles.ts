@@ -1,6 +1,7 @@
 import type { ActivityFrequency } from "@/lib/constants/activity-frequency";
 import type { ActivityTimeBand } from "@/lib/constants/activity-time-band";
 import type { Category } from "@/lib/constants/category";
+import type { MemberBand } from "@/lib/constants/member-band";
 import type { OfficialType } from "@/lib/constants/official-type";
 import type { RecruitmentStatus } from "@/lib/constants/recruitment-status";
 import type { CircleDetail, CircleImage, CircleSummary, MemberSize } from "@/lib/types/domain";
@@ -14,7 +15,7 @@ import type { CircleDetail, CircleImage, CircleSummary, MemberSize } from "@/lib
  * - 모든 단체에 연락처(IG/X/LINE) 1개 이상 + 태그 3~5개 + 「approved」 status + 갤러리 4장.
  * - id 는 고정 UUID v4 — Phase 1.2 T-009 의 시드 SQL 이 같은 UUID 로 INSERT 하여 시각 회귀 테스트가 동일 결과를 보장.
  * - cover_image_url 과 images 는 picsum.photos seed 기반(결정론적, 같은 seed=같은 이미지) 으로 시각 회귀 신뢰성 확보.
- * - activity_days / member_count (T-012) 는 요약 카드 표시에 사용.
+ * - activity_days / member_band (T-012, 2026-05 개편) 는 요약 카드 표시에 사용.
  *
  * 본 모듈의 helper 는 모두 async — Phase 1.2 T-009 와이어업 시 시그니처를 유지하면서
  * 내부만 Supabase fetch 로 무손실 교체 가능하게 함.
@@ -112,7 +113,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     description:
       "週6回の練習で関東学生リーグ上位を狙う本格派体育会。初心者の入部実績あり、未経験でも歓迎。",
     activity_days: "月・水・金・土",
-    member_count: 85,
+    member_band: "from_51_to_100" as MemberBand,
     contact_instagram: "https://instagram.com/keio_tennis_official",
     contact_x: "https://x.com/keio_tennis",
     contact_line: null,
@@ -133,7 +134,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["gachi", "has_camp", "foreign_welcome", "intl_activity"],
     description: "関東大学サッカーリーグ参戦。早慶戦をはじめ本格的な公式戦多数。",
     activity_days: "火・木・土",
-    member_count: 72,
+    member_band: "from_51_to_100" as MemberBand,
     contact_instagram: "https://instagram.com/keio_soccer",
     contact_x: null,
     contact_line: "https://line.me/R/ti/p/keio_soccer",
@@ -154,7 +155,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["gachi", "has_camp", "foreign_welcome"],
     description: "関東大学バスケットボールリーグ1部所属。経験者中心の本格派。",
     activity_days: "月・水・金",
-    member_count: 60,
+    member_band: "from_51_to_100" as MemberBand,
     contact_instagram: "https://instagram.com/keio_basketball",
     contact_x: "https://x.com/keio_basketball",
     contact_line: null,
@@ -175,7 +176,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["beginner_ok", "yurui", "kenser_ok"],
     description: "初心者・経験者問わず気軽に楽しむサークル。週1回・日吉体育館で活動。",
     activity_days: "土曜日",
-    member_count: 45,
+    member_band: "from_31_to_50" as MemberBand,
     contact_instagram: "https://instagram.com/keio_bad",
     contact_x: null,
     contact_line: null,
@@ -196,7 +197,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["beginner_ok", "yurui", "has_camp", "kenser_ok"],
     description: "三田キャンパス周辺で活動する非公認フットサル。土曜午後にゆるく集まる。",
     activity_days: "土曜日",
-    member_count: 25,
+    member_band: "from_11_to_30" as MemberBand,
     contact_instagram: "https://instagram.com/mita_futsal",
     contact_x: null,
     contact_line: null,
@@ -219,7 +220,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["beginner_ok", "yurui", "intl_activity"],
     description: "表千家。初心者大歓迎、お点前から作法まで丁寧に指導。",
     activity_days: "水曜日",
-    member_count: 38,
+    member_band: "from_31_to_50" as MemberBand,
     contact_instagram: "https://instagram.com/keio_chadou",
     contact_x: null,
     contact_line: null,
@@ -240,7 +241,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["yurui", "beginner_ok", "kenser_ok"],
     description: "デッサン・油絵・水彩、各自のペースで制作。三田祭で展示会開催。",
     activity_days: "金曜日",
-    member_count: 32,
+    member_band: "from_31_to_50" as MemberBand,
     contact_instagram: "https://instagram.com/keio_art",
     contact_x: "https://x.com/keio_art",
     contact_line: null,
@@ -261,7 +262,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["yurui", "has_camp", "kenser_ok"],
     description: "月1回の撮影会＋オンライン作品共有。フィルム・デジタル不問。",
     activity_days: "第3土曜日",
-    member_count: 18,
+    member_band: "from_11_to_30" as MemberBand,
     contact_instagram: "https://instagram.com/mita_photo_club",
     contact_x: null,
     contact_line: null,
@@ -282,7 +283,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["beginner_ok", "kenser_ok", "intl_activity"],
     description: "早稲田・上智・慶應合同インカレ書道会。月1回の合同稽古＋年2回展示。",
     activity_days: "第2・第4日曜日",
-    member_count: 55,
+    member_band: "from_51_to_100" as MemberBand,
     contact_instagram: null,
     contact_x: "https://x.com/kanto_shodou",
     contact_line: "https://line.me/R/ti/p/kanto_shodou",
@@ -305,7 +306,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["gachi", "foreign_welcome", "has_camp"],
     description: "1901年創立の伝統ある男声合唱団。本格的なコーラスを目指す。",
     activity_days: "月・水・金",
-    member_count: 70,
+    member_band: "from_51_to_100" as MemberBand,
     contact_instagram: "https://instagram.com/keio_wagner",
     contact_x: "https://x.com/keio_wagner",
     contact_line: null,
@@ -326,7 +327,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["yurui", "kenser_ok", "has_camp"],
     description: "ロック・ポップス・ジャズなど幅広く活動。バンド結成自由。",
     activity_days: "木曜日",
-    member_count: 65,
+    member_band: "from_51_to_100" as MemberBand,
     contact_instagram: "https://instagram.com/keio_light_music",
     contact_x: null,
     contact_line: null,
@@ -347,7 +348,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["yurui", "has_camp", "kenser_ok"],
     description: "ジャズ好きが集まる非公認サークル。三田周辺のライブハウスでセッション。",
     activity_days: "金曜日",
-    member_count: 22,
+    member_band: "from_11_to_30" as MemberBand,
     contact_instagram: "https://instagram.com/mita_jazz",
     contact_x: null,
     contact_line: null,
@@ -368,7 +369,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["gachi", "intl_activity", "has_camp"],
     description: "都内10大学合同インカレアカペラ。年4回の合同ライブ＋夏合宿。",
     activity_days: "月・水・土",
-    member_count: 80,
+    member_band: "from_51_to_100" as MemberBand,
     contact_instagram: "https://instagram.com/tokyo_acapella",
     contact_x: "https://x.com/tokyo_acapella",
     contact_line: null,
@@ -391,7 +392,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["yurui", "kenser_ok", "has_camp"],
     description: "経済学の論文輪読＋ディスカッション。月1回開催、レポート提出なし。",
     activity_days: "第3水曜日",
-    member_count: 35,
+    member_band: "from_31_to_50" as MemberBand,
     contact_instagram: null,
     contact_x: "https://x.com/keio_econ_club",
     contact_line: null,
@@ -412,7 +413,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["beginner_ok", "yurui", "has_camp", "kenser_ok"],
     description: "Webアプリ・AI・競プロなど自由テーマで活動。初心者歓迎。",
     activity_days: "土曜日",
-    member_count: 50,
+    member_band: "from_31_to_50" as MemberBand,
     contact_instagram: "https://instagram.com/keio_prog",
     contact_x: "https://x.com/keio_prog",
     contact_line: null,
@@ -433,7 +434,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["yurui", "has_camp", "kenser_ok"],
     description: "AI/ML関連書籍の読書会。月1回オンライン開催、参加費無料。",
     activity_days: "第2土曜日",
-    member_count: 20,
+    member_band: "from_11_to_30" as MemberBand,
     contact_instagram: null,
     contact_x: "https://x.com/ai_dokushokai",
     contact_line: null,
@@ -454,7 +455,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["gachi", "kenser_ok", "has_camp"],
     description: "東大・早慶・中央など関東主要大学合同。司法試験対策＋判例研究。",
     activity_days: "第1日曜日",
-    member_count: 60,
+    member_band: "from_51_to_100" as MemberBand,
     contact_instagram: null,
     contact_x: "https://x.com/kanto_law",
     contact_line: "https://line.me/R/ti/p/kanto_law",
@@ -477,7 +478,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["beginner_ok", "intl_activity", "kenser_ok"],
     description: "留学生との交流イベント企画・運営。語学不問、英会話練習機会あり。",
     activity_days: "水曜日",
-    member_count: 55,
+    member_band: "from_51_to_100" as MemberBand,
     contact_instagram: "https://instagram.com/keio_intl",
     contact_x: null,
     contact_line: null,
@@ -498,7 +499,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["beginner_ok", "yurui", "has_camp"],
     description: "毎週金曜夜、三田カフェで英会話。レベル別グループ分けでビギナー歓迎。",
     activity_days: "金曜日",
-    member_count: 28,
+    member_band: "from_11_to_30" as MemberBand,
     contact_instagram: "https://instagram.com/mita_english_cafe",
     contact_x: null,
     contact_line: null,
@@ -519,7 +520,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["yurui", "has_camp", "intl_activity"],
     description: "K-POP・韓国語・韓国料理を楽しむゆるい研究会。週1回オンライン＋オフライン。",
     activity_days: "木曜日",
-    member_count: 35,
+    member_band: "from_31_to_50" as MemberBand,
     contact_instagram: "https://instagram.com/keio_korea",
     contact_x: null,
     contact_line: null,
@@ -540,7 +541,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["yurui", "kenser_ok", "has_camp"],
     description: "在京中国人留学生＋日本人学生の交流。月1回、文化イベント中心。",
     activity_days: "第4土曜日",
-    member_count: 65,
+    member_band: "from_51_to_100" as MemberBand,
     contact_instagram: null,
     contact_x: "https://x.com/keio_china",
     contact_line: "https://line.me/R/ti/p/keio_china",
@@ -563,7 +564,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["gachi", "has_camp", "kenser_ok"],
     description: "11月の三田祭を運営する公認実行委員会。広報・企画・財務など分野多数。",
     activity_days: "火・木・土",
-    member_count: 75,
+    member_band: "from_51_to_100" as MemberBand,
     contact_instagram: "https://instagram.com/keio_mita_fes",
     contact_x: "https://x.com/keio_mita_fes",
     contact_line: null,
@@ -584,7 +585,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["yurui", "intl_activity", "kenser_ok"],
     description: "月1回の三田周辺でカジュアルなパーティー。気軽な交流目的。",
     activity_days: "最終金曜日",
-    member_count: 40,
+    member_band: "from_31_to_50" as MemberBand,
     contact_instagram: "https://instagram.com/mita_party",
     contact_x: null,
     contact_line: null,
@@ -605,7 +606,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["yurui", "has_camp", "kenser_ok"],
     description: "月1回の映画鑑賞＋アフタートーク。ジャンル不問、洋画・邦画・アニメ。",
     activity_days: "第2日曜日",
-    member_count: 24,
+    member_band: "from_11_to_30" as MemberBand,
     contact_instagram: "https://instagram.com/keio_movie",
     contact_x: null,
     contact_line: null,
@@ -628,7 +629,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["beginner_ok", "intl_activity", "has_camp"],
     description: "地域ボランティア活動の窓口。災害支援・福祉・環境など多分野。",
     activity_days: "土曜日",
-    member_count: 48,
+    member_band: "from_31_to_50" as MemberBand,
     contact_instagram: "https://instagram.com/keio_volunteer",
     contact_x: "https://x.com/keio_volunteer",
     contact_line: null,
@@ -649,7 +650,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["beginner_ok", "yurui", "has_camp"],
     description: "地域の小中学生向け学習支援ボランティア。週1回、無償活動。",
     activity_days: "水曜日",
-    member_count: 32,
+    member_band: "from_31_to_50" as MemberBand,
     contact_instagram: "https://instagram.com/keio_study_support",
     contact_x: null,
     contact_line: "https://line.me/R/ti/p/keio_study",
@@ -670,7 +671,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["yurui", "intl_activity", "has_camp"],
     description: "三田地域の子ども食堂を支援。月1回、調理＋見守り活動。",
     activity_days: "第1土曜日",
-    member_count: 16,
+    member_band: "from_11_to_30" as MemberBand,
     contact_instagram: "https://instagram.com/mita_kodomo",
     contact_x: null,
     contact_line: null,
@@ -693,7 +694,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["gachi", "kenser_ok", "has_camp"],
     description: "学内最大の学生新聞。取材・編集・写真・Web、各部門で活動。",
     activity_days: "月・水・金",
-    member_count: 58,
+    member_band: "from_51_to_100" as MemberBand,
     contact_instagram: "https://instagram.com/keio_jukushin",
     contact_x: "https://x.com/keio_jukushin",
     contact_line: null,
@@ -714,7 +715,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["gachi", "has_camp", "kenser_ok"],
     description: "ラジオ番組制作・三田祭での生放送。アナウンス・技術・編成の3部門。",
     activity_days: "不定期",
-    member_count: 42,
+    member_band: "from_31_to_50" as MemberBand,
     contact_instagram: "https://instagram.com/keio_kmsc",
     contact_x: null,
     contact_line: null,
@@ -735,7 +736,7 @@ export const DUMMY_CIRCLES: CircleDetail[] = [
     tags: ["yurui", "kenser_ok", "has_camp"],
     description: "YouTube・TikTok向け学生動画制作。撮影・編集・企画を全員で。",
     activity_days: "不定期",
-    member_count: 28,
+    member_band: "from_11_to_30" as MemberBand,
     contact_instagram: "https://instagram.com/keio_video",
     contact_x: "https://x.com/keio_video",
     contact_line: null,
@@ -818,7 +819,7 @@ export async function getCirclesByCategory(category: Category): Promise<CircleSu
  * - q 는 name 의 case-insensitive 부분 매칭 (T-009 와이어업 후 Supabase `ilike` 로 교체).
  * - tags 는 더미 데이터의 tags 배열과 1건 이상 겹치면 매칭 (OR).
  * - activity_days 는 선택 요일 중 하나라도 활동하면 매칭 (OR, DB activity_weekdays && 와 동일).
- * - member_size 는 member_count 범위 (small≤30 / mid 31-100 / large 101-200 / huge 200+).
+ * - member_size 는 member_band 범위 기반 (small: ~30명 / mid: 31-100명 / large/huge: 100명+).
  * - recruitment_status 는 OR (선택 값 중 하나라도 일치).
  * - activity_time_band 는 OR (단체 배열과 선택 배열이 1건 이상 교집합).
  * - sort 는 필터 후 마지막에 정렬 적용.
@@ -902,12 +903,14 @@ export async function filterCircles(
       if (!activityDays.some((day) => weekdays.includes(day))) return false;
     }
 
-    // 회원수 범위 단일 선택
+    // 회원수 범위 단일 선택 — member_band 기반 매칭 (더미 데이터용)
     if (memberSize !== undefined) {
-      if (memberSize === "small" && c.member_count > 30) return false;
-      if (memberSize === "mid" && (c.member_count < 31 || c.member_count > 100)) return false;
-      if (memberSize === "large" && (c.member_count < 101 || c.member_count > 200)) return false;
-      if (memberSize === "huge" && c.member_count <= 200) return false;
+      const band = c.member_band;
+      if (memberSize === "small" && band !== "under_10" && band !== "from_11_to_30") return false;
+      if (memberSize === "mid" && band !== "from_31_to_50" && band !== "from_51_to_100")
+        return false;
+      if (memberSize === "large" && band !== "over_100") return false;
+      if (memberSize === "huge" && band !== "over_100") return false;
     }
 
     // 모집 상태 OR 매칭
@@ -938,8 +941,19 @@ export async function filterCircles(
     const indexMap = new Map(DUMMY_CIRCLES.map((c, i) => [c.id, i]));
     matches = matches.slice().sort((a, b) => (indexMap.get(b.id) ?? 0) - (indexMap.get(a.id) ?? 0));
   } else if (sort === "large") {
-    // 회원수 내림차순
-    matches = matches.slice().sort((a, b) => b.member_count - a.member_count);
+    // 회원수 범위 내림차순 — member_band enum 순서대로 정렬
+    const bandOrder: Record<string, number> = {
+      over_100: 4,
+      from_51_to_100: 3,
+      from_31_to_50: 2,
+      from_11_to_30: 1,
+      under_10: 0,
+    };
+    matches = matches
+      .slice()
+      .sort(
+        (a, b) => (bandOrder[b.member_band ?? ""] ?? -1) - (bandOrder[a.member_band ?? ""] ?? -1)
+      );
   }
 
   const total = matches.length;

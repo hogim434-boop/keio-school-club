@@ -12,6 +12,7 @@ import { TAG_LABELS } from "@/lib/circles/filter-labels";
 import { ACTIVITY_FREQUENCY_LABELS } from "@/lib/constants/activity-frequency";
 import { ACTIVITY_TIME_BAND_LABELS } from "@/lib/constants/activity-time-band";
 import { CATEGORY_LABELS } from "@/lib/constants/category";
+import { MEMBER_BAND_LABELS } from "@/lib/constants/member-band";
 import { getOfficialTypeDisplayLabel } from "@/lib/constants/official-type";
 import { RECRUITMENT_STATUS_LABELS } from "@/lib/constants/recruitment-status";
 import { getReportsByCircle } from "@/lib/supabase/queries/activity-reports";
@@ -151,13 +152,13 @@ function Header({ circle }: { circle: CircleDetail }) {
 /**
  * 요약 카드 5종 — 신규 사양 (2026-05)
  *
- * | 순번 | 라벨     | 소스                                                         |
- * |------|----------|--------------------------------------------------------------|
- * | 1    | 募集状況 | recruitment_status (optional, 없으면 「—」)                   |
- * | 2    | 活動頻度 | activity_frequency (기존 유지)                               |
- * | 3    | 活動日   | activity_days (label 만 「活動曜日」→「活動日」 단축)           |
- * | 4    | 活動時間 | activity_time_band 배열 join (optional, 없으면 「—」)         |
- * | 5    | 会員数   | member_count (기존 유지)                                      |
+ * | 순번 | 라벨     | 소스                                                              |
+ * |------|----------|-------------------------------------------------------------------|
+ * | 1    | 募集状況 | recruitment_status (optional, 없으면 「—」)                        |
+ * | 2    | 活動頻度 | activity_frequency (기존 유지)                                    |
+ * | 3    | 活動日   | activity_days (label 만 「活動曜日」→「活動日」 단축)                |
+ * | 4    | 活動時間 | activity_time_band 배열 join (optional, 없으면 「—」)              |
+ * | 5    | 会員数   | member_band 범위 라벨 (마이그레이션 008, 없으면 「—」)               |
  *
  * 그리드: 모바일 1열 / 데스크탑 3열 (5칸 → 3열 2행, 마지막 칸 비움)
  * 募集状況 카드만 text-keio-navy 강조
@@ -173,6 +174,9 @@ function SummaryGrid({ circle }: { circle: CircleDetail }) {
     circle.activity_time_band && circle.activity_time_band.length > 0
       ? circle.activity_time_band.map((b) => ACTIVITY_TIME_BAND_LABELS[b]).join(" · ")
       : "—";
+
+  // 부원 수 범위 라벨 — member_band 없으면 「—」
+  const memberBandLabel = circle.member_band ? MEMBER_BAND_LABELS[circle.member_band] : "—";
 
   const items: { label: string; value: string; emphasis?: boolean }[] = [
     {
@@ -194,7 +198,7 @@ function SummaryGrid({ circle }: { circle: CircleDetail }) {
     },
     {
       label: "会員数",
-      value: `${circle.member_count}名`,
+      value: memberBandLabel,
     },
   ];
 

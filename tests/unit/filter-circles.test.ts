@@ -90,18 +90,22 @@ describe("filterCircles — 신규 5종 필터", () => {
     }
   });
 
-  it("memberSize='small' → member_count <= 30 인 단체만", async () => {
-    const expectedCount = DUMMY_CIRCLES.filter((c) => c.member_count <= 30).length;
+  it("memberSize='small' → member_band 가 under_10 또는 from_11_to_30 인 단체만", async () => {
+    // member_count → member_band 로 교체 (2026-05 개편)
+    const expectedCount = DUMMY_CIRCLES.filter(
+      (c) => c.member_band === "under_10" || c.member_band === "from_11_to_30"
+    ).length;
     expect(expectedCount).toBeGreaterThan(0);
 
     const r = await filterCircles({ memberSize: "small" });
     expect(r.total).toBe(expectedCount);
 
-    // 결과 단체의 member_count 가 모두 30 이하인지 확인
+    // 결과 단체의 member_band 가 모두 소규모 범위인지 확인
     const resultIds = new Set(r.items.map((c) => c.id));
     for (const circle of DUMMY_CIRCLES) {
       if (resultIds.has(circle.id)) {
-        expect(circle.member_count, `circle ${circle.id}`).toBeLessThanOrEqual(30);
+        const isSmall = circle.member_band === "under_10" || circle.member_band === "from_11_to_30";
+        expect(isSmall, `circle ${circle.id}`).toBe(true);
       }
     }
   });

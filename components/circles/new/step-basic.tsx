@@ -3,7 +3,7 @@
 /**
  * StepBasic — 서클 등록 1단계: 기본 정보 입력
  *
- * 담당 필드: name, category, official_type, activity_frequency, member_count, description, cover
+ * 담당 필드: name, category, official_type, activity_frequency, member_band, description, cover
  *
  * 구조:
  *  - FormProvider(CircleRegistrationForm) 아래에서 useFormContext<RegistrationValues>() 로 접근
@@ -24,6 +24,7 @@ import { AUTH_INPUT_CLS } from "@/lib/auth/input-class";
 import { validateUpload } from "@/lib/storage/strip-exif";
 import type { RegistrationValues } from "@/lib/circles/registration-schema";
 import { CATEGORIES, CATEGORY_LABELS } from "@/lib/constants/category";
+import { MEMBER_BANDS, MEMBER_BAND_LABELS, type MemberBand } from "@/lib/constants/member-band";
 import { OFFICIAL_TYPES, OFFICIAL_TYPE_LABELS } from "@/lib/constants/official-type";
 import {
   ACTIVITY_FREQUENCIES,
@@ -76,13 +77,24 @@ const TEXTAREA_CLS =
  *  - STEP_FIELDS.basic 에 cover 는 포함되지 않으므로 "次へ" trigger 대상 아님
  *  - 제출 시 StepContact 가 getValues("cover") instanceof File 로 꺼내감
  */
-export function StepBasic() {
+/** StepBasic props */
+interface StepBasicProps {
+  /** edit 모드 기존 커버 이미지 URL — 새 파일 미선택 시 미리보기로 표시 */
+  existingCoverUrl?: string | null;
+}
+
+export function StepBasic({ existingCoverUrl = null }: StepBasicProps = {}) {
   // ── FormContext 접근 ─────────────────────────────────────────────────────
   const {
     register,
+    watch,
     setValue,
     formState: { errors },
   } = useFormContext<RegistrationValues>();
+
+  // ── 현재 선택된 부원 수 범위 실시간 감시 ─────────────────────────────────
+  // watch 로 렌더 트리거 보장 (register 대신 watch + setValue 패턴 — step-tags 와 동일)
+  const selectedBand = watch("member_band");
 
   // ── 접근성: 감소된 모션 사용자 대응 ─────────────────────────────────────
   const reducedMotion = useReducedMotion();
@@ -144,6 +156,9 @@ export function StepBasic() {
     // RHF 상태에 File 보관 (shouldValidate 불필요 — cover 는 trigger 대상 외)
     setValue("cover", file);
   }
+
+  // 미리보기 대상 URL — 새로 선택한 파일(previewUrl) 우선, 없으면 기존 커버(edit).
+  const displayUrl = previewUrl ?? existingCoverUrl;
 
   return (
     <LazyMotion features={domAnimation}>
@@ -330,29 +345,61 @@ export function StepBasic() {
           animate="visible"
           transition={makeFadeTransition(0.26)}
         >
-          {/* 회원 수 input (optional) */}
+          {/* 부원 수 범위 칩 단일 선택 (optional) */}
+          {/*
+            step-tags.tsx 의 칩 토글 패턴을 기반으로,
+            단일 선택(라디오 성격) 으로 변형.
+            - 이미 선택된 칩 재클릭 → 해제 (nullable 필드라 OK)
+            - 미선택 칩 클릭 → 해당 값으로 설정
+          */}
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="member_count" className={FIELD_LABEL_CLS}>
+            <p className={FIELD_LABEL_CLS}>
               会員数
-              {/* 임의 항목 표시 */}
               <span className="text-muted-foreground ml-1.5 text-xs font-normal">（任意）</span>
-            </label>
-            <Input
-              id="member_count"
-              type="text"
-              inputMode="numeric"
-              placeholder="例：30"
-              className={cn(
-                AUTH_INPUT_CLS,
-                errors.member_count && "ring-2 ring-red-400 focus-visible:ring-red-400"
-              )}
-              aria-invalid={!!errors.member_count}
-              aria-describedby={errors.member_count ? "error-member-count" : undefined}
-              {...register("member_count")}
-            />
-            {errors.member_count && (
-              <p id="error-member-count" role="alert" className={ERROR_MSG_CLS}>
-                {errors.member_count.message}
+            </p>
+            {/* 범위 칩 목록 — flex-wrap 으로 자동 줄바꿈 */}
+            <ul className="flex flex-wrap gap-2" role="radiogroup" aria-label="会員数範囲">
+              {MEMBER_BANDS.map((band) => {
+                const isSelected = selectedBand === band;
+                return (
+                  <li key={band}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // 이미 선택된 칩 재클릭 시 선택 해제 (任意 필드라 null 허용)
+                        if (isSelected) {
+                          setValue("member_band", undefined, { shouldValidate: true });
+                        } else {
+                          setValue("member_band", band as MemberBand, { shouldValidate: true });
+                        }
+                      }}
+                      role="radio"
+                      aria-checked={isSelected}
+                      aria-label={
+                        isSelected
+                          ? `${MEMBER_BAND_LABELS[band]}（選択済み、クリックで解除）`
+                          : MEMBER_BAND_LABELS[band]
+                      }
+                      className={cn(
+                        // 기본 스타일: step-tags.tsx 의 칩과 동일 (border-2, h-12, rounded-md)
+                        "flex h-12 shrink-0 items-center justify-center rounded-md border-2",
+                        "px-4 text-sm whitespace-nowrap transition-colors",
+                        // 선택 상태: keio-navy 채움 (step-tags 와 동일 토큰)
+                        isSelected
+                          ? "border-keio-navy bg-keio-navy text-keio-navy-foreground font-semibold"
+                          : "border-border text-muted-foreground hover:border-muted-foreground"
+                      )}
+                    >
+                      {MEMBER_BAND_LABELS[band]}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            {/* 에러 메시지 (スキーマ 검증 실패 시) */}
+            {errors.member_band && (
+              <p id="error-member-band" role="alert" className={ERROR_MSG_CLS}>
+                {errors.member_band.message}
               </p>
             )}
           </div>
@@ -411,13 +458,13 @@ export function StepBasic() {
             onChange={handleCoverChange}
           />
 
-          {previewUrl ? (
-            /* 미리보기 영역: 이미지 + 변경 버튼 */
+          {displayUrl ? (
+            /* 미리보기 영역: 이미지 + 변경 버튼 (새 파일 또는 기존 커버) */
             <div className="flex flex-col gap-2">
               <div className="relative overflow-hidden rounded-xl">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={previewUrl}
+                  src={displayUrl}
                   alt="カバー画像プレビュー"
                   className="h-48 w-full object-cover"
                 />

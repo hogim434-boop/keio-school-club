@@ -95,16 +95,42 @@ const STEP_CURRENT: Record<string, number> = {
   done: 3,
 };
 
+/** CircleRegistrationForm props — create(신규 등록) / edit(기존 수정) 공용 */
+interface CircleRegistrationFormProps {
+  /** "create"(기본): 신규 등록 / "edit": 기존 서클 수정 */
+  mode?: "create" | "edit";
+  /** edit 모드 초기값 — circleToEditValues(circle) 결과(pledge=true 포함) */
+  initialValues?: RegistrationValues;
+  /** edit 모드 대상 서클 id — 제출(updateCircle)·복귀 경로에 사용 */
+  circleId?: string;
+  /** step 라우팅 base 경로. create=/circles/new, edit=/circles/{id}/edit */
+  basePath?: string;
+  /** edit 모드에서 기존 커버 이미지 URL — StepBasic 미리보기에 전달 */
+  existingCoverUrl?: string | null;
+}
+
 /**
- * 서클 등록 멀티스텝 폼 컨테이너.
+ * 서클 등록·수정 멀티스텝 폼 컨테이너.
  * useSearchParams() 를 사용하므로 page.tsx 에서 <Suspense> 로 감싸야 한다.
+ *
+ * mode="create": basic → tags → contact → done(審査中). submitRegistration 으로 INSERT.
+ * mode="edit": basic → tags → contact → (제출 후 상세 /circles/{id} 복귀). updateCircle 로 UPDATE.
+ *   서약 UI 는 숨기고 initial 의 pledge=true 로 검증을 통과시킨다.
  */
-export function CircleRegistrationForm() {
+export function CircleRegistrationForm({
+  mode = "create",
+  initialValues,
+  circleId,
+  basePath = "/circles/new",
+  existingCoverUrl = null,
+}: CircleRegistrationFormProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   // 현재 단계: 쿼리스트링 "step" 값, 없으면 "basic"
   const step = searchParams.get("step") ?? "basic";
+
+  const isEdit = mode === "edit";
 
   // ── useReducedMotion: WCAG SC 2.3.3 접근성 준수 ──
   const reducedMotion = useReducedMotion();
@@ -124,17 +150,20 @@ export function CircleRegistrationForm() {
   const tapScale = reducedMotion ? undefined : { scale: 0.98 as const };
 
   // ── RHF 인스턴스 — 전체 플로우에서 단일 보존 ──
-  // zod v4 + @hookform/resolvers v5: coerce(member_count) 등으로 스키마 input/output 타입이
-  // 갈리므로, useForm 제네릭을 <Input, Context, Output> 3개로 분리해 Resolver 타입을 정확히 맞춘다.
+  // zod v4 + @hookform/resolvers v5: 스키마 input/output 타입이 갈리는 경우
+  // useForm 제네릭을 <Input, Context, Output> 3개로 분리해 Resolver 타입을 정확히 맞춘다.
   // (단일 제네릭으로 두면 "Two different types... unrelated" 타입 에러 발생)
   const methods = useForm<z.input<typeof registrationSchema>, unknown, RegistrationValues>({
     resolver: zodResolver(registrationSchema),
     mode: "onChange",
-    defaultValues: {
+    // edit 모드: initialValues(circleToEditValues 결과, pledge=true 포함)로 prefill.
+    // create 모드: 빈 기본값(서약은 미동의 false 로 시작 — 사용자가 직접 체크).
+    defaultValues: initialValues ?? {
       // 단계 1: 기본 정보
       name: "",
       // category, official_type, activity_frequency: 선택 전 undefined (스키마 필수값)
-      member_count: undefined,
+      // member_count → member_band 로 교체 (범위 칩 단일 선택, 任意)
+      member_band: undefined,
       description: "",
       // 단계 2: 태그
       tags: [],
@@ -168,24 +197,31 @@ export function CircleRegistrationForm() {
 
     const next = NEXT_STEP[step];
     if (next) {
-      router.push(`/circles/new?step=${next}`);
+      router.push(`${basePath}?step=${next}`);
     }
-  }, [step, trigger, router]);
+  }, [step, trigger, router, basePath]);
 
   // ── contact 단계 제출 성공 콜백 ──
-  // StepContact(T-018-6) 에서 Supabase 제출 성공 시 호출된다.
+  // create: 完了(審査中) 단계로 / edit: 수정 후 상세 페이지로 복귀.
   const handleRegistered = useCallback(() => {
-    router.replace("/circles/new?step=done");
-  }, [router]);
+    if (isEdit && circleId) {
+      router.replace(`/circles/${circleId}`);
+    } else {
+      router.replace(`${basePath}?step=done`);
+    }
+  }, [router, isEdit, circleId, basePath]);
 
   // ── 단계별 backHref (뒤로가기 링크) ──
+  // edit 첫 단계는 상세(/circles/{id})로, create 첫 단계는 마이페이지로 복귀.
   const backHref =
     step === "basic"
-      ? "/mypage" // 첫 단계: 마이페이지로
+      ? isEdit && circleId
+        ? `/circles/${circleId}`
+        : "/mypage"
       : step === "tags"
-        ? "/circles/new?step=basic"
+        ? `${basePath}?step=basic`
         : step === "contact"
-          ? "/circles/new?step=tags"
+          ? `${basePath}?step=tags`
           : undefined; // done 단계: 뒤로가기 없음
 
   // ── 완료(done) 단계 ─────────────────────────────────────────────────────
@@ -296,7 +332,7 @@ export function CircleRegistrationForm() {
     <m.div whileTap={tapScale} transition={{ duration: 0.1 }}>
       <Button type="submit" form={CIRCLE_REGISTRATION_FORM_ID} className={CTA_BTN_CLS}>
         <span className="flex items-center justify-center gap-2">
-          登録申請する
+          {isEdit ? "更新する" : "登録申請する"}
           <ArrowRight className="size-4" aria-hidden="true" />
         </span>
       </Button>
@@ -346,9 +382,11 @@ export function CircleRegistrationForm() {
           footer={footerCta}
         >
           {/* 단계별 본문 스텝 컴포넌트 분기 */}
-          {step === "basic" && <StepBasic />}
+          {step === "basic" && <StepBasic existingCoverUrl={existingCoverUrl} />}
           {step === "tags" && <StepTags />}
-          {step === "contact" && <StepContact onRegistered={handleRegistered} />}
+          {step === "contact" && (
+            <StepContact onRegistered={handleRegistered} mode={mode} circleId={circleId} />
+          )}
         </AuthScreen>
       </FormProvider>
     </LazyMotion>

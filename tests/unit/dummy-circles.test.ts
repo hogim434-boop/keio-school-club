@@ -65,10 +65,18 @@ describe("DUMMY_CIRCLES 상세 필드 (T-012 보강)", () => {
     }
   });
 
-  it("모든 단체의 member_count 가 양의 정수다", () => {
+  it("모든 단체의 member_band 가 유효한 enum 값이다", () => {
+    // member_count → member_band 로 교체 (2026-05 개편)
+    const VALID_BANDS = [
+      "under_10",
+      "from_11_to_30",
+      "from_31_to_50",
+      "from_51_to_100",
+      "over_100",
+    ];
     for (const circle of DUMMY_CIRCLES) {
-      expect(circle.member_count, `circle ${circle.id}`).toBeGreaterThan(0);
-      expect(Number.isInteger(circle.member_count)).toBe(true);
+      // 더미 데이터는 모두 member_band 값을 가짐 (nullable 이지만 더미는 전부 설정)
+      expect(VALID_BANDS, `circle ${circle.id}`).toContain(circle.member_band);
     }
   });
 

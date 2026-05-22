@@ -183,6 +183,8 @@ export type Database = {
           description: string;
           id: string;
           inquiry_count: number;
+          /** 부원 수 범위 — 마이그레이션 008. nullable (任意 필드) */
+          member_band: Database["public"]["Enums"]["member_band_enum"] | null;
           member_count: number;
           name: string;
           official_type: Database["public"]["Enums"]["official_type_enum"];
@@ -212,6 +214,8 @@ export type Database = {
           description?: string;
           id?: string;
           inquiry_count?: number;
+          /** 부원 수 범위 — nullable (任意) */
+          member_band?: Database["public"]["Enums"]["member_band_enum"] | null;
           member_count?: number;
           name: string;
           official_type: Database["public"]["Enums"]["official_type_enum"];
@@ -241,6 +245,8 @@ export type Database = {
           description?: string;
           id?: string;
           inquiry_count?: number;
+          /** 부원 수 범위 — nullable (任意) */
+          member_band?: Database["public"]["Enums"]["member_band_enum"] | null;
           member_count?: number;
           name?: string;
           official_type?: Database["public"]["Enums"]["official_type_enum"];
@@ -399,6 +405,13 @@ export type Database = {
         | "volunteer"
         | "media";
       circle_status_enum: "pending" | "approved" | "rejected";
+      /** 부원 수 범위 5구간 — 마이그레이션 008 */
+      member_band_enum:
+        | "under_10"
+        | "from_11_to_30"
+        | "from_31_to_50"
+        | "from_51_to_100"
+        | "over_100";
       official_type_enum: "athletics" | "official" | "unofficial" | "intercollegiate" | "other";
       recruitment_status_enum: "newcomer_only" | "year_round";
       tag_kind_enum: "atmosphere" | "cost" | "frequency" | "gender";
@@ -541,6 +554,14 @@ export const Constants = {
         "media",
       ],
       circle_status_enum: ["pending", "approved", "rejected"],
+      /** 부원 수 범위 5구간 — 마이그레이션 008 */
+      member_band_enum: [
+        "under_10",
+        "from_11_to_30",
+        "from_31_to_50",
+        "from_51_to_100",
+        "over_100",
+      ],
       official_type_enum: ["athletics", "official", "unofficial", "intercollegiate", "other"],
       recruitment_status_enum: ["newcomer_only", "year_round"],
       tag_kind_enum: ["atmosphere", "cost", "frequency", "gender"],
