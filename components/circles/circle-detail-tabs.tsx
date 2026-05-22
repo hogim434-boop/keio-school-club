@@ -59,6 +59,7 @@ import { DETAIL_RETURN_TAB_FLAG } from "@/app/circles/[id]/reports/[reportId]/te
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ActivityReportsList } from "@/components/circles/activity-reports-list";
 import { ActivityReportsPreview } from "@/components/circles/activity-reports-preview";
+import { ReportComposeSheet } from "@/components/circles/report-compose-sheet";
 import type { ActivityReport } from "@/lib/types/domain";
 
 interface CircleDetailTabsProps {
@@ -68,6 +69,11 @@ interface CircleDetailTabsProps {
   reports: ActivityReport[];
   /** 「ホーム」 탭에 표시할 콘텐츠 — SummaryGrid + Description (Server Component children) */
   homeContent: React.ReactNode;
+  /**
+   * 소유자 여부 — true 이면 「掲示板」 탭 상단에 「＋ 投稿する」 버튼 표시.
+   * 서버에서 getClaims() + owner_id 비교로 계산 후 전달.
+   */
+  isOwner?: boolean;
 }
 
 type TabValue = "home" | "board";
@@ -83,7 +89,12 @@ const DISTANCE_RATIO_THRESHOLD = 0.3;
 /** iOS 캐러셀 스타일 easing — 프로젝트 전체 통일 (swipe-card.tsx, template.tsx 와 동일) */
 const IOS_EASE: [number, number, number, number] = [0.32, 0.72, 0, 1];
 
-export function CircleDetailTabs({ circleId, reports, homeContent }: CircleDetailTabsProps) {
+export function CircleDetailTabs({
+  circleId,
+  reports,
+  homeContent,
+  isOwner = false,
+}: CircleDetailTabsProps) {
   const [tab, setTab] = useState<TabValue>("home");
   const prefersReducedMotion = useReducedMotion();
 
@@ -331,6 +342,16 @@ export function CircleDetailTabs({ circleId, reports, homeContent }: CircleDetai
               aria-hidden={tab !== "board"}
             >
               <TabsContent value="board" forceMount className="pt-6">
+                {/*
+                 * 소유자 전용 「＋ 投稿する」 버튼 — ActivityReportsList 상단에 우측 정렬.
+                 * ReportComposeSheet 가 자체적으로 SheetTrigger 를 포함하므로
+                 * 외부 open state 없이 독립적으로 동작.
+                 */}
+                {isOwner && (
+                  <div className="mb-3 flex justify-end">
+                    <ReportComposeSheet circleId={circleId} />
+                  </div>
+                )}
                 <ActivityReportsList circleId={circleId} reports={reports} />
               </TabsContent>
             </div>

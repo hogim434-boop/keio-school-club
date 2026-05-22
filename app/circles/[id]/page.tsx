@@ -52,6 +52,17 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
   const supabase = await createClient();
 
   /**
+   * 소유자 판별 — edit/page.tsx 패턴과 동일.
+   * getClaims() 는 서버 측 JWT 검증으로 auth.getUser() 보다 가볍다.
+   * 미로그인 또는 소유자 불일치 시 isOwner = false.
+   * 미승인(pending) 서클 소유자도 작성 가능하도록 status 필터 없음.
+   */
+  const {
+    data: { user: currentUser },
+  } = await supabase.auth.getUser();
+  const isOwner = !!currentUser && circle.owner_id === currentUser.id;
+
+  /**
    * fire-and-forget 조회수 증가 RPC — await 하지 않아 렌더 블로킹 없음.
    * approved 서클만 증가시킨다(소유자의 미승인 프리뷰가 조회수를 올리지 않도록).
    * 에러 시 콘솔 출력만, UX에 영향 없음.
@@ -76,10 +87,12 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
          * 「ホーム」 = SummaryGrid + Description + 活動レポート 미리보기 캐러셀
          * 「掲示板」 = 活動レポート 전체 세로 리스트
          * 「もっと見る」 클릭 시 내부 setTab("board") 으로 자동 전환.
+         * isOwner: 소유자 전용 「＋ 投稿する」 버튼 표시 여부 전달.
          */}
         <CircleDetailTabs
           circleId={circle.id}
           reports={reports}
+          isOwner={isOwner}
           homeContent={
             <>
               <SummaryGrid circle={circle} />
