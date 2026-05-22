@@ -30,21 +30,6 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
 > **🟦 모바일 퍼스트 (전 ROADMAP 의 최우선 설계 원칙)**
 > 본 서비스는 일본 대학생이 스마트폰으로 활용하는 것을 전제로 한다. 모든 UI 작업의 기본 viewport 는 **360–428px**(iPhone SE ~ iPhone Pro Max / Android 표준)이며, 데스크탑(`md:` 이상, 768px+) 은 보조 환경으로서 progressive enhancement 로만 다룬다. 모든 카드·폼·CTA 는 우선 모바일 1열 레이아웃·44px 이상 터치 타깃·safe-area inset 을 보장한 뒤, 가용 너비가 늘어남에 따라 다열 그리드·사이드바·인라인 CTA 로 확장한다.
 
-> **🧭 인증 전략 = Direction A (디렉터리형, 2026-05-20 결정)**
-> 「전원 회원가입」 모델을 폐기하고, **탐색자(일반 학생)는 무로그인, 계정은 서클 대표·관리자만** 만드는 디렉터리형으로 전환한다. 근거: 현실에서 학생은 Instagram → 新歓 LINE 으로 참여하며 게이오 학생 여부를 묻지 않음 → 회원가입 벽은 마찰만 유발. 영향:
->
-> - **무로그인 허용**: 둘러보기·검색·셔플·상세·**連絡(Instagram/X/LINE 외부 링크)**·**즐겨찾기(localStorage)** 전부 비로그인.
-> - **계정 필요 영역**: 서클 등록/관리(`/circles/new`, `/mypage`), 관리자(`/admin`). 회원가입은 사실상 「서클 대표 온보딩」.
-> - **Keio 인증의 의미**: 일반 유저 게이트가 아니라 **서클 대표 신뢰 배지(`keio_verified`)** 로만 사용 (가짜 서클 방지 + 관리자 승인 이중 게이트).
-> - **회원가입/로그인 구현**: 회원가입 = Google(Keio) OAuth 인증 → 비밀번호 설정 → 닉네임 → 완료(4단계 풀스크린 온보딩). 로그인 = Keio 이메일+비밀번호. (`components/login-form.tsx`, `sign-up-form.tsx`, `components/auth/*`, `app/auth/callback/route.ts`)
-> - **連絡 동선**: 「参加する」 → 채널 모달 → Instagram/X/LINE 외부 링크(로그인 불필요). 익명 클릭 시 `inquiry_count` 는 조용히 스킵.
-
-> **🔥 新歓(shinkan_events) 기능 제거 (2026-05-20 결정)**
-> MVP 범위 축소를 위해 新歓 **이벤트 기능**(DB `shinkan_events` 테이블·`ShinkanBanner`·CTA 분기·시드)을 전부 제거. 상세 CTA 「新歓に参加する」 → 「参加する」 단순화. **MVP 출시 후 재도입 예정.** (※ "4월 新歓 시즌 출시" 의 新歓 = 모집 시즌 개념으로 별개, 유지)
-
-> **🗃️ Supabase 프로젝트 일본 리전 이전 (2026-05-20)**
-> 리전 오설정으로 신규 일본 리전 프로젝트(`qugoxkrwlejeqarijztt`) 생성 + 마이그레이션 전체 재적용. `.mcp.json` / `.env.local` / `next.config.ts` 이미지 호스트 갱신 완료.
-
 ---
 
 ## 개발 워크플로우
@@ -221,13 +206,13 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
 > Phase 1.1 에서 만든 UI 가 사용 중인 더미 데이터를 **실제 Supabase fetch / Server Action / RPC** 로 교체한다.
 > 스키마 → RLS → RPC → Storage 가 모두 준비된 후, 마지막 **T-009** 에서 시드 적재와 UI 와이어업을 한꺼번에 처리하여 정합성 확인 비용을 한 번에 모은다.
 
-| ID        | 작업                                                           | 상태      | 공수 | 선행                        | 관련 기능              |
-| --------- | -------------------------------------------------------------- | --------- | ---- | --------------------------- | ---------------------- |
-| **T-005** | DB 스키마 마이그레이션 1차 (10 테이블 + 8 enum) ✅             | completed | 1d   | T-003                       | 전 기능                |
-| **T-006** | RLS 정책 분리·`is_admin()` 헬퍼 ✅                             | completed | 1d   | T-005                       | F005, F006, F007, F010 |
-| **T-007** | RPC `increment_inquiry_count` + `inquiry_events` 디바운스 ✅   | completed | 0.5d | T-005, T-006                | F012                   |
-| **T-008** | Storage 버킷·정책·EXIF 제거 ✅                                 | completed | 0.5d | T-005                       | F003, F005             |
-| **T-009** | 시드 30개 + 태그 10종 + **UI 와이어업 (더미 → 실제 fetch)** ✅ | completed | 1.5d | T-005, T-008, T-010 ~ T-014 | F002, F004, F007, F012 |
+| ID        | 작업                                                        | 상태      | 공수 | 선행                        | 관련 기능              |
+| --------- | ----------------------------------------------------------- | --------- | ---- | --------------------------- | ---------------------- |
+| **T-005** | DB 스키마 마이그레이션 1차 (10 테이블 + 8 enum) ✅          | completed | 1d   | T-003                       | 전 기능                |
+| **T-006** | RLS 정책 분리·`is_admin()` 헬퍼                             | pending   | 1d   | T-005                       | F005, F006, F007, F010 |
+| **T-007** | RPC `increment_inquiry_count` + `inquiry_events` 디바운스   | pending   | 0.5d | T-005, T-006                | F012                   |
+| **T-008** | Storage 버킷·정책·EXIF 제거                                 | pending   | 0.5d | T-005                       | F003, F005             |
+| **T-009** | 시드 30개 + 태그 10종 + **UI 와이어업 (더미 → 실제 fetch)** | pending   | 1.5d | T-005, T-008, T-010 ~ T-014 | F002, F004, F007, F012 |
 
 - **T-005: DB 스키마 마이그레이션 1차** ✅
   - `supabase` MCP `list_tables` 로 기존 상태(`instruments` 만 존재) 확인 후, `apply_migration` 으로 **10개 테이블** 생성 (핵심 8 + 보조 2):
@@ -251,78 +236,20 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
   - **완료 (2026-05-18)**: (a) 6건 마이그레이션 적용 — `005_01_extensions_enums`, `005_02_profiles_circles`, `005_03_circle_satellite`, `005_04_activity_reports`, `005_05_misc_indexes_rls`, `005_05b_revoke_handle_new_user` (security advisor 보강). (b) `mcp__supabase__generate_typescript_types` 자동 생성 결과로 `lib/types/database.ts` 무손실 교체 — 수동 정의 → 12개 Tables + 8개 Enums + `Tables<>`/`TablesInsert<>`/`TablesUpdate<>`/`Enums<>`/`CompositeTypes<>` 헬퍼 + `Constants` 런타임 객체. (c) `npm run lint` / `npm run build` (27 페이지) / `npm run test` (4 files / 51 tests) 모두 통과. (d) `get_advisors security` 남은 항목: RLS policy missing INFO 11건 (T-006 예상) + Auth Leaked Password Protection WARN 1건 (Supabase Auth 대시보드 설정, T-015 범위).
   - **See**: `docs/tasks/T-005-db-schema-migration.md`
 
-- **T-006: RLS 정책 분리·`is_admin()` 헬퍼** ✅
+- **T-006: RLS 정책 분리·`is_admin()` 헬퍼**
   - 검증 이슈 **H-2** 대응: 모든 테이블에 대해 `select / insert / update / delete` 정책을 명시적으로 분리.
   - `public.is_admin()` SECURITY DEFINER 헬퍼 함수 추가 (RLS 정책 내부에서 재귀 호출 방지).
   - `circles.status` 가 `'approved'` 인 행만 익명 select 가능, owner 는 자신의 모든 status 행, admin 은 전체.
   - `circles` update 정책에 `inquiry_count` 컬럼 변경 금지를 명시 (RPC 함수만 갱신).
   - **테스트**: 익명 / 일반 사용자 / owner / admin 4개 컨텍스트에서 각 테이블의 select·insert·update·delete 시도 → 기대값과 일치하는지 SQL 단위 테스트.
-  - **완료 (2026-05-18)**:
-    - **is_admin() 시그니처**: `public.is_admin(uid uuid DEFAULT auth.uid()) RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path = public STABLE` — 정책 USING절에서 인수 없이 호출 가능, SECURITY DEFINER로 profiles RLS 우회 없이 읽기, STABLE로 트랜잭션 내 캐시.
-    - **정책 매트릭스 (26개, 10개 테이블)**:
-      - `profiles` (3): select_own_or_admin / update_own / delete_admin
-      - `circles` (4): select_public_or_owner_or_admin / insert_authenticated / update_owner_or_admin / delete_owner_or_admin
-      - `tags` (2): select_all / write_admin
-      - `circle_tags` (2): select_visible_circle / write_owner_or_admin
-      - `circle_images` (2): select_visible_circle / write_owner_or_admin
-      - `shinkan_events` (2): select_visible_circle / write_owner_or_admin
-      - `favorites` (3): select_own / insert_own / delete_own
-      - `activity_reports` (4): select_public / insert_owner_or_admin / update_owner_or_admin / delete_owner_or_admin
-      - `activity_report_images` (2): select_public / write_owner_or_admin (2단계 EXISTS: report → circle)
-      - `app_settings` (2): select_all / write_admin
-    - **circles_status_admin_check 트리거**: BEFORE UPDATE ON circles, `NEW.status IS DISTINCT FROM OLD.status AND NOT is_admin()` → RAISE EXCEPTION 'Only admin can change circle status' (ERRCODE=42501). RLS UPDATE 정책이 OLD/NEW 비교 불가능한 한계를 트리거로 보완.
-    - **inquiry_events 의도된 deny**: 정책 0건 유지. RLS 활성화 + 정책 없음 = 모든 역할 기본 거부. T-007 `increment_inquiry_count` RPC (SECURITY DEFINER)만 INSERT 가능. `get_advisors` INFO 1건 잔여 — 의도된 설계.
-    - **마이그레이션 5건 적용**: `006_01_is_admin_helper_and_column_revoke`, `006_01b_is_admin_revoke_fix`, `006_01c_is_admin_grant_anon_safe`, `006_02_profiles_circles_satellite_policies`, `006_03_activity_reports_misc_policies`, `006_04_revoke_trigger_fn_public`.
-    - **SQL 시나리오 테스트 20건 PASS**: anon/non-owner/owner/admin 4 컨텍스트 × SELECT·INSERT·UPDATE·DELETE·trigger·deny-by-default 시나리오 전부 기대값 일치. fixture 정리 완료.
-    - **잔여 advisor**: (1) `inquiry_events` RLS no policy INFO — 의도된 deny (T-007 범위). (2) `is_admin()` anon/authenticated EXECUTE WARN — RLS USING절 평가에 필수이므로 불가피. (3) Auth Leaked Password Protection WARN — T-015 범위.
 
-- **T-007: RPC `increment_inquiry_count` + `inquiry_events` 디바운스** ✅
-  - PRD 「Postgres 함수 (RPC)」 절 line 410-466 의 SQL 그대로 `apply_migration` 으로 등록. 검증 이슈 **M-NEW-2** 완전 해소.
-  - **RPC 시그니처**:
-    - `public.increment_inquiry_count(p_circle_id uuid) RETURNS void` — SECURITY DEFINER, search_path=public, **authenticated 전용 EXECUTE**.
-    - `public.increment_view_count(p_circle_id uuid) RETURNS void` — SECURITY DEFINER, search_path=public, **anon+authenticated EXECUTE** (T-015 /shuffle 비로그인 정책 anchor).
-  - **디바운스 동작** (`increment_inquiry_count`):
-    1. `auth.uid() IS NULL` → `RAISE EXCEPTION 'unauthorized' (42501)` — anon 차단.
-    2. `circles WHERE id=p_circle_id AND status='approved'` NOT EXISTS → `RETURN` — pending/rejected/non-existent 조용히 무시.
-    3. `INSERT INTO inquiry_events (user_id, circle_id, day) VALUES (..., CURRENT_DATE) ON CONFLICT (user_id, circle_id, day) DO NOTHING` — PK 충돌 시 `FOUND=false`.
-    4. `IF FOUND THEN UPDATE circles SET inquiry_count = inquiry_count + 1` — 새 row 삽입된 경우에만 카운트 증가.
-  - **컬럼 권한 보강** (T-007c 보강 마이그레이션): T-006 컬럼 REVOKE가 테이블 수준 GRANT ALL로 무효화된 현상을 발견하여, `REVOKE UPDATE ON circles FROM anon, authenticated` 후 허용 컬럼 17개만 `GRANT UPDATE ... TO authenticated` 재부여. `inquiry_count` / `view_count` / `status` 등은 SECURITY DEFINER RPC 및 관리자 경로로만 갱신 가능.
-  - **T-009 anchor**: `components/circles/join-channel-modal.tsx` 의 클라이언트측 카운트 로직 → `increment_inquiry_count` RPC 호출 Server Action 으로 교체 (T-009 와이어업 시점).
-  - **완료 (2026-05-18)**:
-    - **마이그레이션 3건 적용**: `007_rpc_increment_counts` (RPC 2종), `007b_revoke_inquiry_anon_safe` (anon EXECUTE 자동부여 Supabase 현상 보강 REVOKE), `007c_fix_circles_column_revoke` (컬럼 권한 재설계).
-    - **SQL 시나리오 테스트 12건 PASS**: S1(anon 42501) / S2~S4(디바운스 시퀀스 1→1→2) / S5(pending 무시) / S6~S7(view +1+1) / S8(pending view 무시) / S9~S10(컬럼 REVOKE 42501) / S11(owner name 변경 성공) / S12(non-existent uuid 무시). fixture ROLLBACK 정리 완료.
-    - **`lib/types/database.ts` 갱신**: `Functions` 객체에 `increment_inquiry_count` / `increment_view_count` / `is_admin` 3개 추가. T-007 동기화 날짜 반영.
-    - **`npm run lint` / `npm run build` / `npm run test` 모두 통과**.
-    - **잔여 advisor**: (1) `inquiry_events` RLS no policy INFO — 의도된 deny 설계 유지. (2) `increment_view_count` anon EXECUTE WARN — /shuffle 비로그인 정책 의도 (T-015 anchor). (3) `increment_inquiry_count` / `increment_view_count` / `is_admin` authenticated EXECUTE WARN — RPC 공개 API 설계 의도. (4) Auth Leaked Password Protection WARN — T-015 범위.
+- **T-007: RPC `increment_inquiry_count` + `inquiry_events` 디바운스**
+  - PRD 「Postgres 함수 (RPC)」 절의 SQL 그대로 `apply_migration` 으로 등록.
+  - 검증 이슈 **M-NEW-2** 대응으로 `inquiry_events(user_id uuid, circle_id uuid, day date, primary key(user_id, circle_id, day))` 테이블 추가 후, RPC 내부에서 동일 (user, circle, day) 가 이미 존재하면 카운트 증가를 스킵.
+  - `anon` 권한 회수 + `authenticated` 만 EXECUTE 허용.
+  - **테스트**: 같은 사용자가 동일 서클을 하루 두 번 호출 → 두 번째는 `inquiry_count` 가 증가하지 않음을 Playwright + 직접 SQL 검증.
 
-- **T-008: Storage 버킷·정책·EXIF 제거** ✅
-  - 검증 이슈 **M-3** 대응: `circles-public` 퍼블릭 버킷 생성, path prefix `circles/{circle_id}/...` 로 RLS 적용 (owner / admin 만 write).
-  - **버킷 설정**: 이름 `circles-public`, public=true, file_size_limit=4MB, allowed_mime_types=[image/jpeg, image/png, image/webp].
-  - **path 구조**:
-    - 커버 이미지: `circles/{circle_id}/cover.jpg` (upsert)
-    - 갤러리: `circles/{circle_id}/gallery/{uuid}.jpg`
-    - 리포트: `circles/{circle_id}/reports/{report_id}/{uuid}.jpg`
-  - **RLS 정책 4개** (`storage.objects`):
-    - `circles_public_select_all` — SELECT, anon + authenticated 허용 (퍼블릭 조회)
-    - `circles_public_insert_owner_or_admin` — INSERT, authenticated, prefix='circles/' + owner/admin 검증
-    - `circles_public_update_owner_or_admin` — UPDATE, authenticated, owner/admin 검증
-    - `circles_public_delete_owner_or_admin` — DELETE, authenticated, owner/admin 검증
-    - **구현 주의**: EXISTS 서브쿼리 내 `name` 컬럼이 `circles.name` 으로 바인딩되는 PostgreSQL 파서 동작 확인 → `public.storage_circles_public_check_prefix` / `check_owner` 헬퍼 함수(SECURITY INVOKER, SET search_path='')로 모호성 해소 (M-008b/c/d).
-  - **EXIF strip**: 클라이언트 Canvas API (`lib/storage/strip-exif.ts`). 브라우저에서 drawImage → toBlob('image/jpeg', 0.9) 로 EXIF 제거, 모든 출력 image/jpeg 표준화.
-  - **upload 헬퍼 3종** (`lib/storage/strip-exif.ts`):
-    - `uploadCoverImage(supabase, circleId, file)` — cover.jpg upsert
-    - `uploadGalleryImage(supabase, circleId, file)` — gallery/{uuid}.jpg
-    - `uploadReportImage(supabase, circleId, reportId, file)` — reports/{reportId}/{uuid}.jpg
-  - **`next.config.ts` remotePatterns**: `wmiaxjgitpahribjrdyh.supabase.co/storage/v1/object/public/circles-public/**` 추가 (picsum.photos 기존 유지, T-009 시점 제거).
-  - **단위 테스트** (`tests/unit/strip-exif.test.ts`): `validateUpload` 4케이스 PASS (ok/oversize/unsupported-MIME/null). `stripImageExif` Canvas 는 jsdom 한계로 T-018 Playwright 통합 테스트 예정.
-  - **T-018 anchor**: 동아리 등록 폼에서 `uploadCoverImage` / `uploadGalleryImage` 헬퍼 호출 연결 예정.
-  - **완료 (2026-05-18)**:
-    - **마이그레이션 4건 적용**: `008_storage_bucket_and_policies` (버킷 + RLS 4정책), `008b_fix_storage_rls_name_ambiguity` (정책 재설계 1차), `008c_fix_storage_rls_with_helper_fn` (헬퍼 함수 도입), `008d_fix_helper_fn_search_path` (search_path 고정).
-    - **SQL 시나리오 테스트 5건 PASS**: S1(anon SELECT 0행 허용) / S2(anon INSERT 42501) / S3(user-B INSERT to user-A circle 42501) / S4(owner INSERT 성공) / S5(wrong prefix 42501). fixture ROLLBACK 정리 완료.
-    - **`npm run lint` / `npm run build` / `npm run test` (55건) 모두 통과**.
-    - **잔여 advisor**: (1) `inquiry_events` RLS no policy INFO — 의도된 deny 설계 유지. (2) `public_bucket_allows_listing` WARN — 퍼블릭 버킷 의도된 설계 (파일 URL 직접 접근). (3) `increment_view_count` anon EXECUTE WARN — /shuffle 비로그인 정책 의도 (T-015 anchor). (4) `increment_inquiry_count` / `increment_view_count` / `is_admin` authenticated EXECUTE WARN — RPC 공개 API 설계 의도. (5) Auth Leaked Password Protection WARN — T-015 범위.
-
-- **T-009: 시드 30개 + 태그 10종 + UI 와이어업 (더미 → 실제 fetch)** ✅ — **본 Phase 의 통합 지점**
+- **T-009: 시드 30개 + 태그 10종 + UI 와이어업 (더미 → 실제 fetch)** — **본 Phase 의 통합 지점**
   - **(A) DB 시드 적재**
     - PRD 「더미 데이터 정책」의 카테고리 분포대로 `apply_migration` 실행.
     - 태그 10종은 PRD의 SQL 그대로 insert.
@@ -338,51 +265,37 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
   - **(C) 회귀 검증**
     - Phase 1.1 의 Playwright 시나리오를 그대로 재실행 → 더미가 아닌 실제 DB 에서 동일 결과가 나오는지 확인.
     - 동일 사용자가 같은 서클을 즉시 재호출 → `inquiry_count` 가 1만 증가하는지 DB 직접 SELECT.
-  - **완료 (2026-05-19, commit `f549c71`)**:
-    - **(시드)** 4 마이그 적용 — `009_00_tag_kind_enum_extend` (tag_kind enum 보강), `009_01_tags_seed` (10종), `009_02_circles_satellite_seed` (30 circles + 93 circle_tags + 120 circle_images + 10 shinkan_events, owner_id=NULL, status='approved', id 고정 UUID `00000000-0000-4000-8000-{seq}` lib/dummy 일치), `009_03_activity_reports_seed` (120 reports + 360 images). picsum.photos seed URL 그대로 (Storage 업로드는 T-018).
-    - **(queries 모듈)** `lib/supabase/queries/circles.ts` (7 함수: getPopularCircles / getNewCircles / getCirclesByCategory / getCircleById / filterCircles / getFavorites / isFavorited) + `lib/supabase/queries/activity-reports.ts` (2 함수). Supabase JS JOIN nested shape → CircleSummary/Detail/ActivityReport mapping.
-    - **(페이지 와이어업)** `app/circles/page.tsx`, `circles/[id]/page.tsx`, `circles/[id]/reports/[reportId]/page.tsx`, `shuffle/page.tsx`, `search/page.tsx` 의 더미 import → Supabase 쿼리 전면 교체. circles 상세 진입 시 fire-and-forget `supabase.rpc('increment_view_count')`.
-    - **(Server Action)** `app/circles/[id]/actions.ts` 신설 — `toggleFavorite` (auth.getClaims 검증 + favorites insert/delete + revalidatePath) / `incrementInquiryCount` (RPC + revalidatePath). `app/search/actions.ts` 신설 — `getFilterCount` (Apply 버튼 카운트).
-    - **(비로그인 가드 — PRD F012 패턴)** `use-favorites.ts` 전면 재작성 (sessionStorage 완전 제거, `useOptimistic` + `startTransition` + 모듈 singleton 인증 캐시). `FavoriteToggleButton` / `CircleActions` 에 `isAuthenticated` prop 추가 — **♡ 하트 토글**과 **「参加する」 가입 버튼** 둘 다 비로그인 시 `/auth/login?next=...` 리디렉션. `JoinChannelModal.handleChannelClick` → Server Action 연동.
-    - **(컴포넌트)** `components/circles/hourly-category-strip.tsx`, `components/shuffle/swipe-deck.tsx` 도 Supabase 쿼리 / Server Action 직접 호출로 교체.
-    - **(검증)** `npm run build` (27 페이지 PPR) + `npm run lint` 통과. `get_advisors` 신규 critical 0건, 잔여는 T-006~T-008 의도된 항목만.
-    - **Phase 1.2 완료 선언** — T-005 ~ T-009 모두 ✅. 다음 단계: Phase 1.3 인증 & 사용자 영역 (T-015 ~ T-018).
 
 ### Phase 1.3 — 인증 & 사용자 영역 (T-015 ~ T-018)
 
-| ID        | 작업                                                 | 상태             | 공수 | 선행         | 관련 기능 |
-| --------- | ---------------------------------------------------- | ---------------- | ---- | ------------ | --------- |
-| **T-015** | 인증(Google/Keio OAuth + 비밀번호) + `keio_verified` | ✅ 코드\*        | 1d   | T-005, T-006 | F010      |
-| **T-016** | 마이페이지 = 서클 대표 대시보드 (Direction A 재정의) | pending          | 1.5d | T-015        | F011      |
-| **T-017** | 즐겨찾기 페이지 (게스트 localStorage, 로그인 불필요) | 🚧 저장✅/페이지 | 0.5d | T-013        | F007      |
-| **T-018** | 서클 등록 폼 + URL 화이트리스트 검증                 | pending          | 2d   | T-008, T-015 | F005      |
+| ID        | 작업                                      | 상태    | 공수 | 선행         | 관련 기능 |
+| --------- | ----------------------------------------- | ------- | ---- | ------------ | --------- |
+| **T-015** | @keio.jp 인증 + `keio_verified` 자동 부여 | pending | 1d   | T-005, T-006 | F010      |
+| **T-016** | 마이페이지 + 내 서클 관리 페이지          | pending | 1.5d | T-015        | F011      |
+| **T-017** | 즐겨찾기 페이지                           | pending | 1d   | T-013        | F007      |
+| **T-018** | 서클 등록 폼 + URL 화이트리스트 검증      | pending | 2d   | T-008, T-015 | F005      |
 
-> \* T-015 는 코드 구현 완료. 단 실제 Google 로그인 동작에는 **Google Cloud OAuth 클라이언트 + Supabase Google provider 활성화 + Redirect URL 설정**(대시보드 작업)이 선행돼야 함.
+- **T-015: @keio.jp 인증 + `keio_verified` 자동 부여**
+  - 기존 `components/sign-up-form.tsx` 의 이메일 인증 콜백에서 도메인 검사.
+  - `auth.users` insert 트리거가 `profiles` 행 생성 시 이메일 도메인이 `keio.jp` 또는 `*.keio.jp` 면 `keio_verified=true` 설정.
+  - 마이페이지에 「慶應生認証済み」 뱃지 노출.
+  - **모바일 (기본)**: 로그인·회원가입 폼은 1열 스택, 폼 너비 `max-w-sm mx-auto` + 풀폭 입력. 각 input 에 `inputmode="email"` / `autocomplete="email"` / `autocomplete="current-password"` 적용하여 모바일 키보드와 자동완성 최적화. 제출 버튼은 최소 48px, 풀폭.
+  - **`/shuffle` 상시 비로그인 허용 정책**: `/shuffle` 은 **회원가입 전 게스트 디스커버리 진입점**으로 상시 비로그인 허용 (`isPublicPath()` 분기 영구 유지, `lib/supabase/proxy.ts:18`). Phase 1.2 T-009 와이어업 시
+    `increment_view_count` RPC 는 **익명 (anon role) 호출 허용** 으로 설계 — RPC 정의에 `SECURITY DEFINER` + `GRANT EXECUTE ... TO anon` 또는 클라이언트 측 view_count 증가 생략. 즐겨찾기·「参加する」 같은 인증 의존 액션 클릭 시에만 `/auth/login?next=/shuffle` 리디렉션.
+  - **테스트**: `test@keio.jp` 로 가입 시 verified, `test@gmail.com` 으로 가입 시 unverified.
 
-- **T-015: 인증 (Google/Keio OAuth + 비밀번호) + `keio_verified` 자동 부여** ✅ — _Direction A 로 재설계_
-  - **회원가입 = 4단계 풀스크린 온보딩**: ① Google(Keio) OAuth 인증(`hd=keio.jp` 힌트) → ② 비밀번호 설정(8자+) → ③ 닉네임(`display_name`) → ④ 완료. (`components/sign-up-form.tsx`, `components/auth/google-button.tsx`, `app/auth/sign-up/page.tsx`)
-  - **로그인 = Keio 이메일 + 비밀번호** (`signInWithPassword`). Google 버튼 없음. (`components/login-form.tsx`)
-  - **OAuth 콜백** `app/auth/callback/route.ts`: `exchangeCodeForSession` → `profiles.display_name` 이 null(온보딩 미완)이면 `?step=password` 로, 있으면 `next`/`/circles` 로 분기. `sanitizeNext` 공용화(`lib/auth/sanitize-next.ts`).
-  - **`keio_verified` 자동 부여**: `auth.users` insert 트리거 `handle_new_user` 가 `is_keio_email(NEW.email)` 로 `keio.jp`/`*.keio.jp` 판정 (마이그레이션 `015_handle_new_user_keio_verified` 적용 완료). Google 로그인이어도 이메일 도메인 기준 자동.
-  - **비-keio 계정**: 가입은 허용하되 `keio_verified=false` (코드에서 차단하지 않음 — Direction A).
-  - **풀스크린 온보딩 UI (디렉션 C)**: 우상단 「n / 4」 숫자 진행 + 큰 타이틀 + 연한 채움 input(`lib/auth/input-class.ts`) + 비번 show/hide 토글(`components/auth/password-input.tsx`) + 네이비 CTA. 셸 `components/auth/auth-screen.tsx`. `/auth/*` 에서 글로벌 헤더·하단탭 숨김(`header.tsx`/`header-client-gate.tsx`/`bottom-nav.tsx`).
-  - **`/shuffle` 등 게스트 정책**: 둘러보기·검색·셔플·상세·連絡·즐겨찾기 전부 비로그인(`isPublicPath` 에 `/shuffle`·`/favorites` 공개). `increment_view_count` 익명 허용 유지.
-  - **⚠️ 선행 조건(미완)**: 실제 Google 로그인 동작에는 Google Cloud OAuth 클라이언트 + Supabase Google provider 활성화 + Redirect URL(`/auth/callback`) 설정 필요(대시보드 작업).
-  - **테스트**: `*@keio.jp` 가입 시 verified, 그 외 unverified.
+- **T-016: 마이페이지 + 내 서클 관리 페이지**
+  - `app/mypage/page.tsx`: 표시명·이메일·verified 뱃지·등록 서클 수 카드 + 「登録サークルを管理」 링크.
+  - `app/mypage/circles/page.tsx`: 내 서클 목록 (status 뱃지 「審査中」/「公開中」/「却下」 + 거절 사유 표시).
+  - 둘 다 `lib/supabase/server.ts` 사용 +
+    Suspense 경계.
+  - **모바일 (기본)**: 프로필 카드와 등록 서클 카드 모두 1열 풀폭 스택. 「登録サークルを管理」 링크는 풀폭 버튼(터치 타깃 48px). 내 서클 목록은 1열 카드, 상태 뱃지는 카드 우상단.
 
-- **T-016: 마이페이지 = 서클 대표 대시보드** — _Direction A 재정의_
-  - **대상**: 로그인한 사용자(사실상 서클 대표/관리자). 일반 탐색자는 계정이 없으므로 마이페이지 비대상 — **"비로그인 유저가 못 쓰는 것"이 정상·의도된 설계**(즐겨찾기는 별도 게스트 탭 `/favorites`).
-  - **비로그인 접근**: `proxy.ts` 가 `/mypage` 를 비공개로 막아 `/auth/login?next=/mypage` 로 리디렉트. 「サークルを運営していますか? ログイン」 톤의 안내(로그인=서클 대표 입구).
-  - `app/mypage/page.tsx`: 프로필(닉네임 `display_name`·`keio_verified` 「慶應生認証済み」 배지) + 등록 서클 수 카드 + 「登録サークルを管理」 링크 + 로그아웃. **등록 서클이 0개이면 「サークルを登録する」 CTA**(대표가 아직 미등록인 경우).
-  - `app/mypage/circles/page.tsx`: 내 서클 목록 (status 뱃지 「審査中」/「公開中」/「却下」 + 거절 사유).
-  - 둘 다 `lib/supabase/server.ts` + Suspense. **모바일 (기본)**: 1열 풀폭 스택, 「登録サークルを管理」 풀폭 버튼(48px), 상태 뱃지 카드 우상단.
-
-- **T-017: 즐겨찾기 페이지 (게스트 localStorage)** — _Direction A: 로그인 불필요. 🚧 저장 로직 완료 / 페이지 UI 남음_
-  - **✅ 저장 로직 완료 (Direction A 리팩토링 시 적용)**: `lib/circles/use-favorites.ts` 가 브라우저 `localStorage`(`kc:favorites`)에 circle id 저장(로그인 불필요). 헬퍼 export: `useFavorites(circleId)` / `addFavoriteLocal` / `isFavoriteLocal` / `getFavoriteIds`. 상세 하트(`circle-actions`)·카드 하트(`favorite-toggle-button`)·셔플 우측 스와이프(`swipe-deck`) 모두 게스트 동작. `/favorites` 는 `isPublicPath` 공개로 변경됨. DB `favorites` 테이블·서버 액션 `toggleFavorite` 는 보존(현재 미사용).
-  - **⬜ 남은 작업 — 즐겨찾기 페이지 UI**: `app/favorites/page.tsx` (현재 `ComingSoon`) 교체. 클라이언트에서 `getFavoriteIds()` 로 저장된 id 읽기 → **신규 쿼리 `getCirclesByIds(ids)`** (`lib/supabase/queries/circles.ts`, `.in("id", ids)`) 로 카드 데이터 fetch → 카드 그리드 렌더. 빈 상태 안내. 카드별 하트 해제 시 목록 즉시 반영(`kc-favorites-changed` 이벤트 활용) + 비교 체크박스(최대 3개, 초과 시 `toast`).
-  - 「比較する」 → `/compare?ids=a,b,c` (T-024 에서 비교 페이지).
-  - **계정 동기화는 추후**: 로그인 도입 시 보존된 DB `favorites` 테이블 + 서버 액션으로 기기 간 동기화 확장.
-  - **모바일 (기본)**: 카드 그리드 1열(`sm:grid-cols-2`), 비교 체크박스 터치 타깃 44px, 「比較する」 하단 sticky 바.
+- **T-017: 즐겨찾기 페이지**
+  - `app/favorites/page.tsx`: 로그인 필수 (미로그인 시 `/auth/login?next=/favorites` 리디렉션).
+  - 카드 그리드 + 카드별 하트 해제 버튼 + 비교 체크박스 (최대 3개, 초과 시 `toast` 경고).
+  - 「比較する」 버튼 → `/compare?ids=a,b,c` 로 이동 (Phase 1 후반 stretch goal — T-024 에서 실제 비교 페이지 구현).
+  - **모바일 (기본)**: 카드 그리드 1열 (`sm:grid-cols-2`). 비교 체크박스는 카드 좌상단 24×24px 이상 + 터치 타깃 영역 44px 확보. 「比較する」 버튼은 하단 sticky 바(`md:` 이상에서는 카드 그리드 상단 인라인 버튼).
 
 - **T-018: 단체 등록 폼 + URL 화이트리스트 검증** — 우선순위
   - `app/circles/new/page.tsx` (Client Component, RHF + Zod).

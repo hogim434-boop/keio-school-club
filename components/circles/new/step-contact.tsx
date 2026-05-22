@@ -36,7 +36,7 @@ import { LazyMotion, domAnimation, m, useReducedMotion } from "motion/react";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AUTH_INPUT_CLS } from "@/lib/auth/input-class";
-import { submitRegistration } from "@/lib/circles/submit-registration";
+import { submitRegistration, updateCircle } from "@/lib/circles/submit-registration";
 import type { RegistrationValues } from "@/lib/circles/registration-schema";
 import { cn } from "@/lib/utils";
 
@@ -50,10 +50,14 @@ export const CIRCLE_REGISTRATION_FORM_ID = "circle-registration";
 // ── Props ──────────────────────────────────────────────────────────────────
 export interface StepContactProps {
   /**
-   * 등록 성공 후 호출되는 콜백.
-   * CircleRegistrationForm 이 전달하며, 호출 시 step=done 으로 전환한다.
+   * 등록/수정 성공 후 호출되는 콜백.
+   * create: 컨테이너가 step=done 으로 전환 / edit: 상세 페이지로 복귀.
    */
   onRegistered: () => void;
+  /** "create"(기본) | "edit" — edit 면 서약 UI 를 숨기고 updateCircle 로 제출. */
+  mode?: "create" | "edit";
+  /** edit 모드 대상 서클 id — updateCircle 호출에 사용. */
+  circleId?: string;
 }
 
 // ── 스타일 토큰 ──────────────────────────────────────────────────────────────
@@ -80,7 +84,9 @@ const ERROR_MSG_CLS = "text-xs text-red-500";
  *  - 본문: <form id={CIRCLE_REGISTRATION_FORM_ID} onSubmit={handleSubmit(onSubmit)}>
  *  - 제출 버튼: 컨테이너 footer 의 <Button type="submit" form={CIRCLE_REGISTRATION_FORM_ID}>
  */
-export function StepContact({ onRegistered }: StepContactProps) {
+export function StepContact({ onRegistered, mode = "create", circleId }: StepContactProps) {
+  const isEdit = mode === "edit";
+
   // ── FormContext 접근 ─────────────────────────────────────────────────────
   const {
     register,
@@ -115,15 +121,19 @@ export function StepContact({ onRegistered }: StepContactProps) {
     const rawCover = getValues("cover");
     const coverFile = rawCover instanceof File ? rawCover : null;
 
-    const result = await submitRegistration(values, coverFile);
+    // edit: updateCircle(UPDATE) / create: submitRegistration(INSERT)
+    const result =
+      isEdit && circleId
+        ? await updateCircle(circleId, values, coverFile)
+        : await submitRegistration(values, coverFile);
 
     if ("error" in result) {
-      // circles INSERT 실패 — 에러 메시지 표시 후 재시도 가능 상태로 복원
+      // 제출 실패 — 에러 메시지 표시 후 재시도 가능 상태로 복원
       setSubmitError(result.error);
       return;
     }
 
-    // 성공 → 컨테이너가 "done" 단계로 전환
+    // 성공 → 컨테이너가 done 단계 전환(create) 또는 상세 복귀(edit)
     onRegistered();
   };
 
@@ -150,10 +160,12 @@ export function StepContact({ onRegistered }: StepContactProps) {
           transition={makeFadeTransition(0.05)}
         >
           <h1 className="text-[1.75rem] leading-snug font-bold tracking-tight">
-            連絡先・規約への同意
+            {isEdit ? "連絡先" : "連絡先・規約への同意"}
           </h1>
           <p className="text-muted-foreground text-sm">
-            公式 SNS の URL を入力し、利用規約に同意してください
+            {isEdit
+              ? "公式 SNS の URL を入力してください"
+              : "公式 SNS の URL を入力し、利用規約に同意してください"}
           </p>
         </m.div>
 
@@ -256,89 +268,91 @@ export function StepContact({ onRegistered }: StepContactProps) {
           </div>
         </m.div>
 
-        {/* ── 서약 체크박스 그룹 ──────────────────────────────────────── */}
-        <m.div
-          className="flex flex-col gap-4"
-          variants={FADE_UP_VARIANTS}
-          initial={initial}
-          animate="visible"
-          transition={makeFadeTransition(0.2)}
-        >
-          <p className={cn(FIELD_LABEL_CLS, "text-base")}>規約への同意</p>
+        {/* ── 서약 체크박스 그룹 — edit 모드에서는 숨김(재동의 불필요) ── */}
+        {!isEdit && (
+          <m.div
+            className="flex flex-col gap-4"
+            variants={FADE_UP_VARIANTS}
+            initial={initial}
+            animate="visible"
+            transition={makeFadeTransition(0.2)}
+          >
+            <p className={cn(FIELD_LABEL_CLS, "text-base")}>規約への同意</p>
 
-          {/* 서약 1: 실재 단체 + 학칙 준수 선언 */}
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-start gap-3">
-              {/*
+            {/* 서약 1: 실재 단체 + 학칙 준수 선언 */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-start gap-3">
+                {/*
                 Controller 사용 이유:
                 shadcn Checkbox(Radix UI) 는 checked/onCheckedChange API 사용.
                 RHF register 는 onChange/value API 이므로 Controller 로 브릿지.
                 checked: !!value 로 boolean 강제 변환 (defaultValues 의 false 대응).
               */}
-              <Controller
-                control={control}
-                name="pledge1"
-                render={({ field }) => (
-                  <Checkbox
-                    id="pledge1"
-                    checked={!!field.value}
-                    onCheckedChange={(checked) => {
-                      // Radix UI onCheckedChange 는 boolean | "indeterminate" 반환
-                      // indeterminate 는 false 로 처리
-                      field.onChange(checked === true);
-                    }}
-                    aria-invalid={!!errors.pledge1}
-                    aria-describedby={errors.pledge1 ? "error-pledge1" : undefined}
-                    // 체크박스는 form submit 시 Radix 가 hidden input 처리 — name 불필요
-                    className={cn(
-                      "mt-0.5 shrink-0",
-                      // 에러 시 border 붉게
-                      errors.pledge1 && "border-red-400"
-                    )}
-                  />
-                )}
-              />
-              <label htmlFor="pledge1" className="cursor-pointer text-sm leading-relaxed">
-                本団体は実在し、慶應義塾大学の学則に違反しないことを誓約します
-              </label>
+                <Controller
+                  control={control}
+                  name="pledge1"
+                  render={({ field }) => (
+                    <Checkbox
+                      id="pledge1"
+                      checked={!!field.value}
+                      onCheckedChange={(checked) => {
+                        // Radix UI onCheckedChange 는 boolean | "indeterminate" 반환
+                        // indeterminate 는 false 로 처리
+                        field.onChange(checked === true);
+                      }}
+                      aria-invalid={!!errors.pledge1}
+                      aria-describedby={errors.pledge1 ? "error-pledge1" : undefined}
+                      // 체크박스는 form submit 시 Radix 가 hidden input 처리 — name 불필요
+                      className={cn(
+                        "mt-0.5 shrink-0",
+                        // 에러 시 border 붉게
+                        errors.pledge1 && "border-red-400"
+                      )}
+                    />
+                  )}
+                />
+                <label htmlFor="pledge1" className="cursor-pointer text-sm leading-relaxed">
+                  本団体は実在し、慶應義塾大学の学則に違反しないことを誓約します
+                </label>
+              </div>
+              {errors.pledge1 && (
+                <p id="error-pledge1" role="alert" className={cn(ERROR_MSG_CLS, "pl-7")}>
+                  {errors.pledge1.message}
+                </p>
+              )}
             </div>
-            {errors.pledge1 && (
-              <p id="error-pledge1" role="alert" className={cn(ERROR_MSG_CLS, "pl-7")}>
-                {errors.pledge1.message}
-              </p>
-            )}
-          </div>
 
-          {/* 서약 2: 비공식 서비스 + 책임 인지 */}
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-start gap-3">
-              <Controller
-                control={control}
-                name="pledge2"
-                render={({ field }) => (
-                  <Checkbox
-                    id="pledge2"
-                    checked={!!field.value}
-                    onCheckedChange={(checked) => {
-                      field.onChange(checked === true);
-                    }}
-                    aria-invalid={!!errors.pledge2}
-                    aria-describedby={errors.pledge2 ? "error-pledge2" : undefined}
-                    className={cn("mt-0.5 shrink-0", errors.pledge2 && "border-red-400")}
-                  />
-                )}
-              />
-              <label htmlFor="pledge2" className="cursor-pointer text-sm leading-relaxed">
-                本サービスは慶應義塾大学公式の認証とは無関係であり、登録内容の責任は本人に帰属することを理解しました
-              </label>
+            {/* 서약 2: 비공식 서비스 + 책임 인지 */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-start gap-3">
+                <Controller
+                  control={control}
+                  name="pledge2"
+                  render={({ field }) => (
+                    <Checkbox
+                      id="pledge2"
+                      checked={!!field.value}
+                      onCheckedChange={(checked) => {
+                        field.onChange(checked === true);
+                      }}
+                      aria-invalid={!!errors.pledge2}
+                      aria-describedby={errors.pledge2 ? "error-pledge2" : undefined}
+                      className={cn("mt-0.5 shrink-0", errors.pledge2 && "border-red-400")}
+                    />
+                  )}
+                />
+                <label htmlFor="pledge2" className="cursor-pointer text-sm leading-relaxed">
+                  本サービスは慶應義塾大学公式の認証とは無関係であり、登録内容の責任は本人に帰属することを理解しました
+                </label>
+              </div>
+              {errors.pledge2 && (
+                <p id="error-pledge2" role="alert" className={cn(ERROR_MSG_CLS, "pl-7")}>
+                  {errors.pledge2.message}
+                </p>
+              )}
             </div>
-            {errors.pledge2 && (
-              <p id="error-pledge2" role="alert" className={cn(ERROR_MSG_CLS, "pl-7")}>
-                {errors.pledge2.message}
-              </p>
-            )}
-          </div>
-        </m.div>
+          </m.div>
+        )}
 
         {/* ── 제출 에러 + isSubmitting 상태 표시 ─────────────────────── */}
         <m.div
