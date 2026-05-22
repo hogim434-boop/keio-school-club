@@ -294,6 +294,11 @@ export async function getCirclesByCategory(category: string, limit = 8): Promise
 /**
  * 서클 상세 1건 — circles/[id] 페이지에서 사용.
  * circle_images, circle_tags(tags) 전부 JOIN.
+ *
+ * status 필터를 두지 않는다 — RLS 정책 circles_select_public_or_owner_or_admin 이
+ * "approved 는 공개 / pending·rejected 는 owner(또는 admin)만" 을 자동 판정한다.
+ * 따라서 비로그인·비소유자가 미승인 서클을 조회하면 RLS 가 SELECT 를 막아 data=null →
+ * 호출측(page)의 notFound() 흐름으로 처리되고, 소유자는 본인의 미승인 상세(프리뷰)를 볼 수 있다.
  */
 export async function getCircleById(id: string): Promise<CircleDetail | null> {
   const supabase = await createClient();
@@ -301,7 +306,6 @@ export async function getCircleById(id: string): Promise<CircleDetail | null> {
     .from("circles")
     .select("*, circle_tags(tags(slug)), circle_images(*)")
     .eq("id", id)
-    .eq("status", "approved")
     .maybeSingle();
 
   if (error) {

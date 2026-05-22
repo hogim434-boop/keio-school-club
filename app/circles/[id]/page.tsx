@@ -53,11 +53,14 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
 
   /**
    * fire-and-forget 조회수 증가 RPC — await 하지 않아 렌더 블로킹 없음.
+   * approved 서클만 증가시킨다(소유자의 미승인 프리뷰가 조회수를 올리지 않도록).
    * 에러 시 콘솔 출력만, UX에 영향 없음.
    */
-  supabase.rpc("increment_view_count", { p_circle_id: id }).then(({ error }) => {
-    if (error) console.warn("[increment_view_count]", error.message);
-  });
+  if (circle.status === "approved") {
+    supabase.rpc("increment_view_count", { p_circle_id: id }).then(({ error }) => {
+      if (error) console.warn("[increment_view_count]", error.message);
+    });
+  }
 
   return (
     <article className="space-y-6">

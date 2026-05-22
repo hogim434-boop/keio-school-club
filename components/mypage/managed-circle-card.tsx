@@ -25,6 +25,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Construction, Ellipsis, Users } from "lucide-react";
 import { useReducedMotion } from "motion/react";
 import * as m from "motion/react-m";
@@ -95,6 +96,16 @@ export function ManagedCircleCard({ circle, onRequestDelete, className }: Manage
   /* OS "동작 줄이기" 감지 — true 이면 whileTap 비활성 */
   const shouldReduceMotion = useReducedMotion();
 
+  /* 카드 클릭 시 상세 페이지로 이동시키기 위한 router */
+  const router = useRouter();
+
+  /**
+   * 카드 클릭/Enter → 상세 페이지 이동.
+   * 미승인(審査中·却下) 서클도 소유자는 RLS 로 상세(프리뷰)를 볼 수 있다.
+   * 카드 내부의 버튼·토글·메뉴는 stopPropagation 으로 이 이동에서 제외된다.
+   */
+  const goToDetail = () => router.push(`/circles/${circle.id}`);
+
   /* official_type 표시 라벨: athletics/intercollegiate 만 반환, 나머지 null */
   const officialTypeLabel = getOfficialTypeDisplayLabel(circle.official_type);
 
@@ -124,7 +135,17 @@ export function ManagedCircleCard({ circle, onRequestDelete, className }: Manage
       <m.div
         whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
         transition={SPRING_PRESS}
-        className={cn("w-full", className)}
+        onClick={goToDetail}
+        role="link"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            goToDetail();
+          }
+        }}
+        aria-label={`${circle.name} の詳細を見る`}
+        className={cn("w-full cursor-pointer", className)}
       >
         <Card className="overflow-hidden p-0">
           {/* ── 커버 이미지 16:9 ── */}
@@ -162,6 +183,8 @@ export function ManagedCircleCard({ circle, onRequestDelete, className }: Manage
                       size="icon"
                       className="text-muted-foreground hover:text-foreground size-7 shrink-0"
                       aria-label="メニューを開く"
+                      // 메뉴 버튼 클릭이 카드 전체 클릭(상세 이동)으로 버블링되지 않도록 차단
+                      onClick={(e) => e.stopPropagation()}
                     >
                       <Ellipsis className="size-4" aria-hidden="true" />
                     </Button>
@@ -186,10 +209,15 @@ export function ManagedCircleCard({ circle, onRequestDelete, className }: Manage
               {officialTypeLabel && <span> · {officialTypeLabel}</span>}
             </p>
 
-            {/* ── status 별 분기 본문 ── */}
-            {circle.status === "approved" && <ApprovedContent circle={circle} />}
-            {circle.status === "pending" && <PendingContent circle={circle} />}
-            {circle.status === "rejected" && <RejectedContent circle={circle} />}
+            {/* ── status 별 분기 본문 ──
+                내부 버튼(編集)·모집 토글 클릭이 카드 전체 클릭(상세 이동)으로 버블링되지 않도록
+                stopPropagation 래퍼로 감싼다. (메트릭 등 비인터랙티브 영역도 포함되지만,
+                상세 이동은 커버·서클명·카테고리 영역 클릭으로 충분히 가능) */}
+            <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
+              {circle.status === "approved" && <ApprovedContent circle={circle} />}
+              {circle.status === "pending" && <PendingContent circle={circle} />}
+              {circle.status === "rejected" && <RejectedContent circle={circle} />}
+            </div>
           </CardContent>
         </Card>
       </m.div>
