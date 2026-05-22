@@ -188,7 +188,7 @@ export function ManagedCircleCard({ circle, onRequestDelete, className }: Manage
 
             {/* ── status 별 분기 본문 ── */}
             {circle.status === "approved" && <ApprovedContent circle={circle} />}
-            {circle.status === "pending" && <PendingContent />}
+            {circle.status === "pending" && <PendingContent circle={circle} />}
             {circle.status === "rejected" && <RejectedContent circle={circle} />}
           </CardContent>
         </Card>
@@ -252,16 +252,16 @@ function ApprovedContent({ circle }: { circle: MyCircle }) {
         <RecruitmentToggle circleId={circle.id} current={circle.recruitment_status} />
       )}
 
-      {/* 編集する — 상세 페이지(/circles/[id]) 로 이동. 실제 작동하는 링크. */}
+      {/* 編集する — 편집 폼(/circles/[id]/edit) 으로 이동. */}
       <Button asChild className="h-10 w-full">
-        <Link href={`/circles/${circle.id}`}>編集する</Link>
+        <Link href={`/circles/${circle.id}/edit`}>編集する</Link>
       </Button>
     </>
   );
 }
 
-/** pending: 審査中 안내 박스 + 편집 버튼 비활성 */
-function PendingContent() {
+/** pending: 審査中 안내 박스 + 編集 링크(재제출) */
+function PendingContent({ circle }: { circle: MyCircle }) {
   return (
     <>
       {/* 審査中 안내 — amber 톤 */}
@@ -269,18 +269,15 @@ function PendingContent() {
         審査中です。公開までお待ちください。
       </div>
 
-      {/* 편집 버튼 비활성 + 보조 텍스트 */}
-      <div className="space-y-1.5">
-        <Button disabled className="h-10 w-full" aria-disabled="true">
-          編集する
-        </Button>
-        <p className="text-muted-foreground text-center text-xs">公開後に編集できます</p>
-      </div>
+      {/* 編集する — 審査中에도 수정 가능(재제출). 편집 폼으로 이동. */}
+      <Button asChild variant="outline" className="h-10 w-full">
+        <Link href={`/circles/${circle.id}/edit`}>編集する</Link>
+      </Button>
     </>
   );
 }
 
-/** rejected: 却下理由 박스 + 편집 버튼 비활성 */
+/** rejected: 却下理由 박스 + 修正して再申請 링크 */
 function RejectedContent({ circle }: { circle: MyCircle }) {
   return (
     <>
@@ -292,13 +289,10 @@ function RejectedContent({ circle }: { circle: MyCircle }) {
         </div>
       )}
 
-      {/* 편집 버튼 비활성 + 보조 텍스트 */}
-      <div className="space-y-1.5">
-        <Button disabled className="h-10 w-full" aria-disabled="true">
-          編集する
-        </Button>
-        <p className="text-muted-foreground text-center text-xs">修正は近日対応</p>
-      </div>
+      {/* 修正して再申請 — 편집 폼으로 이동. 수정 제출 시 審査中(pending)으로 재신청됨. */}
+      <Button asChild className="h-10 w-full">
+        <Link href={`/circles/${circle.id}/edit`}>修正して再申請</Link>
+      </Button>
     </>
   );
 }

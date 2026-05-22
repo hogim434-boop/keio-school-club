@@ -219,8 +219,30 @@ export async function updateCircle(
     return { error: "ログインが必要です。再度ログインしてください。" };
   }
 
-  // ── 단계 2: circles UPDATE (핵심 단계) ────────────────
-  // slug / status / pledge_accepted_at 미포함(보존). owner_id 는 변경하지 않음.
+  // ── 단계 2: 현재 status 조회 — 재제출 분기 판단 ──────
+  // rejected → pending 재신청 / pending → pending 유지 / approved → approved 유지
+  const { data: currentRow, error: fetchError } = await supabase
+    .from("circles")
+    .select("status")
+    .eq("id", circleId)
+    .single();
+
+  if (fetchError || !currentRow) {
+    return { error: fetchError?.message ?? "サークル情報の取得に失敗しました" };
+  }
+
+  const currentStatus = currentRow.status as string;
+
+  // ── 단계 3: circles UPDATE (핵심 단계) ────────────────
+  // slug / pledge_accepted_at 는 변경하지 않음(URL 안정성·최초 동의 시각 보존).
+  // status 분기:
+  //   - rejected: status='pending', rejection_reason=null 포함 → 재신청
+  //               (트리거 check_circles_status_change 가 소유자의 rejected→pending 만 허용)
+  //   - pending / approved: status 변경 없음 → 트리거 조건(NEW.status IS DISTINCT FROM OLD.status)
+  //                         미충족이므로 트리거 예외 미발생
+  const statusFields =
+    currentStatus === "rejected" ? { status: "pending" as const, rejection_reason: null } : {};
+
   const { error: updateError } = await supabase
     .from("circles")
     .update({
@@ -235,6 +257,8 @@ export async function updateCircle(
       contact_x: values.contact_x?.trim() || null,
       contact_line: values.contact_line?.trim() || null,
       updated_at: new Date().toISOString(),
+      // 재신청 시에만 status/rejection_reason 포함, 나머지는 현재 값 유지
+      ...statusFields,
     })
     .eq("id", circleId);
 

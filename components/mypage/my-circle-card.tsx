@@ -2,10 +2,18 @@
  * 내 서클 카드 컴포넌트
  * 마이페이지 /mypage/circles 에서 사용자가 등록한 서클 1건을 표시하는 카드.
  * 서버 컴포넌트 — "use client" 없음. 정적 마크업/스타일 전용.
+ *
+ * 편집 버튼 정책 (T-018-edit):
+ *  - approved: 「編集する」 → /circles/{id}/edit 링크
+ *  - pending:  「編集する」 → /circles/{id}/edit 링크 (심사 중에도 수정 가능)
+ *  - rejected: 「修正して再申請」 → /circles/{id}/edit 링크 (강조 스타일, 却下理由 박스 유지)
  */
+
+import Link from "next/link";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { CATEGORY_LABELS } from "@/lib/constants/category";
 import { getOfficialTypeDisplayLabel } from "@/lib/constants/official-type";
 import { CIRCLE_STATUS_LABELS } from "@/lib/constants/circle-status";
@@ -84,10 +92,23 @@ export function MyCircleCard({ circle, className }: MyCircleCardProps) {
           </div>
         )}
 
-        {/* ── 하단 구분선 + 편집 placeholder ── */}
-        {/* TODO: T-018 서클 편집 폼 구현 후 Link/Button으로 교체 */}
+        {/* ── 하단 구분선 + 편집 버튼 ── */}
+        {/* 모든 status 에서 편집 활성. rejected 는 강조 스타일 + 재신청 문구. */}
         <div className="mt-3 border-t pt-3">
-          <span className="text-muted-foreground text-xs">編集は近日対応</span>
+          {circle.status === "rejected" ? (
+            // 却下: 강조 스타일(keio-navy 배경) + 재신청 문구
+            <Button
+              asChild
+              className="bg-keio-navy text-keio-navy-foreground h-9 w-full rounded-lg text-sm font-semibold hover:opacity-90"
+            >
+              <Link href={`/circles/${circle.id}/edit`}>修正して再申請</Link>
+            </Button>
+          ) : (
+            // approved / pending: 일반 outline 스타일 편집 버튼
+            <Button asChild variant="outline" className="h-9 w-full rounded-lg text-sm">
+              <Link href={`/circles/${circle.id}/edit`}>編集する</Link>
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

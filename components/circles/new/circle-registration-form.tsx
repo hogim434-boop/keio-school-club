@@ -202,14 +202,20 @@ export function CircleRegistrationForm({
   }, [step, trigger, router, basePath]);
 
   // ── contact 단계 제출 성공 콜백 ──
-  // create: 完了(審査中) 단계로 / edit: 수정 후 상세 페이지로 복귀.
+  // create: 完了(審査中) 단계로 / edit: 마이페이지로 복귀.
+  //
+  // edit 후 마이페이지로 복귀하는 이유:
+  //   - rejected → pending(재신청) 시 상세 페이지(/circles/{id})는 approved 필터로 접근 불가
+  //   - pending 상태의 동아리도 상세 페이지 접근이 막혀 있어 마이페이지가 안전한 착지점
+  //   - router.refresh() 로 마이페이지 서클 목록을 최신화
   const handleRegistered = useCallback(() => {
-    if (isEdit && circleId) {
-      router.replace(`/circles/${circleId}`);
+    if (isEdit) {
+      router.refresh();
+      router.replace("/mypage");
     } else {
       router.replace(`${basePath}?step=done`);
     }
-  }, [router, isEdit, circleId, basePath]);
+  }, [router, isEdit, basePath]);
 
   // ── 단계별 backHref (뒤로가기 링크) ──
   // edit 첫 단계는 상세(/circles/{id})로, create 첫 단계는 마이페이지로 복귀.

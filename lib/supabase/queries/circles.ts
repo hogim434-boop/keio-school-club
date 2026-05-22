@@ -441,6 +441,38 @@ export async function getFavorites(userId: string): Promise<CircleSummary[]> {
 }
 
 /**
+ * 소유자용 서클 상세 조회 — 편집 페이지(/circles/{id}/edit)에서 사용.
+ *
+ * getCircleById 와 동일한 JOIN + toCircleDetail 매핑을 재사용하지만
+ * status 필터를 두지 않는다.
+ *
+ * RLS circles_select_public_or_owner_or_admin 정책이 자동으로
+ *   - approved: 누구나 조회 가능
+ *   - pending / rejected: owner 또는 admin 만 조회 가능
+ * 을 적용하므로, 소유자가 아닌 사용자가 미승인 서클을 조회하면 RLS 가 막아 null 을 반환한다.
+ *
+ * 편집 페이지는 추가로 circle.owner_id !== userId 를 직접 확인해 명시적 가드를 적용한다.
+ *
+ * @param id 서클 UUID
+ */
+export async function getCircleForEdit(id: string): Promise<CircleDetail | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("circles")
+    .select("*, circle_tags(tags(slug)), circle_images(*)")
+    .eq("id", id)
+    // status 필터 없음 — pending / rejected 도 소유자·admin 은 조회 가능
+    .maybeSingle();
+
+  if (error) {
+    console.error("[getCircleForEdit]", error.message);
+    return null;
+  }
+  if (!data) return null;
+  return toCircleDetail(data as Record<string, unknown>);
+}
+
+/**
  * 즐겨찾기 여부 확인 — 서클 상세 페이지 하트 초기 상태에 사용.
  * @param userId 인증된 사용자 UUID
  * @param circleId 서클 UUID
