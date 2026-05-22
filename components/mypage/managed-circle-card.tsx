@@ -3,12 +3,17 @@
 /**
  * ManagedCircleCard — 마이페이지 운영 카드 (핵심 컴포넌트).
  *
- * props: circle: MyCircle
+ * props: circle: MyCircle, onRequestDelete: () => void
  *
  * status 별 분기:
  * - approved: 커버 이미지 + 메트릭 3종 + 모집 상태 뱃지 + "編集する" 링크 (작동)
  * - pending:  커버 이미지 + 審査中 안내 박스(amber) + 편집 버튼 비활성
  * - rejected: 커버 이미지 + 却下理由 박스(destructive) + 편집 버튼 비활성
+ *
+ * 삭제 기능:
+ * - 카드 우상단 ⋯ (MoreVertical) 버튼 → DropdownMenu → 「削除する」
+ * - AlertDialog 로 최종 확인 후 onRequestDelete() 호출
+ * - DropdownMenu + AlertDialog 포커스 충돌 방지를 위해 controlled state 사용
  *
  * 모션:
  * - 카드 루트: whileTap scale 0.97 + SPRING_PRESS (reduced-motion 시 비활성)
@@ -17,15 +22,32 @@
  * 접근성: useReducedMotion() 으로 whileTap 우회.
  */
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Construction, Users } from "lucide-react";
+import { Construction, Ellipsis, Users } from "lucide-react";
 import { useReducedMotion } from "motion/react";
 import * as m from "motion/react-m";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { CATEGORY_LABELS } from "@/lib/constants/category";
 import { CIRCLE_STATUS_LABELS } from "@/lib/constants/circle-status";
 import { MEMBER_BAND_LABELS } from "@/lib/constants/member-band";
@@ -39,6 +61,8 @@ import { RecruitmentToggle } from "./recruitment-toggle";
 
 interface ManagedCircleCardProps {
   circle: MyCircle;
+  /** 삭제 확인 다이얼로그 → OK 시 부모(MyPageView)의 handleDelete 를 호출 */
+  onRequestDelete: () => void;
   className?: string;
 }
 
@@ -67,62 +91,137 @@ function StatusBadge({ status }: { status: MyCircle["status"] }) {
   );
 }
 
-export function ManagedCircleCard({ circle, className }: ManagedCircleCardProps) {
+export function ManagedCircleCard({ circle, onRequestDelete, className }: ManagedCircleCardProps) {
   /* OS "동작 줄이기" 감지 — true 이면 whileTap 비활성 */
   const shouldReduceMotion = useReducedMotion();
 
   /* official_type 표시 라벨: athletics/intercollegiate 만 반환, 나머지 null */
   const officialTypeLabel = getOfficialTypeDisplayLabel(circle.official_type);
 
-  return (
-    /* m.div: 카드 루트에 press 피드백 (whileTap scale 0.97) */
-    <m.div
-      whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
-      transition={SPRING_PRESS}
-      className={cn("w-full", className)}
-    >
-      <Card className="overflow-hidden p-0">
-        {/* ── 커버 이미지 16:9 ── */}
-        <div className="bg-muted relative aspect-video w-full">
-          {circle.cover_image_url ? (
-            <Image
-              src={circle.cover_image_url}
-              alt={circle.name}
-              fill
-              sizes="(max-width: 672px) 100vw, 672px"
-              className="object-cover"
-            />
-          ) : (
-            /* 커버 없을 때 Construction 아이콘 placeholder */
-            <div className="text-muted-foreground flex h-full w-full items-center justify-center">
-              <Construction className="size-10" aria-hidden="true" />
-            </div>
-          )}
-        </div>
+  /*
+   * DropdownMenu + AlertDialog 포커스 충돌 방지를 위해 controlled state 사용.
+   * - menuOpen: 드롭다운 열림 여부
+   * - dialogOpen: 삭제 확인 다이얼로그 열림 여부
+   *
+   * 「削除する」 클릭 시:
+   *   1. 메뉴를 먼저 닫음(setMenuOpen(false))
+   *   2. 다음 틱에서 다이얼로그를 열어 포커스 이동을 올바르게 처리
+   */
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
-        <CardContent className="space-y-3 p-4">
-          {/* ── 상단 행: 서클명 + 심사 상태 뱃지 ── */}
-          <div className="flex items-start justify-between gap-3">
-            <h3 className="line-clamp-2 min-w-0 flex-1 text-sm leading-snug font-semibold">
-              {circle.name}
-            </h3>
-            <StatusBadge status={circle.status} />
+  /** 메뉴의 「削除する」 클릭 핸들러 */
+  const handleDeleteMenuClick = () => {
+    // 메뉴를 먼저 닫은 뒤 다이얼로그 열기
+    setMenuOpen(false);
+    // setTimeout 0: 메뉴 close 애니메이션이 끝나고 포커스가 트리거로 돌아온 뒤 다이얼로그 열림
+    setTimeout(() => setDialogOpen(true), 0);
+  };
+
+  return (
+    <>
+      {/* m.div: 카드 루트에 press 피드백 (whileTap scale 0.97) */}
+      <m.div
+        whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
+        transition={SPRING_PRESS}
+        className={cn("w-full", className)}
+      >
+        <Card className="overflow-hidden p-0">
+          {/* ── 커버 이미지 16:9 ── */}
+          <div className="bg-muted relative aspect-video w-full">
+            {circle.cover_image_url ? (
+              <Image
+                src={circle.cover_image_url}
+                alt={circle.name}
+                fill
+                sizes="(max-width: 672px) 100vw, 672px"
+                className="object-cover"
+              />
+            ) : (
+              /* 커버 없을 때 Construction 아이콘 placeholder */
+              <div className="text-muted-foreground flex h-full w-full items-center justify-center">
+                <Construction className="size-10" aria-hidden="true" />
+              </div>
+            )}
           </div>
 
-          {/* ── 카테고리 · official_type 라벨 ── */}
-          <p className="text-muted-foreground text-sm">
-            {CATEGORY_LABELS[circle.category]}
-            {/* 体育会 / インカレ 일 때만 가운데점 구분 */}
-            {officialTypeLabel && <span> · {officialTypeLabel}</span>}
-          </p>
+          <CardContent className="space-y-3 p-4">
+            {/* ── 상단 행: 서클명 + 심사 상태 뱃지 + ⋯ 메뉴 ── */}
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="line-clamp-2 min-w-0 flex-1 text-sm leading-snug font-semibold">
+                {circle.name}
+              </h3>
+              {/* 우상단 뱃지 + ⋯ 메뉴 묶음 */}
+              <div className="flex shrink-0 items-center gap-1">
+                <StatusBadge status={circle.status} />
+                {/* ⋯ 더보기 메뉴 (삭제 등) */}
+                <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-foreground size-7 shrink-0"
+                      aria-label="メニューを開く"
+                    >
+                      <Ellipsis className="size-4" aria-hidden="true" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-32">
+                    {/* 削除する — destructive 색상으로 위험 동작임을 시각화 */}
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer text-sm"
+                      onSelect={handleDeleteMenuClick}
+                    >
+                      削除する
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
 
-          {/* ── status 별 분기 본문 ── */}
-          {circle.status === "approved" && <ApprovedContent circle={circle} />}
-          {circle.status === "pending" && <PendingContent />}
-          {circle.status === "rejected" && <RejectedContent circle={circle} />}
-        </CardContent>
-      </Card>
-    </m.div>
+            {/* ── 카테고리 · official_type 라벨 ── */}
+            <p className="text-muted-foreground text-sm">
+              {CATEGORY_LABELS[circle.category]}
+              {/* 体育会 / インカレ 일 때만 가운데점 구분 */}
+              {officialTypeLabel && <span> · {officialTypeLabel}</span>}
+            </p>
+
+            {/* ── status 별 분기 본문 ── */}
+            {circle.status === "approved" && <ApprovedContent circle={circle} />}
+            {circle.status === "pending" && <PendingContent />}
+            {circle.status === "rejected" && <RejectedContent circle={circle} />}
+          </CardContent>
+        </Card>
+      </m.div>
+
+      {/* ── 삭제 확인 AlertDialog (카드 외부에 렌더해 포커스 트랩 충돌 방지) ── */}
+      <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {/* 서클명을 따옴표로 감싸 어떤 서클인지 명확히 표시 */}「{circle.name}
+              」を削除しますか?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              この操作は取り消せません。活動レポートなどの関連データもすべて削除されます。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            {/* 삭제 실행 — destructive 스타일로 위험 동작 강조 */}
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                setDialogOpen(false);
+                onRequestDelete();
+              }}
+            >
+              削除する
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
