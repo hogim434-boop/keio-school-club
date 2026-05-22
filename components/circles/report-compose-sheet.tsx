@@ -29,7 +29,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { LazyMotion, domAnimation, m, useReducedMotion } from "motion/react";
-import { ImageIcon, Loader2, Plus, X } from "lucide-react";
+import { ImagePlus, Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -470,6 +470,30 @@ export function ReportComposeSheet({ circleId }: ReportComposeSheetProps) {
                 )}
               </m.div>
 
+              {/* ── 활동 날짜 (선택) ───────────────────────── */}
+              <m.div
+                className="flex flex-col gap-1.5"
+                variants={FADE_UP_VARIANTS}
+                initial={initial}
+                animate="visible"
+                transition={makeFadeTransition(0.22)}
+              >
+                <label htmlFor="report-date" className={FIELD_LABEL_CLS}>
+                  活動日
+                  <span className="text-muted-foreground ml-1.5 text-xs font-normal">
+                    （任意・未設定なら今日）
+                  </span>
+                </label>
+                <Input
+                  id="report-date"
+                  type="date"
+                  // 미래 날짜 방지 — 오늘까지만 선택 가능
+                  max={new Date().toISOString().split("T")[0]}
+                  className={cn(AUTH_INPUT_CLS, "appearance-none")}
+                  {...register("event_date")}
+                />
+              </m.div>
+
               {/* ── 이미지 (선택, 최대 8장) ───────────────── */}
               <m.div
                 className="flex flex-col gap-2"
@@ -496,57 +520,63 @@ export function ReportComposeSheet({ circleId }: ReportComposeSheetProps) {
                   onChange={handleImageChange}
                 />
 
-                {/* 이미지 미리보기 그리드 */}
-                {imagePreviews.length > 0 && (
-                  <ul
-                    className="grid grid-cols-3 gap-2 sm:grid-cols-4"
-                    aria-label="選択した画像のプレビュー"
-                  >
-                    {imagePreviews.map((url, index) => (
-                      <li key={url} className="relative aspect-square">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={url}
-                          alt={`画像 ${index + 1}`}
-                          className="h-full w-full rounded-lg object-cover"
-                        />
-                        {/* 삭제 버튼 */}
-                        <button
-                          type="button"
-                          onClick={() => handleImageRemove(index)}
-                          aria-label={`画像 ${index + 1} を削除`}
-                          className={cn(
-                            "absolute top-1 right-1 flex size-5 items-center justify-center",
-                            "rounded-full bg-black/60 text-white transition-opacity hover:bg-black/80"
-                          )}
-                        >
-                          <X className="size-3" aria-hidden="true" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                {/*
+                 * 이미지 그리드 — 업로드된 이미지 셀들 + 마지막에 ＋타일(인라인).
+                 * 레퍼런스 UX: 한 장 올리면 그 옆에 점선 ＋타일이 붙어 이어서 추가.
+                 */}
+                <ul
+                  className="grid grid-cols-3 gap-2 sm:grid-cols-4"
+                  aria-label="活動画像（プレビューと追加）"
+                >
+                  {/* 업로드된 이미지 셀 */}
+                  {imagePreviews.map((url, index) => (
+                    <li key={url} className="relative aspect-square">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={url}
+                        alt={`画像 ${index + 1}`}
+                        className="border-border h-full w-full rounded-xl border object-cover"
+                      />
+                      {/* 삭제 버튼 — 레퍼런스처럼 우상단 원형 X */}
+                      <button
+                        type="button"
+                        onClick={() => handleImageRemove(index)}
+                        aria-label={`画像 ${index + 1} を削除`}
+                        className={cn(
+                          "absolute top-1.5 right-1.5 flex size-6 items-center justify-center",
+                          "rounded-full bg-black/55 text-white transition-opacity hover:bg-black/75"
+                        )}
+                      >
+                        <X className="size-3.5" aria-hidden="true" />
+                      </button>
+                    </li>
+                  ))}
 
-                {/* 이미지 추가 버튼 — MAX_IMAGES 미만일 때만 표시 */}
-                {imageFiles.length < MAX_IMAGES && (
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className={cn(
-                      "flex h-20 w-full flex-col items-center justify-center gap-1.5 rounded-xl",
-                      "border-border text-muted-foreground border-2 border-dashed bg-neutral-50",
-                      "hover:border-muted-foreground transition-colors hover:bg-neutral-100",
-                      "active:bg-neutral-200"
-                    )}
-                    aria-label="画像を追加する"
-                  >
-                    <ImageIcon className="size-6 opacity-40" aria-hidden="true" />
-                    <span className="text-xs">
-                      画像を追加
-                      {imageFiles.length > 0 ? `（${imageFiles.length}/${MAX_IMAGES}）` : ""}
-                    </span>
-                  </button>
-                )}
+                  {/* ＋타일 — MAX_IMAGES 미만일 때 그리드 마지막 셀에 인라인 표시 */}
+                  {imageFiles.length < MAX_IMAGES && (
+                    <li className="aspect-square">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className={cn(
+                          "flex h-full w-full flex-col items-center justify-center gap-1 rounded-xl",
+                          "border-keio-navy/30 text-keio-navy/70 border-2 border-dashed",
+                          "hover:border-keio-navy/50 hover:bg-keio-navy/5 transition-colors",
+                          "active:bg-keio-navy/10"
+                        )}
+                        aria-label="画像を追加する"
+                      >
+                        <ImagePlus className="size-6" aria-hidden="true" />
+                        {/* 첫 추가 전에는 안내 텍스트, 이후엔 카운트 */}
+                        <span className="text-[11px] font-medium">
+                          {imageFiles.length === 0
+                            ? "画像を追加"
+                            : `${imageFiles.length}/${MAX_IMAGES}`}
+                        </span>
+                      </button>
+                    </li>
+                  )}
+                </ul>
 
                 {/* 이미지 검증 에러 메시지 */}
                 {imageError && (

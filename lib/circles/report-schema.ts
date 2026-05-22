@@ -53,6 +53,13 @@ export const reportSchema = z.object({
 
   /** 장소 (선택, 최대 100자) */
   location: z.string().max(100, "場所は100文字以内で入力してください").optional(),
+
+  /**
+   * 활동 날짜 (선택) — native <input type="date"> 값("YYYY-MM-DD").
+   * 설정 시 activity_reports.created_at 으로 저장(표시·정렬 기준).
+   * 미설정 시 DB default now() = 작성일.
+   */
+  event_date: z.string().optional(),
 });
 
 // ─────────────────────────────────────────

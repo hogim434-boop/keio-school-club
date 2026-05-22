@@ -80,6 +80,13 @@ export async function submitActivityReport(
 
   // ── 단계 2: activity_reports INSERT (핵심 단계) ────────
 
+  // 활동 날짜(任意) — 설정 시 created_at 으로 저장(표시·정렬 기준), 미설정 시 키 생략 → DB default now().
+  // "YYYY-MM-DD" → ISO. 표시(formatJpDate)는 날짜 부분만 쓰므로 timezone 영향 없음.
+  const createdAtField =
+    values.event_date && values.event_date.trim()
+      ? { created_at: new Date(values.event_date).toISOString() }
+      : {};
+
   const { data: reportRow, error: insertError } = await supabase
     .from("activity_reports")
     .insert({
@@ -92,6 +99,8 @@ export async function submitActivityReport(
       activity_type: values.activity_type ?? null,
       // location: 빈 문자열 → null (DB 컬럼 nullable, 빈 문자열 혼재 방지)
       location: values.location?.trim() || null,
+      // 활동 날짜 설정 시에만 created_at 포함 (미설정 시 default now())
+      ...createdAtField,
     })
     .select("id")
     .single();
