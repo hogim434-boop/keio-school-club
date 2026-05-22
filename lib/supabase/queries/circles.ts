@@ -19,6 +19,7 @@ import {
   type RecruitmentStatus,
 } from "@/lib/constants/recruitment-status";
 import type { Category } from "@/lib/constants/category";
+import type { MemberBand } from "@/lib/constants/member-band";
 import type { OfficialType } from "@/lib/constants/official-type";
 import type { CircleStatus } from "@/lib/constants/circle-status";
 
@@ -167,7 +168,8 @@ function toCircleDetail(row: Record<string, unknown>): CircleDetail {
   return {
     ...summary,
     activity_days: (row.activity_days as string) ?? "",
-    member_count: (row.member_count as number) ?? 0,
+    // member_count 는 DB 에 남아 있지만 표시는 member_band 로 대체 (마이그레이션 008)
+    member_band: (row.member_band as MemberBand | null) ?? null,
     contact_instagram: (row.contact_instagram as string | null) ?? null,
     contact_x: (row.contact_x as string | null) ?? null,
     contact_line: (row.contact_line as string | null) ?? null,
@@ -466,6 +468,12 @@ export async function isFavorited(userId: string, circleId: string): Promise<boo
  * 내 서클 목록 한 줄 — 오너 전용 경량 타입.
  * 심사 상태(status)·반려 이유(rejection_reason)를 포함해
  * 마이페이지의 서클 관리 카드에서 상태 뱃지·반려 메시지를 표시한다.
+ *
+ * 운영 대시보드 개편(T-018)으로 운영 지표 추가:
+ * - view_count: 총 조회수 (approved 카드 메트릭에 표시)
+ * - inquiry_count: 문의 수 (approved 카드 메트릭에 표시)
+ * - member_band: 부원 수 범위 (approved 카드 뱃지에 표시 — member_count 에서 교체)
+ * - recruitment_status: 모집 상태 (approved 카드 모집 뱃지에 표시)
  */
 export type MyCircle = {
   id: string;
@@ -477,6 +485,17 @@ export type MyCircle = {
   rejection_reason: string | null;
   cover_image_url: string | null;
   created_at: string;
+  /** 총 조회수 — DB 기본값 0, 항상 number */
+  view_count: number;
+  /**
+   * 부원 수 범위 — 마이그레이션 008. nullable (任意 필드).
+   * 운영 카드에서 뱃지로 표시. 미설정(null) 이면 뱃지 비표시.
+   */
+  member_band: MemberBand | null;
+  /** 문의 수 — DB 기본값 0, 항상 number */
+  inquiry_count: number;
+  /** 모집 상태 — DB enum (recruitment_status_enum). 미설정 시 null 가능성 없음(DB 기본값 있음) */
+  recruitment_status: RecruitmentStatus;
 };
 
 /**
@@ -506,14 +525,19 @@ export async function getMyProfile(
 /**
  * 내 서클 목록 — owner_id 기준, status 무관 전체 조회.
  * RLS circles_select_public_or_owner_or_admin 정책에 의해 owner 본인 행은 통과된다.
+ *
+ * 운영 대시보드 개편(T-018)으로 운영 지표 4종 추가 select:
+ * view_count, member_count, inquiry_count, recruitment_status
+ *
  * @param userId 인증된 사용자 UUID
  */
 export async function getMyCircles(userId: string): Promise<MyCircle[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("circles")
+    // member_count → member_band 로 교체 (마이그레이션 008)
     .select(
-      "id, name, slug, category, official_type, status, rejection_reason, cover_image_url, created_at"
+      "id, name, slug, category, official_type, status, rejection_reason, cover_image_url, created_at, view_count, member_band, inquiry_count, recruitment_status"
     )
     .eq("owner_id", userId)
     .order("created_at", { ascending: false });
@@ -533,6 +557,12 @@ export async function getMyCircles(userId: string): Promise<MyCircle[]> {
       rejection_reason: (r.rejection_reason as string | null) ?? null,
       cover_image_url: (r.cover_image_url as string | null) ?? null,
       created_at: r.created_at as string,
+      // 운영 지표
+      view_count: (r.view_count as number) ?? 0,
+      // 부원 수 범위 — nullable (任意), 미설정이면 null
+      member_band: (r.member_band as MemberBand | null) ?? null,
+      inquiry_count: (r.inquiry_count as number) ?? 0,
+      recruitment_status: r.recruitment_status as MyCircle["recruitment_status"],
     };
   });
 }

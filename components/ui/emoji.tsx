@@ -30,6 +30,8 @@ const EMOJI_MAP = {
   "bust-in-silhouette": "fluent-emoji:bust-in-silhouette",
   bell: "fluent-emoji:bell",
   "magnifying-glass": "fluent-emoji:magnifying-glass-tilted-left",
+  // 마이페이지 빈 상태 (1종)
+  "busts-in-silhouette": "fluent-emoji:busts-in-silhouette",
 } as const;
 
 export type EmojiName = keyof typeof EMOJI_MAP;
