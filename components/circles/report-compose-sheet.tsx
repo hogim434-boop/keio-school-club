@@ -1,19 +1,34 @@
 "use client";
 
 /**
- * ReportComposeSheet — 활동 리포트 작성 바텀 시트 컴포넌트.
+ * ReportComposeSheet — 활동 리포트 작성·수정 바텀 시트 컴포넌트 (작성/수정 공용).
+ *
+ * mode 구분:
+ *  - "create" (기본): 「＋ 投稿する」 SheetTrigger 버튼 내장. 자체 open state 관리.
+ *  - "edit": 외부(⋯ 메뉴)에서 open/onOpenChange 를 controlled 로 전달. SheetTrigger 숨김.
  *
  * 동작 흐름:
- *  1. 「＋ 投稿する」 버튼(SheetTrigger) 클릭 → 바텀 시트 슬라이드업
- *  2. RHF + Zod 폼 입력 (제목·본문·활동종류·장소 + 이미지 0~8장)
- *  3. 「投稿する」 → submitActivityReport(circleId, values, imageFiles)
- *  4. 성공: toast.success + 폼 리셋 + 시트 닫힘 + router.refresh()
- *     실패: toast.error
+ *  create:
+ *    1. 「＋ 投稿する」 버튼(SheetTrigger) 클릭 → 바텀 시트 슬라이드업
+ *    2. RHF + Zod 폼 입력 (제목·본문·활동종류·장소·날짜 + 이미지 0~8장)
+ *    3. 「投稿する」 → submitActivityReport(circleId, values, File[])
+ *    4. 성공: toast.success("投稿しました") + 폼 리셋 + 시트 닫힘 + router.refresh()
+ *       실패: toast.error
+ *  edit:
+ *    1. 외부 ⋯ 메뉴에서 open=true → 바텀 시트 슬라이드업
+ *    2. report 값으로 RHF reset + 이미지 existing 항목으로 초기 로드
+ *    3. 「更新する」 → updateActivityReport(reportId, circleId, values, images)
+ *    4. 성공: toast.success("更新しました") + 시트 닫힘 + onOpenChange(false) + router.refresh()
+ *       실패: toast.error
+ *
+ * 이미지 통합 모델 (ReportImageItem):
+ *  - existing { kind:"existing"; url: string } — DB 에 이미 있는 이미지 URL
+ *  - new      { kind:"new"; file: File }       — 사용자가 새로 선택한 이미지
+ *  작성(create) 시: 전부 new. 수정(edit) 시: existing + new 혼합.
+ *  미리보기 셀은 existing=url, new=objectURL 표시.
  *
  * 설계 주의사항:
- *  - 이미지(File[])는 브라우저 전용 객체 → RHF/Zod 밖 별도 state 로 관리
- *    (submit-registration.ts 의 cover 처리와 동일 패턴)
- *  - submitActivityReport 는 브라우저 클라이언트 전용 함수
+ *  - submitActivityReport 와 updateActivityReport 는 브라우저 클라이언트 전용 함수
  *    (uploadReportImage 가 Canvas API 사용 — Server Action 아님)
  *  - SheetContent: max-h-[90vh] + overflow-y-auto 로 긴 폼도 스크롤 가능
  *  - mx-auto max-w-2xl: 데스크탑에서 시트 폭 제한
@@ -24,16 +39,20 @@
  *  - useReducedMotion 시 즉시 표시 + whileTap 비활성 (접근성)
  */
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { LazyMotion, domAnimation, m, useReducedMotion } from "motion/react";
-import { ImagePlus, Loader2, Plus, X } from "lucide-react";
+import { CalendarIcon, ImagePlus, Loader2, Plus, X } from "lucide-react";
+import { format } from "date-fns";
+import { ja } from "date-fns/locale";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Sheet,
   SheetClose,
@@ -50,7 +69,12 @@ import {
 } from "@/lib/constants/activity-report-type";
 import { validateUpload } from "@/lib/storage/strip-exif";
 import { reportSchema, type ReportValues } from "@/lib/circles/report-schema";
-import { submitActivityReport } from "@/lib/circles/submit-activity-report";
+import {
+  submitActivityReport,
+  updateActivityReport,
+  type ReportImageItem,
+} from "@/lib/circles/submit-activity-report";
+import type { ActivityReport } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
 
 // ─────────────────────────────────────────
@@ -83,12 +107,49 @@ const TEXTAREA_CLS =
 const MAX_IMAGES = 8;
 
 // ─────────────────────────────────────────
+// 이미지 미리보기 아이템 (내부 state 용)
+// ─────────────────────────────────────────
+
+/**
+ * 이미지 state 내부 표현.
+ * - preview: 셀에 표시할 URL (existing=원본 url, new=objectURL)
+ * - item: 제출 시 updateActivityReport 에 넘길 ReportImageItem
+ */
+interface PreviewItem {
+  preview: string;
+  item: ReportImageItem;
+}
+
+// ─────────────────────────────────────────
 // Props
 // ─────────────────────────────────────────
 
 interface ReportComposeSheetProps {
   /** 리포트를 등록할 서클 UUID */
   circleId: string;
+  /**
+   * 모드 — "create"(기본) 또는 "edit".
+   * create: 자체 open state + SheetTrigger 버튼 내장.
+   * edit: 외부 controlled open/onOpenChange + SheetTrigger 숨김.
+   */
+  mode?: "create" | "edit";
+  /** edit 모드 시 수정할 리포트 데이터 */
+  report?: ActivityReport;
+  /** edit 모드 시 외부에서 제어하는 열림 여부 */
+  open?: boolean;
+  /** edit 모드 시 외부 open state 변경 콜백 */
+  onOpenChange?: (open: boolean) => void;
+  /**
+   * SheetTrigger 버튼 표시 여부 (기본 true).
+   * edit 모드에서 외부 ⋯ 메뉴가 open 을 제어할 때 false 로 설정.
+   */
+  showTrigger?: boolean;
+  /**
+   * 트리거 버튼 모양 (기본 "box").
+   * - "box":  풀폭 점선 작성 박스 (게시판 탭 등).
+   * - "tile": 가로 캐러셀 셀(정사각 점선 타일) — 미리보기 캐러셀 첫 칸에 배치.
+   */
+  triggerVariant?: "box" | "tile";
 }
 
 // ─────────────────────────────────────────
@@ -96,29 +157,47 @@ interface ReportComposeSheetProps {
 // ─────────────────────────────────────────
 
 /**
- * 활동 리포트 작성 바텀 시트.
+ * 활동 리포트 작성·수정 바텀 시트.
  *
- * SheetTrigger 안에 「＋ 投稿する」 버튼을 포함하므로,
+ * create 모드: SheetTrigger 안에 「＋ 投稿する」 버튼을 포함하므로
  * 외부에서 별도의 open state 관리 없이 독립적으로 사용 가능.
+ *
+ * edit 모드: 외부(⋯ 메뉴)에서 open/onOpenChange 를 controlled 로 전달.
+ * showTrigger={false} 로 SheetTrigger 버튼을 숨긴다.
  */
-export function ReportComposeSheet({ circleId }: ReportComposeSheetProps) {
+export function ReportComposeSheet({
+  circleId,
+  mode = "create",
+  report,
+  open: externalOpen,
+  onOpenChange: externalOnOpenChange,
+  showTrigger = true,
+  triggerVariant = "box",
+}: ReportComposeSheetProps) {
   const router = useRouter();
   const prefersReducedMotion = useReducedMotion();
 
-  // 시트 open state — 제출 성공 후 프로그래매틱하게 닫기 위해 controlled 로 관리
-  const [open, setOpen] = useState(false);
+  const isEdit = mode === "edit";
+
+  // 시트 open state — create 모드에서는 내부 state, edit 모드에서는 external 로 위임
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = isEdit ? (externalOpen ?? false) : internalOpen;
 
   // 제출 중 로딩 상태
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ── 이미지 파일 state (RHF/Zod 밖) ────────────────────────
-  // File[] + 미리보기 objectURL[] 을 병렬로 관리.
-  // 언마운트 / 삭제 시 URL.revokeObjectURL 로 메모리 해제.
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  // ── 이미지 state (RHF/Zod 밖) ────────────────────────────
+  // PreviewItem[] 통합 배열:
+  //  - create 시: 전부 { kind:"new", file: File }
+  //  - edit 시: existing { kind:"existing", url } + new { kind:"new", file } 혼합
+  const [previewItems, setPreviewItems] = useState<PreviewItem[]>([]);
   const [imageError, setImageError] = useState<string | null>(null);
 
-  /** 숨겨진 file input 참조 — 커스텀 버튼에서 클릭 트리거 */
+  // ── 활동 날짜 state ─────────────────────────────────────
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [dateOpen, setDateOpen] = useState(false);
+
+  /** 숨겨진 file input 참조 */
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── RHF 초기화 ──────────────────────────────────────────
@@ -136,11 +215,53 @@ export function ReportComposeSheet({ circleId }: ReportComposeSheetProps) {
       body: "",
       activity_type: undefined,
       location: "",
+      event_date: "",
     },
   });
 
   /** 현재 선택된 활동종류 실시간 감시 (세그먼트 버튼 하이라이트용) */
   const selectedType = watch("activity_type");
+
+  // ── edit 모드: 시트가 열릴 때 report 값으로 폼 초기화 ────
+  // open 이 true 로 바뀌고 report 가 있을 때만 실행.
+  // 의존성 배열에 report.id 를 포함해 다른 report 로 열릴 때도 갱신.
+  useEffect(() => {
+    if (!isEdit || !open || !report) return;
+
+    // RHF 필드 초기화
+    const dateStr = report.created_at.split("T")[0]; // "YYYY-MM-DD"
+    reset({
+      title: report.title,
+      body: report.body,
+      activity_type: report.activity_type,
+      location: report.location ?? "",
+      event_date: dateStr,
+    });
+
+    // 날짜 선택기 초기화
+    const [year, month, day] = dateStr.split("-").map(Number);
+    setSelectedDate(new Date(year, month - 1, day));
+
+    // 이미지 existing 항목으로 초기화
+    const existingItems: PreviewItem[] = (report.images ?? [])
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((img) => ({
+        preview: img.image_url,
+        item: { kind: "existing" as const, url: img.image_url },
+      }));
+
+    // image_url 만 있고 images[] 가 비어 있는 경우 fallback
+    if (existingItems.length === 0 && report.image_url) {
+      existingItems.push({
+        preview: report.image_url,
+        item: { kind: "existing" as const, url: report.image_url },
+      });
+    }
+
+    setPreviewItems(existingItems);
+    setImageError(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEdit, open, report?.id]);
 
   // ── 애니메이션 헬퍼 ──────────────────────────────────────
   const initial = prefersReducedMotion ? "visible" : "hidden";
@@ -154,9 +275,9 @@ export function ReportComposeSheet({ circleId }: ReportComposeSheetProps) {
    * 이미지 파일 input onChange — 여러 파일을 한 번에 추가.
    *
    * 처리 순서:
-   *  1. 현재 파일 수 + 추가할 파일 수가 MAX_IMAGES 초과 시 에러 표시 (추가 중단)
+   *  1. 현재 아이템 수 + 추가할 파일 수가 MAX_IMAGES 초과 시 에러 표시 (추가 중단)
    *  2. 각 파일을 validateUpload 로 검증 — 실패한 파일은 건너뜀
-   *  3. 검증 통과한 파일만 state 에 추가 + objectURL 미리보기 생성
+   *  3. 검증 통과한 파일만 PreviewItem 으로 변환해 state 에 추가
    */
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -165,58 +286,58 @@ export function ReportComposeSheet({ circleId }: ReportComposeSheetProps) {
     setImageError(null);
 
     // 최대 장수 초과 검사
-    if (imageFiles.length + files.length > MAX_IMAGES) {
+    if (previewItems.length + files.length > MAX_IMAGES) {
       setImageError(`画像は最大${MAX_IMAGES}枚まで追加できます`);
       e.target.value = "";
       return;
     }
 
-    const validFiles: File[] = [];
-    const validUrls: string[] = [];
+    const newItems: PreviewItem[] = [];
     let hasError = false;
 
     for (const file of files) {
       const result = validateUpload(file);
       if (!result.ok) {
-        // validateUpload 의 한국어 메시지를 일본어로 변환
         if (file.size > 4 * 1024 * 1024) {
           setImageError("ファイルサイズは4MB以下にしてください");
         } else {
           setImageError("JPEG・PNG・WebP 形式の画像を選択してください");
         }
         hasError = true;
-        continue; // 이 파일은 건너뜀
+        continue;
       }
-      validFiles.push(file);
-      validUrls.push(URL.createObjectURL(file));
+      newItems.push({
+        preview: URL.createObjectURL(file),
+        item: { kind: "new", file },
+      });
     }
 
     if (!hasError) {
       setImageError(null);
     }
 
-    if (validFiles.length > 0) {
-      setImageFiles((prev) => [...prev, ...validFiles]);
-      setImagePreviews((prev) => [...prev, ...validUrls]);
+    if (newItems.length > 0) {
+      setPreviewItems((prev) => [...prev, ...newItems]);
     }
 
-    // input 값 초기화 (같은 파일 재선택 허용)
     e.target.value = "";
   }
 
   /**
    * 이미지 개별 삭제 핸들러.
+   * new 아이템의 경우 objectURL 메모리 해제도 수행.
    *
    * @param index - 삭제할 이미지 인덱스
    */
   function handleImageRemove(index: number) {
-    // objectURL 메모리 해제
-    const urlToRevoke = imagePreviews[index];
-    if (urlToRevoke) URL.revokeObjectURL(urlToRevoke);
-
-    setImageFiles((prev) => prev.filter((_, i) => i !== index));
-    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
-    // 에러 초기화 (삭제 후 유효한 상태일 수 있으므로)
+    setPreviewItems((prev) => {
+      const item = prev[index];
+      // new 아이템의 objectURL 은 메모리 해제
+      if (item?.item.kind === "new") {
+        URL.revokeObjectURL(item.preview);
+      }
+      return prev.filter((_, i) => i !== index);
+    });
     setImageError(null);
   }
 
@@ -227,24 +348,40 @@ export function ReportComposeSheet({ circleId }: ReportComposeSheetProps) {
    * 제출 성공 후 또는 시트 닫힐 때 호출.
    */
   function resetAll() {
-    reset();
-    // 모든 objectURL 메모리 해제
-    imagePreviews.forEach((url) => URL.revokeObjectURL(url));
-    setImageFiles([]);
-    setImagePreviews([]);
+    reset({
+      title: "",
+      body: "",
+      activity_type: undefined,
+      location: "",
+      event_date: "",
+    });
+    // new 아이템의 objectURL 메모리 해제
+    previewItems.forEach((item) => {
+      if (item.item.kind === "new") {
+        URL.revokeObjectURL(item.preview);
+      }
+    });
+    setPreviewItems([]);
     setImageError(null);
+    setSelectedDate(undefined);
+    setDateOpen(false);
   }
 
   // ── 시트 open 변경 핸들러 ────────────────────────────────
 
   /**
-   * 시트 닫힐 때 폼 초기화.
-   * 제출 중에는 닫기를 막지 않지만, 닫히면 상태를 정리한다.
+   * 시트 열림/닫힘 상태 변경 처리.
+   * create 모드: 내부 state 업데이트.
+   * edit 모드: 외부 onOpenChange 콜백 호출.
+   * 닫힐 때 create 모드에서는 폼 초기화(edit 모드는 useEffect 가 다음 열림 시 재초기화).
    */
   function handleOpenChange(nextOpen: boolean) {
-    setOpen(nextOpen);
-    if (!nextOpen) {
-      resetAll();
+    if (isEdit) {
+      externalOnOpenChange?.(nextOpen);
+      if (!nextOpen) resetAll();
+    } else {
+      setInternalOpen(nextOpen);
+      if (!nextOpen) resetAll();
     }
   }
 
@@ -252,23 +389,43 @@ export function ReportComposeSheet({ circleId }: ReportComposeSheetProps) {
 
   /**
    * RHF handleSubmit 콜백 — Zod 검증 통과 후 호출.
+   * mode 에 따라 submitActivityReport / updateActivityReport 분기.
    */
   async function onSubmit(values: ReportValues) {
     setIsSubmitting(true);
 
     try {
-      const result = await submitActivityReport(circleId, values, imageFiles);
+      if (isEdit && report) {
+        // ── 수정 모드 ──────────────────────────────────────
+        const result = await updateActivityReport(report.id, circleId, values, [
+          ...previewItems.map((p) => p.item),
+        ]);
 
-      if ("error" in result) {
-        // 실패: 에러 toast 표시
-        toast.error(result.error);
+        if ("error" in result) {
+          toast.error(result.error);
+        } else {
+          toast.success("更新しました");
+          handleOpenChange(false);
+          router.refresh();
+        }
       } else {
-        // 성공: 성공 toast + 시트 닫기 + 목록 갱신
-        toast.success("投稿しました");
-        setOpen(false);
-        resetAll();
-        // router.refresh() 로 board 탭의 ActivityReportsList 를 서버 데이터 기준으로 갱신
-        router.refresh();
+        // ── 작성 모드 ──────────────────────────────────────
+        // create 시에는 new 아이템 File 만 추출해 기존 submitActivityReport 에 전달
+        const imageFiles = previewItems
+          .filter(
+            (p): p is PreviewItem & { item: { kind: "new"; file: File } } => p.item.kind === "new"
+          )
+          .map((p) => p.item.file);
+
+        const result = await submitActivityReport(circleId, values, imageFiles);
+
+        if ("error" in result) {
+          toast.error(result.error);
+        } else {
+          toast.success("投稿しました");
+          handleOpenChange(false);
+          router.refresh();
+        }
       }
     } finally {
       setIsSubmitting(false);
@@ -277,20 +434,44 @@ export function ReportComposeSheet({ circleId }: ReportComposeSheetProps) {
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      {/* 「＋ 投稿する」 트리거 버튼 */}
-      <SheetTrigger asChild>
-        <m.div whileTap={prefersReducedMotion ? {} : { scale: 0.96 }} className="inline-flex">
-          <Button
-            variant="default"
-            size="sm"
-            className="bg-keio-navy hover:bg-keio-navy/90 gap-1.5"
-            aria-label="活動レポートを投稿する"
-          >
-            <Plus className="size-4" aria-hidden="true" />
-            投稿する
-          </Button>
-        </m.div>
-      </SheetTrigger>
+      {/* 트리거 버튼 — showTrigger=false(edit 모드)에서 숨김 */}
+      {showTrigger &&
+        (triggerVariant === "tile" ? (
+          /* tile: 가로 캐러셀 셀 — 미리보기 카드(w-36/md:w-44 + 정사각 썸네일)와 정렬. */
+          <SheetTrigger asChild>
+            <m.button
+              type="button"
+              whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
+              aria-label="活動レポートを投稿する"
+              className={cn(
+                "w-36 shrink-0 snap-start md:w-44",
+                "flex aspect-square flex-col items-center justify-center gap-1.5 rounded-lg",
+                "border-keio-navy/30 text-keio-navy border-2 border-dashed",
+                "hover:border-keio-navy/50 hover:bg-keio-navy/5 transition-colors"
+              )}
+            >
+              <Plus className="size-6" aria-hidden="true" />
+              <span className="text-xs font-medium">投稿</span>
+            </m.button>
+          </SheetTrigger>
+        ) : (
+          /* box(기본): 풀폭 점선 작성 박스 — 게시판 탭 등. */
+          <SheetTrigger asChild>
+            <m.button
+              type="button"
+              whileTap={prefersReducedMotion ? undefined : { scale: 0.99 }}
+              aria-label="活動レポートを投稿する"
+              className={cn(
+                "flex w-full items-center justify-center gap-2 rounded-xl py-3.5",
+                "border-keio-navy/30 text-keio-navy border-2 border-dashed text-sm font-medium",
+                "hover:border-keio-navy/50 hover:bg-keio-navy/5 transition-colors"
+              )}
+            >
+              <Plus className="size-4" aria-hidden="true" />
+              活動レポートを投稿
+            </m.button>
+          </SheetTrigger>
+        ))}
 
       {/*
        * SheetContent:
@@ -305,9 +486,11 @@ export function ReportComposeSheet({ circleId }: ReportComposeSheetProps) {
         showCloseButton={false}
       >
         <LazyMotion features={domAnimation}>
-          {/* 헤더 */}
+          {/* 헤더 — mode 에 따라 타이틀 변경 */}
           <SheetHeader className="px-4 pb-2">
-            <SheetTitle className="text-lg">活動レポートを投稿</SheetTitle>
+            <SheetTitle className="text-lg">
+              {isEdit ? "活動レポートを編集" : "活動レポートを投稿"}
+            </SheetTitle>
           </SheetHeader>
 
           {/* 폼 본문 */}
@@ -383,7 +566,7 @@ export function ReportComposeSheet({ circleId }: ReportComposeSheetProps) {
                 )}
               </m.div>
 
-              {/* ── 활동종류 세그먼트 (선택) ───────────────── */}
+              {/* ── 활동종류 세그먼트 (필수) ────────────────── */}
               <m.div
                 className="flex flex-col gap-1.5"
                 variants={FADE_UP_VARIANTS}
@@ -393,10 +576,12 @@ export function ReportComposeSheet({ circleId }: ReportComposeSheetProps) {
               >
                 <p className={FIELD_LABEL_CLS}>
                   活動種類
-                  <span className="text-muted-foreground ml-1.5 text-xs font-normal">（任意）</span>
+                  <span className="ml-1 text-red-500" aria-hidden="true">
+                    *
+                  </span>
                 </p>
                 {/*
-                 * 세그먼트 칩 토글 — 선택 → 해제 가능 (任意 필드).
+                 * 세그먼트 칩 토글 — 선택 → 해제 없이 선택만 (다른 칩 클릭으로 전환).
                  * step-basic.tsx 의 member_band 칩 단일 선택 패턴과 동일.
                  */}
                 <ul className="flex flex-wrap gap-2" role="radiogroup" aria-label="活動種類を選択">
@@ -406,21 +591,10 @@ export function ReportComposeSheet({ circleId }: ReportComposeSheetProps) {
                       <li key={type}>
                         <button
                           type="button"
-                          onClick={() => {
-                            // 이미 선택된 칩 재클릭 시 선택 해제
-                            if (isSelected) {
-                              setValue("activity_type", undefined, { shouldValidate: true });
-                            } else {
-                              setValue("activity_type", type, { shouldValidate: true });
-                            }
-                          }}
+                          onClick={() => setValue("activity_type", type, { shouldValidate: true })}
                           role="radio"
                           aria-checked={isSelected}
-                          aria-label={
-                            isSelected
-                              ? `${ACTIVITY_REPORT_TYPE_LABELS[type]}（選択済み、クリックで解除）`
-                              : ACTIVITY_REPORT_TYPE_LABELS[type]
-                          }
+                          aria-label={ACTIVITY_REPORT_TYPE_LABELS[type]}
                           className={cn(
                             "flex h-10 shrink-0 items-center justify-center rounded-md border-2",
                             "px-3.5 text-sm whitespace-nowrap transition-colors",
@@ -435,6 +609,11 @@ export function ReportComposeSheet({ circleId }: ReportComposeSheetProps) {
                     );
                   })}
                 </ul>
+                {errors.activity_type && (
+                  <p role="alert" className={ERROR_MSG_CLS}>
+                    {errors.activity_type.message}
+                  </p>
+                )}
               </m.div>
 
               {/* ── 장소 필드 (선택) ──────────────────────── */}
@@ -470,7 +649,7 @@ export function ReportComposeSheet({ circleId }: ReportComposeSheetProps) {
                 )}
               </m.div>
 
-              {/* ── 활동 날짜 (선택) ───────────────────────── */}
+              {/* ── 활동 날짜 (필수) ────────────────────────── */}
               <m.div
                 className="flex flex-col gap-1.5"
                 variants={FADE_UP_VARIANTS}
@@ -478,20 +657,54 @@ export function ReportComposeSheet({ circleId }: ReportComposeSheetProps) {
                 animate="visible"
                 transition={makeFadeTransition(0.22)}
               >
-                <label htmlFor="report-date" className={FIELD_LABEL_CLS}>
+                <span className={FIELD_LABEL_CLS}>
                   活動日
-                  <span className="text-muted-foreground ml-1.5 text-xs font-normal">
-                    （任意・未設定なら今日）
+                  <span className="ml-1 text-red-500" aria-hidden="true">
+                    *
                   </span>
-                </label>
-                <Input
-                  id="report-date"
-                  type="date"
-                  // 미래 날짜 방지 — 오늘까지만 선택 가능
-                  max={new Date().toISOString().split("T")[0]}
-                  className={cn(AUTH_INPUT_CLS, "appearance-none")}
-                  {...register("event_date")}
-                />
+                </span>
+                {/* RHF 등록용 hidden input — 실제 값은 Calendar onSelect 의 setValue 로 갱신 */}
+                <input type="hidden" {...register("event_date")} />
+                {/* shadcn Date Picker — Popover 트리거 버튼 + Calendar */}
+                <Popover open={dateOpen} onOpenChange={setDateOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn(
+                        "h-12 justify-start gap-2 rounded-xl bg-neutral-100 px-3 text-base font-normal",
+                        "border-0 shadow-none hover:bg-neutral-100",
+                        !selectedDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="size-4 opacity-60" aria-hidden="true" />
+                      {selectedDate
+                        ? format(selectedDate, "yyyy年M月d日(E)", { locale: ja })
+                        : "日付を選択"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(date) => {
+                        setSelectedDate(date);
+                        // RHF event_date 동기화 — Date → "YYYY-MM-DD" 문자열
+                        setValue("event_date", date ? format(date, "yyyy-MM-dd") : "");
+                        setDateOpen(false);
+                      }}
+                      // 미래 날짜 방지 — 오늘까지만
+                      disabled={{ after: new Date() }}
+                      autoFocus
+                      locale={ja}
+                    />
+                  </PopoverContent>
+                </Popover>
+                {errors.event_date && (
+                  <p role="alert" className={ERROR_MSG_CLS}>
+                    {errors.event_date.message}
+                  </p>
+                )}
               </m.div>
 
               {/* ── 이미지 (선택, 최대 8장) ───────────────── */}
@@ -522,22 +735,22 @@ export function ReportComposeSheet({ circleId }: ReportComposeSheetProps) {
 
                 {/*
                  * 이미지 그리드 — 업로드된 이미지 셀들 + 마지막에 ＋타일(인라인).
-                 * 레퍼런스 UX: 한 장 올리면 그 옆에 점선 ＋타일이 붙어 이어서 추가.
+                 * existing: 원본 URL 표시 / new: objectURL 표시.
                  */}
                 <ul
                   className="grid grid-cols-3 gap-2 sm:grid-cols-4"
                   aria-label="活動画像（プレビューと追加）"
                 >
-                  {/* 업로드된 이미지 셀 */}
-                  {imagePreviews.map((url, index) => (
-                    <li key={url} className="relative aspect-square">
+                  {/* 이미지 셀 — existing / new 통합 표시 */}
+                  {previewItems.map((item, index) => (
+                    <li key={item.preview} className="relative aspect-square">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={url}
+                        src={item.preview}
                         alt={`画像 ${index + 1}`}
                         className="border-border h-full w-full rounded-xl border object-cover"
                       />
-                      {/* 삭제 버튼 — 레퍼런스처럼 우상단 원형 X */}
+                      {/* 삭제 버튼 — 우상단 원형 X */}
                       <button
                         type="button"
                         onClick={() => handleImageRemove(index)}
@@ -553,7 +766,7 @@ export function ReportComposeSheet({ circleId }: ReportComposeSheetProps) {
                   ))}
 
                   {/* ＋타일 — MAX_IMAGES 미만일 때 그리드 마지막 셀에 인라인 표시 */}
-                  {imageFiles.length < MAX_IMAGES && (
+                  {previewItems.length < MAX_IMAGES && (
                     <li className="aspect-square">
                       <button
                         type="button"
@@ -569,9 +782,9 @@ export function ReportComposeSheet({ circleId }: ReportComposeSheetProps) {
                         <ImagePlus className="size-6" aria-hidden="true" />
                         {/* 첫 추가 전에는 안내 텍스트, 이후엔 카운트 */}
                         <span className="text-[11px] font-medium">
-                          {imageFiles.length === 0
+                          {previewItems.length === 0
                             ? "画像を追加"
-                            : `${imageFiles.length}/${MAX_IMAGES}`}
+                            : `${previewItems.length}/${MAX_IMAGES}`}
                         </span>
                       </button>
                     </li>
@@ -587,7 +800,7 @@ export function ReportComposeSheet({ circleId }: ReportComposeSheetProps) {
               </m.div>
             </div>
 
-            {/* ── フッター: キャンセル + 投稿する ─────────── */}
+            {/* ── フッター: キャンセル + 投稿する/更新する ─── */}
             <SheetFooter className="flex-row gap-2 px-4 pt-4">
               <SheetClose asChild>
                 <Button type="button" variant="outline" className="flex-1" disabled={isSubmitting}>
@@ -603,13 +816,23 @@ export function ReportComposeSheet({ circleId }: ReportComposeSheetProps) {
                   type="submit"
                   className="bg-keio-navy hover:bg-keio-navy/90 w-full"
                   disabled={isSubmitting}
-                  aria-label={isSubmitting ? "投稿中..." : "投稿する"}
+                  aria-label={
+                    isSubmitting
+                      ? isEdit
+                        ? "更新中..."
+                        : "投稿中..."
+                      : isEdit
+                        ? "更新する"
+                        : "投稿する"
+                  }
                 >
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-1.5 size-4 animate-spin" aria-hidden="true" />
-                      投稿中...
+                      {isEdit ? "更新中..." : "投稿中..."}
                     </>
+                  ) : isEdit ? (
+                    "更新する"
                   ) : (
                     "投稿する"
                   )}

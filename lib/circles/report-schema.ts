@@ -45,21 +45,19 @@ export const reportSchema = z.object({
     .max(5000, "本文は5000文字以内で入力してください"),
 
   /**
-   * 활동 종류 (선택).
+   * 활동 종류 (필수).
    * ACTIVITY_REPORT_TYPES 상수와 DB enum 이 1:1 일치.
-   * undefined 로 두면 DB 에 null 로 저장.
    */
-  activity_type: z.enum(ACTIVITY_REPORT_TYPES).optional(),
+  activity_type: z.enum(ACTIVITY_REPORT_TYPES, "活動種類を選択してください"),
 
-  /** 장소 (선택, 최대 100자) */
+  /** 장소 (선택, 최대 100자) — 유일한 任意 필드 */
   location: z.string().max(100, "場所は100文字以内で入力してください").optional(),
 
   /**
-   * 활동 날짜 (선택) — native <input type="date"> 값("YYYY-MM-DD").
-   * 설정 시 activity_reports.created_at 으로 저장(표시·정렬 기준).
-   * 미설정 시 DB default now() = 작성일.
+   * 활동 날짜 (필수) — Calendar 선택값("YYYY-MM-DD").
+   * activity_reports.created_at 으로 저장(표시·정렬 기준).
    */
-  event_date: z.string().optional(),
+  event_date: z.string().min(1, "活動日を選択してください"),
 });
 
 // ─────────────────────────────────────────

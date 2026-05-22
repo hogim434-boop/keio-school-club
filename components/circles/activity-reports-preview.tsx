@@ -21,6 +21,7 @@ import Image from "next/image";
 import { ChevronRight, Construction } from "lucide-react";
 
 import { SlideOutContext } from "@/app/circles/[id]/template";
+import { ReportComposeSheet } from "@/components/circles/report-compose-sheet";
 import type { ActivityReport } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
 
@@ -31,53 +32,63 @@ interface ActivityReportsPreviewProps {
   reports: ActivityReport[];
   /** 「もっと見る」 클릭 콜백 — 부모가 탭 전환 처리 */
   onMoreClick: () => void;
+  /** 소유자 여부 — true 이면 투고 박스(풀폭 점선) 표시 */
+  isOwner?: boolean;
 }
 
 export function ActivityReportsPreview({
   circleId,
   reports,
   onMoreClick,
+  isOwner = false,
 }: ActivityReportsPreviewProps) {
-  // 리포트 0건이면 섹션 자체 미렌더 (Phase 1.1 더미는 채워져 있어 실제로는 항상 노출)
-  if (reports.length === 0) return null;
+  // 리포트 0건 + 비소유자면 섹션 미렌더. 소유자는 투고 박스를 위해 렌더.
+  if (reports.length === 0 && !isOwner) return null;
+
+  const hasReports = reports.length > 0;
 
   return (
     <section className="space-y-3">
-      {/* 헤더 — 좌측 타이틀 + 우측 「もっと見る」 button */}
+      {/* 헤더 — 좌측 타이틀 + 우측 「もっと見る」 button (리포트 있을 때만) */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">活動レポート</h2>
-        <button
-          type="button"
-          onClick={onMoreClick}
-          className={cn(
-            "text-muted-foreground hover:text-foreground inline-flex items-center gap-0.5 text-sm transition-colors",
-            "focus-visible:ring-ring focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-          )}
-        >
-          もっと見る
-          <ChevronRight className="size-4" aria-hidden="true" />
-        </button>
+        {hasReports && (
+          <button
+            type="button"
+            onClick={onMoreClick}
+            className={cn(
+              "text-muted-foreground hover:text-foreground inline-flex items-center gap-0.5 text-sm transition-colors",
+              "focus-visible:ring-ring focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            )}
+          >
+            もっと見る
+            <ChevronRight className="size-4" aria-hidden="true" />
+          </button>
+        )}
       </div>
 
       {/*
        * 가로 캐러셀 — 풀블리드 (-mx-4 px-4) + snap.
-       * gap-3 + 카드 폭 w-36 / md:w-44 → 모바일 약 2-3장 / 데스크탑 약 4-5장 보임.
+       * 소유자면 첫 칸에 투고 타일(tile), 이어서 리포트 카드. (리포트 0건이어도 소유자면 타일만 표시)
+       * items-start: 정사각 투고 타일이 카드 높이로 stretch 되지 않도록 상단 정렬.
        *
        * data-tab-carousel: 부모 circle-detail-tabs 의 onPointerDown 게이팅에 사용.
-       * 이 속성이 있는 영역 위에서 시작된 포인터 이벤트는 탭 트랙 드래그를 활성화하지 않아
-       * native 가로 스크롤이 그대로 동작한다.
        */}
-      <div
-        data-tab-carousel
-        className={cn(
-          "-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1",
-          "[scroll-padding-inline:1rem] [overscroll-behavior-x:contain]"
-        )}
-      >
-        {reports.map((report) => (
-          <ReportPreviewCard key={report.id} circleId={circleId} report={report} />
-        ))}
-      </div>
+      {(hasReports || isOwner) && (
+        <div
+          data-tab-carousel
+          className={cn(
+            "-mx-4 flex snap-x snap-mandatory items-start gap-3 overflow-x-auto px-4 pb-1",
+            "[scroll-padding-inline:1rem] [overscroll-behavior-x:contain]"
+          )}
+        >
+          {/* 소유자 투고 타일 — 캐러셀 첫 칸(가로 배치) */}
+          {isOwner && <ReportComposeSheet circleId={circleId} triggerVariant="tile" />}
+          {reports.map((report) => (
+            <ReportPreviewCard key={report.id} circleId={circleId} report={report} />
+          ))}
+        </div>
+      )}
     </section>
   );
 }
