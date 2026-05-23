@@ -83,9 +83,18 @@ const TEXTAREA_CLS =
 interface StepBasicProps {
   /** edit 모드 기존 커버 이미지 URL — 새 파일 미선택 시 미리보기로 표시 */
   existingCoverUrl?: string | null;
+  /**
+   * 선택 항목(活動時間帯·活動曜日·会員数·サークル紹介) 노출 여부.
+   * - true(기본·edit): 전체 노출 — 사후 보강 입력처.
+   * - false(신규 등록): 숨김 — 등록 부담을 줄이고 마이페이지 완성도에서 채운다.
+   */
+  showOptionalFields?: boolean;
 }
 
-export function StepBasic({ existingCoverUrl = null }: StepBasicProps = {}) {
+export function StepBasic({
+  existingCoverUrl = null,
+  showOptionalFields = true,
+}: StepBasicProps = {}) {
   // ── FormContext 접근 ─────────────────────────────────────────────────────
   const {
     register,
@@ -365,183 +374,192 @@ export function StepBasic({ existingCoverUrl = null }: StepBasicProps = {}) {
           </div>
         </m.div>
 
-        {/* ── 活動時間帯 · 活動曜日 (선택, 다중) ───────────────────────────── */}
-        <m.div
-          className="flex flex-col gap-5"
-          variants={FADE_UP_VARIANTS}
-          initial={initial}
-          animate="visible"
-          transition={makeFadeTransition(0.23)}
-        >
-          {/* 활동 시간대 칩 (任意·다중) */}
-          <div className="flex flex-col gap-1.5">
-            <p className={FIELD_LABEL_CLS}>
-              活動時間帯
-              <span className="text-muted-foreground ml-1.5 text-xs font-normal">
-                （任意・複数可）
-              </span>
-            </p>
-            <ul className="flex flex-wrap gap-2" aria-label="活動時間帯">
-              {ACTIVITY_TIME_BANDS.map((band) => {
-                const isSelected = selectedTimeBands.includes(band);
-                return (
-                  <li key={band}>
-                    <button
-                      type="button"
-                      aria-pressed={isSelected}
-                      onClick={() =>
-                        setValue("activity_time_band", toggleArrayValue(selectedTimeBands, band), {
-                          shouldValidate: true,
-                        })
-                      }
-                      className={cn(
-                        "flex h-12 shrink-0 items-center justify-center rounded-md border-2",
-                        "px-4 text-sm whitespace-nowrap transition-colors",
-                        isSelected
-                          ? "border-keio-navy bg-keio-navy text-keio-navy-foreground font-semibold"
-                          : "border-border text-muted-foreground hover:border-muted-foreground"
-                      )}
-                    >
-                      {ACTIVITY_TIME_BAND_LABELS[band]}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+        {/* 선택 항목(활동시간대·요일·회원수·소개)은 신규 등록에선 숨기고 마이페이지 보강에서 채운다 */}
+        {showOptionalFields && (
+          <>
+            {/* ── 活動時間帯 · 活動曜日 (선택, 다중) ───────────────────────────── */}
+            <m.div
+              className="flex flex-col gap-5"
+              variants={FADE_UP_VARIANTS}
+              initial={initial}
+              animate="visible"
+              transition={makeFadeTransition(0.23)}
+            >
+              {/* 활동 시간대 칩 (任意·다중) */}
+              <div className="flex flex-col gap-1.5">
+                <p className={FIELD_LABEL_CLS}>
+                  活動時間帯
+                  <span className="text-muted-foreground ml-1.5 text-xs font-normal">
+                    （任意・複数可）
+                  </span>
+                </p>
+                <ul className="flex flex-wrap gap-2" aria-label="活動時間帯">
+                  {ACTIVITY_TIME_BANDS.map((band) => {
+                    const isSelected = selectedTimeBands.includes(band);
+                    return (
+                      <li key={band}>
+                        <button
+                          type="button"
+                          aria-pressed={isSelected}
+                          onClick={() =>
+                            setValue(
+                              "activity_time_band",
+                              toggleArrayValue(selectedTimeBands, band),
+                              {
+                                shouldValidate: true,
+                              }
+                            )
+                          }
+                          className={cn(
+                            "flex h-12 shrink-0 items-center justify-center rounded-md border-2",
+                            "px-4 text-sm whitespace-nowrap transition-colors",
+                            isSelected
+                              ? "border-keio-navy bg-keio-navy text-keio-navy-foreground font-semibold"
+                              : "border-border text-muted-foreground hover:border-muted-foreground"
+                          )}
+                        >
+                          {ACTIVITY_TIME_BAND_LABELS[band]}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
 
-          {/* 활동 요일 칩 (任意·다중) */}
-          <div className="flex flex-col gap-1.5">
-            <p className={FIELD_LABEL_CLS}>
-              活動曜日
-              <span className="text-muted-foreground ml-1.5 text-xs font-normal">
-                （任意・複数可）
-              </span>
-            </p>
-            <ul className="flex flex-wrap gap-2" aria-label="活動曜日">
-              {ACTIVITY_DAY_OPTIONS.map((day) => {
-                const isSelected = selectedWeekdays.includes(day);
-                // 不定期 칩은 글자가 길어 가로 패딩, 요일 1자 칩은 정사각
-                const isIrregular = day === IRREGULAR_DAY;
-                return (
-                  <li key={day}>
-                    <button
-                      type="button"
-                      aria-pressed={isSelected}
-                      onClick={() => toggleWeekday(day)}
-                      className={cn(
-                        "flex h-12 shrink-0 items-center justify-center rounded-md border-2",
-                        "text-sm transition-colors",
-                        isIrregular ? "px-4 whitespace-nowrap" : "w-12",
-                        isSelected
-                          ? "border-keio-navy bg-keio-navy text-keio-navy-foreground font-semibold"
-                          : "border-border text-muted-foreground hover:border-muted-foreground"
-                      )}
-                    >
-                      {day}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </m.div>
+              {/* 활동 요일 칩 (任意·다중) */}
+              <div className="flex flex-col gap-1.5">
+                <p className={FIELD_LABEL_CLS}>
+                  活動曜日
+                  <span className="text-muted-foreground ml-1.5 text-xs font-normal">
+                    （任意・複数可）
+                  </span>
+                </p>
+                <ul className="flex flex-wrap gap-2" aria-label="活動曜日">
+                  {ACTIVITY_DAY_OPTIONS.map((day) => {
+                    const isSelected = selectedWeekdays.includes(day);
+                    // 不定期 칩은 글자가 길어 가로 패딩, 요일 1자 칩은 정사각
+                    const isIrregular = day === IRREGULAR_DAY;
+                    return (
+                      <li key={day}>
+                        <button
+                          type="button"
+                          aria-pressed={isSelected}
+                          onClick={() => toggleWeekday(day)}
+                          className={cn(
+                            "flex h-12 shrink-0 items-center justify-center rounded-md border-2",
+                            "text-sm transition-colors",
+                            isIrregular ? "px-4 whitespace-nowrap" : "w-12",
+                            isSelected
+                              ? "border-keio-navy bg-keio-navy text-keio-navy-foreground font-semibold"
+                              : "border-border text-muted-foreground hover:border-muted-foreground"
+                          )}
+                        >
+                          {day}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </m.div>
 
-        {/* ── 회원수 + 개요 그룹 ──────────────────────────────────────────── */}
-        <m.div
-          className="flex flex-col gap-5"
-          variants={FADE_UP_VARIANTS}
-          initial={initial}
-          animate="visible"
-          transition={makeFadeTransition(0.26)}
-        >
-          {/* 부원 수 범위 칩 단일 선택 (optional) */}
-          {/*
+            {/* ── 회원수 + 개요 그룹 ──────────────────────────────────────────── */}
+            <m.div
+              className="flex flex-col gap-5"
+              variants={FADE_UP_VARIANTS}
+              initial={initial}
+              animate="visible"
+              transition={makeFadeTransition(0.26)}
+            >
+              {/* 부원 수 범위 칩 단일 선택 (optional) */}
+              {/*
             step-tags.tsx 의 칩 토글 패턴을 기반으로,
             단일 선택(라디오 성격) 으로 변형.
             - 이미 선택된 칩 재클릭 → 해제 (nullable 필드라 OK)
             - 미선택 칩 클릭 → 해당 값으로 설정
           */}
-          <div className="flex flex-col gap-1.5">
-            <p className={FIELD_LABEL_CLS}>
-              会員数
-              <span className="text-muted-foreground ml-1.5 text-xs font-normal">（任意）</span>
-            </p>
-            {/* 범위 칩 목록 — flex-wrap 으로 자동 줄바꿈 */}
-            <ul className="flex flex-wrap gap-2" role="radiogroup" aria-label="会員数範囲">
-              {MEMBER_BANDS.map((band) => {
-                const isSelected = selectedBand === band;
-                return (
-                  <li key={band}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        // 이미 선택된 칩 재클릭 시 선택 해제 (任意 필드라 null 허용)
-                        if (isSelected) {
-                          setValue("member_band", undefined, { shouldValidate: true });
-                        } else {
-                          setValue("member_band", band as MemberBand, { shouldValidate: true });
-                        }
-                      }}
-                      role="radio"
-                      aria-checked={isSelected}
-                      aria-label={
-                        isSelected
-                          ? `${MEMBER_BAND_LABELS[band]}（選択済み、クリックで解除）`
-                          : MEMBER_BAND_LABELS[band]
-                      }
-                      className={cn(
-                        // 기본 스타일: step-tags.tsx 의 칩과 동일 (border-2, h-12, rounded-md)
-                        "flex h-12 shrink-0 items-center justify-center rounded-md border-2",
-                        "px-4 text-sm whitespace-nowrap transition-colors",
-                        // 선택 상태: keio-navy 채움 (step-tags 와 동일 토큰)
-                        isSelected
-                          ? "border-keio-navy bg-keio-navy text-keio-navy-foreground font-semibold"
-                          : "border-border text-muted-foreground hover:border-muted-foreground"
-                      )}
-                    >
-                      {MEMBER_BAND_LABELS[band]}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-            {/* 에러 메시지 (スキーマ 검증 실패 시) */}
-            {errors.member_band && (
-              <p id="error-member-band" role="alert" className={ERROR_MSG_CLS}>
-                {errors.member_band.message}
-              </p>
-            )}
-          </div>
+              <div className="flex flex-col gap-1.5">
+                <p className={FIELD_LABEL_CLS}>
+                  会員数
+                  <span className="text-muted-foreground ml-1.5 text-xs font-normal">（任意）</span>
+                </p>
+                {/* 범위 칩 목록 — flex-wrap 으로 자동 줄바꿈 */}
+                <ul className="flex flex-wrap gap-2" role="radiogroup" aria-label="会員数範囲">
+                  {MEMBER_BANDS.map((band) => {
+                    const isSelected = selectedBand === band;
+                    return (
+                      <li key={band}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            // 이미 선택된 칩 재클릭 시 선택 해제 (任意 필드라 null 허용)
+                            if (isSelected) {
+                              setValue("member_band", undefined, { shouldValidate: true });
+                            } else {
+                              setValue("member_band", band as MemberBand, { shouldValidate: true });
+                            }
+                          }}
+                          role="radio"
+                          aria-checked={isSelected}
+                          aria-label={
+                            isSelected
+                              ? `${MEMBER_BAND_LABELS[band]}（選択済み、クリックで解除）`
+                              : MEMBER_BAND_LABELS[band]
+                          }
+                          className={cn(
+                            // 기본 스타일: step-tags.tsx 의 칩과 동일 (border-2, h-12, rounded-md)
+                            "flex h-12 shrink-0 items-center justify-center rounded-md border-2",
+                            "px-4 text-sm whitespace-nowrap transition-colors",
+                            // 선택 상태: keio-navy 채움 (step-tags 와 동일 토큰)
+                            isSelected
+                              ? "border-keio-navy bg-keio-navy text-keio-navy-foreground font-semibold"
+                              : "border-border text-muted-foreground hover:border-muted-foreground"
+                          )}
+                        >
+                          {MEMBER_BAND_LABELS[band]}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {/* 에러 메시지 (スキーマ 검증 실패 시) */}
+                {errors.member_band && (
+                  <p id="error-member-band" role="alert" className={ERROR_MSG_CLS}>
+                    {errors.member_band.message}
+                  </p>
+                )}
+              </div>
 
-          {/* 서클 소개 textarea (optional) */}
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="description" className={FIELD_LABEL_CLS}>
-              サークル紹介
-              <span className="text-muted-foreground ml-1.5 text-xs font-normal">
-                （任意・1000文字以内）
-              </span>
-            </label>
-            <textarea
-              id="description"
-              rows={5}
-              maxLength={1000}
-              placeholder="サークルの活動内容・雰囲気・新入生へのメッセージなどを自由に記入してください"
-              aria-invalid={!!errors.description}
-              aria-describedby={errors.description ? "error-description" : undefined}
-              className={cn(
-                TEXTAREA_CLS,
-                errors.description && "ring-2 ring-red-400 focus-visible:ring-red-400"
-              )}
-              {...register("description")}
-            />
-            {errors.description && (
-              <p id="error-description" role="alert" className={ERROR_MSG_CLS}>
-                {errors.description.message}
-              </p>
-            )}
-          </div>
-        </m.div>
+              {/* 서클 소개 textarea (optional) */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="description" className={FIELD_LABEL_CLS}>
+                  サークル紹介
+                  <span className="text-muted-foreground ml-1.5 text-xs font-normal">
+                    （任意・1000文字以内）
+                  </span>
+                </label>
+                <textarea
+                  id="description"
+                  rows={5}
+                  maxLength={1000}
+                  placeholder="サークルの活動内容・雰囲気・新入生へのメッセージなどを自由に記入してください"
+                  aria-invalid={!!errors.description}
+                  aria-describedby={errors.description ? "error-description" : undefined}
+                  className={cn(
+                    TEXTAREA_CLS,
+                    errors.description && "ring-2 ring-red-400 focus-visible:ring-red-400"
+                  )}
+                  {...register("description")}
+                />
+                {errors.description && (
+                  <p id="error-description" role="alert" className={ERROR_MSG_CLS}>
+                    {errors.description.message}
+                  </p>
+                )}
+              </div>
+            </m.div>
+          </>
+        )}
 
         {/* ── 커버 이미지 (선택) ──────────────────────────────────────────── */}
         <m.div

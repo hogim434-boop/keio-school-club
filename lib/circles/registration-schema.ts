@@ -265,7 +265,10 @@ export const registrationSchema = baseSchema.superRefine(requireAtLeastOneSns);
  * if (isValid) setStep(2);
  */
 export const STEP_FIELDS = {
-  /** 단계 1: 기본 정보 필드 목록 */
+  /**
+   * 단계 1(편집/전체): 기본 정보 전체 필드.
+   * 수정(edit) 화면은 사후 보강 입력처라 시간대·요일·회원수·소개까지 모두 검증·노출.
+   */
   basic: [
     "name",
     "category",
@@ -277,7 +280,14 @@ export const STEP_FIELDS = {
     "description",
   ] as const,
 
-  /** 단계 2: 태그 필드 목록 */
+  /**
+   * 단계 1(신규 등록 최소): 핵심 4종만.
+   * 등록 부담을 줄이기 위해 시간대·요일·회원수·소개·태그는 등록에서 받지 않고
+   * 승인 후 마이페이지(완성도 보강) 에서 채운다. (2026-05 A안)
+   */
+  basicMinimal: ["name", "category", "official_type", "activity_frequency"] as const,
+
+  /** 단계 2: 태그 필드 목록 (수정 화면 전용 — 신규 등록은 태그 단계 스킵) */
   tags: ["tags"] as const,
 
   /** 단계 3: 연락처 + 서약 필드 목록 */

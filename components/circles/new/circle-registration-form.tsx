@@ -55,15 +55,10 @@ import { StepTags } from "@/components/circles/new/step-tags";
 import { StepContact, CIRCLE_REGISTRATION_FORM_ID } from "@/components/circles/new/step-contact";
 
 // ── 단계 순서 정의 ──────────────────────────────────────────────────────────
-// done 을 제외한 실제 입력 단계 수 (StepProgress total 에 사용)
-const INPUT_STEP_COUNT = 3;
-
-// 단계 전환 순서 맵 (현재 step → 다음 step)
-const NEXT_STEP: Record<string, string> = {
-  basic: "tags",
-  tags: "contact",
-  contact: "done",
-};
+// 단계 시퀀스는 mode 에 따라 컴포넌트 내부에서 계산한다 (2026-05 A안):
+//  - create(신규 등록): basic → contact  (입력 2단계, 태그 단계 스킵)
+//  - edit(수정·사후 보강): basic → tags → contact  (전체 3단계)
+// "done" 은 입력 단계가 아니라 완료 화면이므로 시퀀스에서 제외.
 
 // ── 스타일 토큰 ──────────────────────────────────────────────────────────────
 // sign-up-form.tsx 와 동일한 CTA 버튼 스타일
@@ -85,15 +80,6 @@ const DONE_VARIANTS = {
   hidden: { opacity: 0, scale: 0.96 },
   visible: { opacity: 1, scale: 1 },
 } as const;
-
-// ── 단계별 StepProgress current 값 ──────────────────────────────────────────
-// "basic"=1, "tags"=2, "contact"=3, "done"=3 (완료도 3/3 표시)
-const STEP_CURRENT: Record<string, number> = {
-  basic: 1,
-  tags: 2,
-  contact: 3,
-  done: 3,
-};
 
 /** CircleRegistrationForm props — create(신규 등록) / edit(기존 수정) 공용 */
 interface CircleRegistrationFormProps {
@@ -131,6 +117,14 @@ export function CircleRegistrationForm({
   const step = searchParams.get("step") ?? "basic";
 
   const isEdit = mode === "edit";
+
+  // ── 단계 시퀀스 (mode별, done 제외) ──
+  // create: basic → contact (2단계) / edit: basic → tags → contact (3단계)
+  const stepSequence = isEdit
+    ? (["basic", "tags", "contact"] as const)
+    : (["basic", "contact"] as const);
+  const inputStepCount = stepSequence.length;
+  const stepIndex = (stepSequence as readonly string[]).indexOf(step);
 
   // ── useReducedMotion: WCAG SC 2.3.3 접근성 준수 ──
   const reducedMotion = useReducedMotion();
@@ -189,8 +183,14 @@ export function CircleRegistrationForm({
 
   // ── 다음 단계로 이동 (부분검증 통과 시에만) ──
   const goNext = useCallback(async () => {
-    // 현재 단계에 해당하는 필드만 trigger 로 부분검증
-    const fields = STEP_FIELDS[step as keyof typeof STEP_FIELDS];
+    // 현재 단계에 해당하는 필드만 trigger 로 부분검증.
+    // basic 단계는 mode 에 따라 검증 범위가 다르다: create=핵심4만 / edit=전체.
+    const fields =
+      step === "basic"
+        ? isEdit
+          ? STEP_FIELDS.basic
+          : STEP_FIELDS.basicMinimal
+        : STEP_FIELDS[step as keyof typeof STEP_FIELDS];
     if (!fields) return;
 
     // trigger 반환값: 유효하면 true, 에러 있으면 false
@@ -199,11 +199,14 @@ export function CircleRegistrationForm({
     });
     if (!ok) return;
 
-    const next = NEXT_STEP[step];
+    // 현재 단계의 다음 단계로 이동 (mode별 시퀀스 기준)
+    const seq = isEdit ? ["basic", "tags", "contact"] : ["basic", "contact"];
+    const i = seq.indexOf(step);
+    const next = i >= 0 ? seq[i + 1] : undefined;
     if (next) {
       router.push(`${basePath}?step=${next}`);
     }
-  }, [step, trigger, router, basePath]);
+  }, [step, isEdit, trigger, router, basePath]);
 
   // ── contact 단계 제출 성공 콜백 ──
   // create: 完了(審査中) 단계로 / edit: 마이페이지로 복귀.
@@ -222,16 +225,15 @@ export function CircleRegistrationForm({
   }, [router, isEdit, basePath]);
 
   // ── 단계별 backHref (뒤로가기 링크) ──
-  // 첫 단계(basic)는 create·edit 모두 마이페이지로 복귀.
-  // (편집 진입 출처가 마이페이지이고, 상세 페이지로 보내면 "플레이뷰로 들어가는" 혼란이 생김)
+  // 첫 단계는 create·edit 모두 마이페이지로 복귀.
+  //   (편집 진입 출처가 마이페이지이고, 상세 페이지로 보내면 "플레이뷰로 들어가는" 혼란이 생김)
+  // 그 외에는 mode별 시퀀스의 이전 단계로. done 은 뒤로가기 없음.
   const backHref =
-    step === "basic"
-      ? "/mypage"
-      : step === "tags"
-        ? `${basePath}?step=basic`
-        : step === "contact"
-          ? `${basePath}?step=tags`
-          : undefined; // done 단계: 뒤로가기 없음
+    step === "done"
+      ? undefined
+      : stepIndex <= 0
+        ? "/mypage"
+        : `${basePath}?step=${stepSequence[stepIndex - 1]}`;
 
   // ── 완료(done) 단계 ─────────────────────────────────────────────────────
   if (step === "done") {
@@ -240,8 +242,8 @@ export function CircleRegistrationForm({
         <AuthScreen
           align="center"
           progress={
-            // 완료 단계도 3/3 진행 표시 유지
-            <StepProgress current={INPUT_STEP_COUNT} total={INPUT_STEP_COUNT} />
+            // 완료 단계도 마지막 단계로 진행 표시 유지 (create=2/2, edit=3/3)
+            <StepProgress current={inputStepCount} total={inputStepCount} />
           }
         >
           {/* 중앙 집약 그룹: 셀러브레이션 블록 + CTA 버튼 */}
@@ -302,8 +304,8 @@ export function CircleRegistrationForm({
     );
   }
 
-  // ── 현재 단계의 StepProgress current 값 ──
-  const currentStep = STEP_CURRENT[step] ?? 1;
+  // ── 현재 단계의 StepProgress current 값 (시퀀스 기준 1-based) ──
+  const currentStep = stepIndex >= 0 ? stepIndex + 1 : 1;
 
   // ── contact 단계 여부 판별 ──
   const isContactStep = step === "contact";
@@ -397,14 +399,18 @@ export function CircleRegistrationForm({
                   <ArrowLeft className="size-5" aria-hidden="true" />
                 </Link>
               )}
-              <StepProgress current={currentStep} total={INPUT_STEP_COUNT} className="flex-1" />
+              <StepProgress current={currentStep} total={inputStepCount} className="flex-1" />
             </m.div>
           }
           footer={footerCta}
         >
-          {/* 단계별 본문 스텝 컴포넌트 분기 */}
-          {step === "basic" && <StepBasic existingCoverUrl={existingCoverUrl} />}
-          {step === "tags" && <StepTags />}
+          {/* 단계별 본문 스텝 컴포넌트 분기.
+              create 모드는 시간대·요일·회원수·소개를 숨기고(showOptionalFields=false),
+              태그 단계 자체를 스킵한다(사후 마이페이지 보강). edit 모드는 전체 노출. */}
+          {step === "basic" && (
+            <StepBasic existingCoverUrl={existingCoverUrl} showOptionalFields={isEdit} />
+          )}
+          {step === "tags" && isEdit && <StepTags />}
           {step === "contact" && (
             <StepContact onRegistered={handleRegistered} mode={mode} circleId={circleId} />
           )}
