@@ -19,11 +19,24 @@
  * slug 는 DB 키, label_ja 는 UI 라벨.
  */
 export const TAG_SEEDS: { slug: string; label_ja: string }[] = [
+  // 특징
   { slug: "beginner_ok", label_ja: "初心者歓迎" },
   { slug: "kenser_ok", label_ja: "兼サー可" },
   { slug: "has_camp", label_ja: "合宿あり" },
   { slug: "foreign_welcome", label_ja: "留学生の入部歓迎" },
   { slug: "intl_activity", label_ja: "海外で活動あり" },
+  // 活動場所
+  { slug: "on_campus", label_ja: "校内" },
+  { slug: "off_campus", label_ja: "学外" },
+  { slug: "online_place", label_ja: "オンライン" },
+  { slug: "hybrid", label_ja: "混合" },
+  // 入会方法
+  { slug: "first_come", label_ja: "先着順" },
+  { slug: "interview", label_ja: "面接" },
+  { slug: "lottery", label_ja: "抽選" },
+  { slug: "no_screening", label_ja: "選考なし" },
+  // 募集対象
+  { slug: "grade_limited", label_ja: "学年制限あり" },
 ];
 
 /** slug → label_ja 빠른 조회용 record */
