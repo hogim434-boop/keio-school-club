@@ -39,7 +39,6 @@ import { IRREGULAR_DAY } from "@/lib/circles/filter-labels";
 import { CATEGORIES } from "@/lib/constants/category";
 import { MEMBER_BANDS } from "@/lib/constants/member-band";
 import { OFFICIAL_TYPES } from "@/lib/constants/official-type";
-import { RECRUITMENT_STATUSES } from "@/lib/constants/recruitment-status";
 import type { CircleDetail } from "@/lib/types/domain";
 import { instagramUrlToHandle, xUrlToHandle, lineUrlToId } from "@/lib/circles/sns";
 
@@ -117,12 +116,10 @@ const baseSchema = z.object({
   /** 활동 빈도 (DB enum 값) */
   activity_frequency: z.enum(ACTIVITY_FREQUENCIES, "活動頻度を選択してください"),
 
-  /**
-   * 모집 상태 (DB enum, 필수).
-   * 사용자 검색 필터의 「募集状態」 와 매칭되도록 등록 시 운영자가 직접 선택한다.
-   * (이전엔 DB default year_round 로만 들어가 필터와 어긋났던 문제 해소)
-   */
-  recruitment_status: z.enum(RECRUITMENT_STATUSES, "募集状況を選択してください"),
+  // 모집 상태(recruitment_status)는 등록 폼에서 받지 않는다 (2026-05 결정).
+  //  - 신규 등록: 募集中(year_round) 으로 고정 저장 (submit-registration 의 INSERT)
+  //  - 이후 변경: 마이페이지의 모집 상태 토글로 운영자가 직접 조절
+  //  - 편집(updateCircle)은 recruitment_status 를 건드리지 않아 토글 값을 보존
 
   /**
    * 활동 시간대 (복수 가능, 任意).
@@ -274,7 +271,6 @@ export const STEP_FIELDS = {
     "category",
     "official_type",
     "activity_frequency",
-    "recruitment_status",
     "activity_time_band",
     "activity_weekdays",
     "member_band",
@@ -309,8 +305,6 @@ export function circleToEditValues(circle: CircleDetail): RegistrationValues {
     category: circle.category,
     official_type: circle.official_type,
     activity_frequency: circle.activity_frequency,
-    // 모집 상태: null 이면 year_round(募集中) 로 폴백 (필수 필드라 빈 값 불가)
-    recruitment_status: circle.recruitment_status ?? "year_round",
     // 활동 시간대: 신규 enum(ACTIVITY_TIME_BANDS) 값만 — 레거시(weekday_*) 는 제외해
     // 편집 제출 시 z.enum 검증을 통과시킨다.
     activity_time_band: (circle.activity_time_band ?? []).filter(

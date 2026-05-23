@@ -31,10 +31,6 @@ import {
   ACTIVITY_FREQUENCY_LABELS,
 } from "@/lib/constants/activity-frequency";
 import { ACTIVITY_TIME_BANDS, ACTIVITY_TIME_BAND_LABELS } from "@/lib/constants/activity-time-band";
-import {
-  RECRUITMENT_STATUSES,
-  RECRUITMENT_STATUS_LABELS,
-} from "@/lib/constants/recruitment-status";
 import { ACTIVITY_DAY_OPTIONS, IRREGULAR_DAY } from "@/lib/circles/filter-labels";
 import { cn } from "@/lib/utils";
 
@@ -364,38 +360,6 @@ export function StepBasic({ existingCoverUrl = null }: StepBasicProps = {}) {
             {errors.activity_frequency && (
               <p id="error-activity-frequency" role="alert" className={ERROR_MSG_CLS}>
                 {errors.activity_frequency.message}
-              </p>
-            )}
-          </div>
-
-          {/* 모집 상태 select (필수) — 사용자 검색 필터 「募集状態」 와 매칭 */}
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="recruitment_status" className={FIELD_LABEL_CLS}>
-              募集状況
-              <span className="ml-1 text-red-500" aria-hidden="true">
-                *
-              </span>
-            </label>
-            <select
-              id="recruitment_status"
-              aria-invalid={!!errors.recruitment_status}
-              aria-describedby={errors.recruitment_status ? "error-recruitment-status" : undefined}
-              aria-required="true"
-              className={cn(
-                SELECT_CLS,
-                errors.recruitment_status && "ring-2 ring-red-400 focus:ring-red-400"
-              )}
-              {...register("recruitment_status")}
-            >
-              {RECRUITMENT_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {RECRUITMENT_STATUS_LABELS[status]}
-                </option>
-              ))}
-            </select>
-            {errors.recruitment_status && (
-              <p id="error-recruitment-status" role="alert" className={ERROR_MSG_CLS}>
-                {errors.recruitment_status.message}
               </p>
             )}
           </div>
