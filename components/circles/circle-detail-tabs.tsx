@@ -261,15 +261,32 @@ export function CircleDetailTabs({
        * TabsList 스타일 개선 — 트랙/드래그 로직은 아래 LazyMotion 블록에서 완전히 분리되므로 영향 없음.
        * - 활성 탭: text-keio-navy + 굵은 언더라인(h-[3px], rounded-full)
        * - 비활성 탭: text-muted-foreground
-       * - font-semibold + px-5 pb-3 으로 탭 패딩/굵기 강화
+       * - font-semibold + px-5 pt-4 pb-3 으로 탭 패딩/굵기 강화
        * after:h-[3px]: 기본 after:h-0.5(2px) 를 3px 로 오버라이드해 언더라인 두껍게
        * after:rounded-full: 언더라인 양 끝 둥글게
+       *
+       * sticky 고정 (스크롤 시 탭 바가 상단 유지):
+       * - sticky top-0 z-30 bg-background: 탭 위치까지 스크롤하면 상단에 붙어 항상 보임.
+       *   (상세 페이지는 글로벌 헤더가 숨겨져 있어 top-0 = viewport 최상단)
+       * - -mx-4 w-[calc(100%+2rem)] px-4: 부모 px-4 컨테이너를 넘어 bg 가 좌우 끝까지 full-bleed.
+       *   (w-full=콘텐츠폭이라 -mx-4 만으론 우측 32px 부족 → calc 로 보충해 비침 방지)
+       * - pt-[env(safe-area-inset-top)]: notch 기기에서만 상단 inset 만큼 더 띄움(브라우저는 0).
        */}
-      <TabsList variant="line" className="w-full justify-start border-b">
+      <TabsList
+        variant="line"
+        className="bg-background sticky top-0 z-30 -mx-4 w-[calc(100%+2rem)] justify-start border-b px-4 pt-[env(safe-area-inset-top)] pb-0 group-data-[orientation=horizontal]/tabs:h-auto"
+      >
         <TabsTrigger
           value="home"
           className={cn(
-            "px-5 pb-3 font-semibold",
+            // 탭 바 높이 키우기 — shadcn 기본값이 group-data 복합 variant 라 같은 접두사로 override.
+            // - h-auto: 트리거 고정 높이(h-[calc(100%-1px)]) 해제 → pt/pb 가 실제 높이에 반영.
+            // - group-data-[orientation=horizontal]/tabs:after:bottom-0: 언더라인을 기본 -5px → 트리거 바닥
+            //   (= 회색 border-b 위)으로 끌어올려 글자 밑에 붙임(따로 안 뜨게).
+            // - pt-4 pb-3: 살짝 줄인 높이.
+            // - after:bottom-[-2px]: 언더라인을 회색 하단 보더 위로 정확히 내려 일치시킴
+            //   (트리거 투명 보더 오프셋 보정 — Playwright 실측으로 맞춤).
+            "h-auto px-5 pt-4 pb-3 text-base font-semibold group-data-[orientation=horizontal]/tabs:after:bottom-[-2px]",
             // 비활성: muted 색
             "text-muted-foreground",
             // 활성: keio-navy 텍스트 + keio-navy 언더라인(3px, rounded)
@@ -282,7 +299,14 @@ export function CircleDetailTabs({
         <TabsTrigger
           value="board"
           className={cn(
-            "px-5 pb-3 font-semibold",
+            // 탭 바 높이 키우기 — shadcn 기본값이 group-data 복합 variant 라 같은 접두사로 override.
+            // - h-auto: 트리거 고정 높이(h-[calc(100%-1px)]) 해제 → pt/pb 가 실제 높이에 반영.
+            // - group-data-[orientation=horizontal]/tabs:after:bottom-0: 언더라인을 기본 -5px → 트리거 바닥
+            //   (= 회색 border-b 위)으로 끌어올려 글자 밑에 붙임(따로 안 뜨게).
+            // - pt-4 pb-3: 살짝 줄인 높이.
+            // - after:bottom-[-2px]: 언더라인을 회색 하단 보더 위로 정확히 내려 일치시킴
+            //   (트리거 투명 보더 오프셋 보정 — Playwright 실측으로 맞춤).
+            "h-auto px-5 pt-4 pb-3 text-base font-semibold group-data-[orientation=horizontal]/tabs:after:bottom-[-2px]",
             "text-muted-foreground",
             "data-[state=active]:text-keio-navy",
             "data-[state=active]:after:bg-keio-navy data-[state=active]:after:h-[3px] data-[state=active]:after:rounded-full"
