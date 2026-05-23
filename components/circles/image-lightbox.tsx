@@ -14,7 +14,8 @@
  * - useReducedMotion: 현재 scroll 동작 자체에는 영향 없음(브라우저 네이티브 스크롤).
  *
  * 카운터:
- * - IntersectionObserver 로 현재 보이는 이미지 index 추적 → n/total 표시.
+ * - 가로 스크롤 위치(scrollLeft / 컨테이너 폭)로 현재 index 를 계산 → n/total 표시.
+ *   (IntersectionObserver 는 스와이프 중 갱신을 놓치는 경우가 있어 scroll 기반으로 교체)
  *
  * 하단 링크:
  * - 현재 이미지가 reportId 를 가지면 「投稿を見る」 링크 표시.
@@ -103,33 +104,19 @@ export function ImageLightbox({
     return () => cancelAnimationFrame(frame);
   }, [open, initialIndex]);
 
-  // ── IntersectionObserver — 현재 보이는 이미지 index 추적 ──────────────────
-  useEffect(() => {
-    if (!open) return;
-
+  // ── 스크롤 위치 기반 현재 index 추적 ──────────────────────────────────────
+  // 각 이미지 셀이 컨테이너 폭(w-full)과 같으므로, 안착 위치의 scrollLeft 는 index*폭.
+  // round(scrollLeft / 폭) 로 현재 index 를 결정 → 스와이프/스냅 어느 경우든 정확히 갱신.
+  const handleScroll = useCallback(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
-
-    // threshold 0.5: 셀이 50% 이상 보일 때 active 로 판단
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            const index = itemRefs.current.indexOf(entry.target as HTMLDivElement);
-            if (index !== -1) {
-              setCurrentIndex(index);
-            }
-          }
-        }
-      },
-      { root: container, threshold: 0.5 }
-    );
-
-    const els = itemRefs.current;
-    els.forEach((el) => el && io.observe(el));
-
-    return () => io.disconnect();
-  }, [open, images.length]);
+    const width = container.clientWidth;
+    if (width === 0) return;
+    const index = Math.round(container.scrollLeft / width);
+    // 범위 클램프 후 동일 값이면 React 가 리렌더를 생략하므로 throttle 불필요
+    const clamped = Math.max(0, Math.min(index, images.length - 1));
+    setCurrentIndex(clamped);
+  }, [images.length]);
 
   // ── 닫기 핸들러 ───────────────────────────────────────────────────────────
   const handleClose = useCallback(() => {
@@ -184,15 +171,15 @@ export function ImageLightbox({
            */}
           <div
             ref={scrollContainerRef}
+            onScroll={handleScroll}
             className="flex h-full w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain"
             style={{ scrollbarWidth: "none" }} // 스크롤바 숨김 (Firefox)
           >
             {images.map((img, i) => (
               <div
                 key={`${img.url}-${i}`}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 ref={(el) => {
-                  (itemRefs.current as any)[i] = el;
+                  itemRefs.current[i] = el;
                 }}
                 className="relative flex h-full w-full shrink-0 snap-center snap-always items-center justify-center"
               >
