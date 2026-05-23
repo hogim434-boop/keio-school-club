@@ -83,7 +83,7 @@ export function CircleActions({ circle }: CircleActionsProps) {
   const { isFavorited: favorited, toggle, isPending } = useFavorites(circle.id);
 
   /** CTA 텍스트 — 채널(連絡) 모달 오픈 */
-  const ctaText = "参加する";
+  const ctaText = "問い合わせる";
 
   function handleFavoriteToggle() {
     toggle();
