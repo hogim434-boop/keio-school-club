@@ -44,7 +44,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { LazyMotion, domAnimation, m, useReducedMotion } from "motion/react";
-import { CalendarIcon, ImagePlus, Loader2, Plus, X } from "lucide-react";
+import { ArrowLeft, CalendarIcon, ImagePlus, Loader2, Plus, X } from "lucide-react";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { toast } from "sonner";
@@ -221,6 +221,18 @@ export function ReportComposeSheet({
 
   /** 현재 선택된 활동종류 실시간 감시 (세그먼트 버튼 하이라이트용) */
   const selectedType = watch("activity_type");
+
+  /*
+   * 필수 항목 채움 여부 — 제출 버튼 활성/색 전환에 사용.
+   * 필수: 제목 / 본문 / 활동종류 / 활동일 (場所·이미지는 선택).
+   * 채워지면 버튼이 keio-navy 로 차오르고, 비어 있으면 회색(비활성)으로 표시.
+   * (세부 검증(글자수 등)은 제출 시 zod 가 담당 — 여기선 "입력 여부"만 본다)
+   */
+  const watchedTitle = watch("title");
+  const watchedBody = watch("body");
+  const watchedEventDate = watch("event_date");
+  const isRequiredFilled =
+    !!watchedTitle?.trim() && !!watchedBody?.trim() && !!selectedType && !!watchedEventDate;
 
   // ── edit 모드: 시트가 열릴 때 report 값으로 폼 초기화 ────
   // open 이 true 로 바뀌고 report 가 있을 때만 실행.
@@ -486,11 +498,29 @@ export function ReportComposeSheet({
         showCloseButton={false}
       >
         <LazyMotion features={domAnimation}>
-          {/* 헤더 — mode 에 따라 타이틀 변경 */}
+          {/* 헤더 — 좌측 돌아가기(←) 버튼 + 타이틀(mode 에 따라 변경) */}
           <SheetHeader className="px-4 pb-2">
-            <SheetTitle className="text-lg">
-              {isEdit ? "活動レポートを編集" : "活動レポートを投稿"}
-            </SheetTitle>
+            <div className="flex items-center gap-2">
+              {/* 돌아가기 — SheetClose 로 시트 닫기. 제출 중에는 비활성 */}
+              <SheetClose asChild>
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  aria-label="戻る"
+                  className={cn(
+                    "-ml-2 inline-flex size-9 shrink-0 items-center justify-center rounded-full",
+                    "text-foreground hover:bg-muted transition-colors",
+                    "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
+                    "disabled:pointer-events-none disabled:opacity-50"
+                  )}
+                >
+                  <ArrowLeft className="size-5" aria-hidden="true" />
+                </button>
+              </SheetClose>
+              <SheetTitle className="text-lg">
+                {isEdit ? "活動レポートを編集" : "活動レポートを投稿"}
+              </SheetTitle>
+            </div>
           </SheetHeader>
 
           {/* 폼 본문 */}
@@ -800,22 +830,29 @@ export function ReportComposeSheet({
               </m.div>
             </div>
 
-            {/* ── フッター: キャンセル + 投稿する/更新する ─── */}
-            <SheetFooter className="flex-row gap-2 px-4 pt-4">
-              <SheetClose asChild>
-                <Button type="button" variant="outline" className="flex-1" disabled={isSubmitting}>
-                  キャンセル
-                </Button>
-              </SheetClose>
-
+            {/*
+             * ── フッター: 投稿する/更新する (취소는 헤더의 ← 돌아가기로 대체) ───
+             * 서클 상세의 「参加する」처럼 시트 하단에 sticky 고정 — 폼이 길어 스크롤해도
+             * 제출 버튼이 항상 보이도록. bg-background + border-t 로 본문이 비치지 않게 하고
+             * safe-area-inset-bottom 으로 홈 인디케이터 영역 회피.
+             */}
+            <SheetFooter className="bg-background sticky bottom-0 z-10 border-t px-4 pt-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
               <m.div
-                className="flex-1"
-                whileTap={prefersReducedMotion || isSubmitting ? {} : { scale: 0.97 }}
+                className="w-full"
+                whileTap={
+                  prefersReducedMotion || isSubmitting || !isRequiredFilled ? {} : { scale: 0.97 }
+                }
               >
                 <Button
                   type="submit"
-                  className="bg-keio-navy hover:bg-keio-navy/90 w-full"
-                  disabled={isSubmitting}
+                  className={cn(
+                    "w-full transition-colors",
+                    // 필수 항목이 모두 채워지면 keio-navy 로 차오르고, 아니면 회색(비활성 톤)
+                    isRequiredFilled
+                      ? "bg-keio-navy hover:bg-keio-navy/90"
+                      : "bg-muted text-muted-foreground hover:bg-muted"
+                  )}
+                  disabled={isSubmitting || !isRequiredFilled}
                   aria-label={
                     isSubmitting
                       ? isEdit
