@@ -93,7 +93,7 @@ export function StepContact({ onRegistered, mode = "create", circleId }: StepCon
     control,
     handleSubmit,
     getValues,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useFormContext<RegistrationValues>();
 
   // ── 제출 에러 상태 ───────────────────────────────────────────────────────
@@ -373,16 +373,9 @@ export function StepContact({ onRegistered, mode = "create", circleId }: StepCon
           )}
 
           {/*
-            isSubmitting 중 진행 안내:
-            footer 버튼은 컨테이너가 소유하므로 직접 disabled 제어 불가.
-            대신 본문에 "送信中…" 텍스트를 표시해 사용자에게 진행 상태를 알림.
-            (footer 버튼 비활성화는 향후 컨텍스트 공유 또는 data attribute 로 개선 가능)
+            제출 진행 표시는 footer 제출 버튼의 라벨("送信中…")로 이전됨
+            (circle-registration-form.tsx). 본문 별도 안내 텍스트 제거.
           */}
-          {isSubmitting && (
-            <p className="text-muted-foreground text-center text-sm" aria-live="polite">
-              送信中…
-            </p>
-          )}
         </m.div>
 
         {/*

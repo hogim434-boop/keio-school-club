@@ -304,6 +304,12 @@ export function CircleRegistrationForm({
   // ── contact 단계 여부 판별 ──
   const isContactStep = step === "contact";
 
+  // ── 제출 진행 상태 ──
+  // RHF formState.isSubmitting: onSubmit(async) 실행 중 true.
+  // FormProvider 로 StepContact 와 같은 인스턴스를 공유하므로 여기서 직접 구독 가능.
+  // → 별도 "送信中…" 본문 텍스트 대신, footer 제출 버튼의 라벨 자체를 바꾼다.
+  const isSubmitting = methods.formState.isSubmitting;
+
   // ── footer CTA 분기 ──────────────────────────────────────────────────────
   //
   // 배치 전략: 방법 (a) — form id 연결
@@ -331,14 +337,20 @@ export function CircleRegistrationForm({
   ) : (
     // contact 단계: form id 로 연결된 제출 버튼
     // StepContact 의 <form id={CIRCLE_REGISTRATION_FORM_ID}> 와 짝을 이룬다.
-    // isSubmitting 상태는 StepContact 가 data-submitting 속성으로 외부에 알림 (CSS 활용)
-    // → 단순 구조를 위해 버튼 disabled 는 StepContact 내부 상태로 관리하지 않고
-    //   form 자체의 submit 이벤트가 RHF 의 isSubmitting 을 제어함
-    <m.div whileTap={tapScale} transition={{ duration: 0.1 }}>
-      <Button type="submit" form={CIRCLE_REGISTRATION_FORM_ID} className={CTA_BTN_CLS}>
+    // 제출 중에는 버튼 라벨을 "送信中…" 으로 바꾸고 disabled 처리해 중복 제출을 막는다.
+    // (기존엔 본문에 별도 "送信中…" 텍스트를 띄웠으나, 버튼 라벨 변경 방식으로 통일)
+    <m.div whileTap={isSubmitting ? undefined : tapScale} transition={{ duration: 0.1 }}>
+      <Button
+        type="submit"
+        form={CIRCLE_REGISTRATION_FORM_ID}
+        className={CTA_BTN_CLS}
+        disabled={isSubmitting}
+        aria-live="polite"
+      >
         <span className="flex items-center justify-center gap-2">
-          {isEdit ? "更新する" : "登録申請する"}
-          <ArrowRight className="size-4" aria-hidden="true" />
+          {isSubmitting ? "送信中…" : isEdit ? "更新する" : "登録申請する"}
+          {/* 제출 중에는 화살표를 숨겨 로딩 라벨에 집중 */}
+          {!isSubmitting && <ArrowRight className="size-4" aria-hidden="true" />}
         </span>
       </Button>
     </m.div>
