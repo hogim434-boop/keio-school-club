@@ -3,12 +3,14 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { MapPin } from "lucide-react";
 
+import { ReportDetailMenu } from "@/components/circles/report-detail-menu";
 import { ReportPageHeader } from "@/components/circles/report-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ACTIVITY_REPORT_TYPE_LABELS } from "@/lib/constants/activity-report-type";
 import { getReportById } from "@/lib/supabase/queries/activity-reports";
 import { getCircleById } from "@/lib/supabase/queries/circles";
+import { createClient } from "@/lib/supabase/server";
 import type { ActivityReport } from "@/lib/types/domain";
 
 interface Props {
@@ -43,6 +45,13 @@ async function ReportDetailContent({ params }: Props) {
   // 존재하지 않거나 서클-리포트 불일치 시 404
   if (!circle || !report || report.circle_id !== id) notFound();
 
+  // 소유자 여부 — 우상단 ⋯ 편집/삭제 메뉴 표시 권한 (서클 page.tsx 와 동일한 계산)
+  const supabase = await createClient();
+  const {
+    data: { user: currentUser },
+  } = await supabase.auth.getUser();
+  const isOwner = !!currentUser && circle.owner_id === currentUser.id;
+
   const typeLabel = report.activity_type ? ACTIVITY_REPORT_TYPE_LABELS[report.activity_type] : null;
   const formattedDate = formatJpDateLong(report.created_at);
 
@@ -50,6 +59,9 @@ async function ReportDetailContent({ params }: Props) {
     <article className="space-y-6">
       {/* 좌상단 floating 뒤로가기 — sticky 헤더 제거 후 floating 버튼만 */}
       <ReportPageHeader />
+
+      {/* 우상단 floating ⋯ 편집/삭제 메뉴 — 소유자에게만 노출 */}
+      <ReportDetailMenu circleId={id} report={report} isOwner={isOwner} />
 
       <div className="container mx-auto max-w-3xl space-y-6 px-4 pt-16">
         {/* 헤더 섹션 — 활동 종류 배지 + 제목 + 날짜 + 장소 */}
