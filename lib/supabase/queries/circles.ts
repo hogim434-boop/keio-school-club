@@ -23,6 +23,7 @@ import {
   type RecruitmentStatus,
 } from "@/lib/constants/recruitment-status";
 import type { Category } from "@/lib/constants/category";
+import type { ActivityTimeBand } from "@/lib/constants/activity-time-band";
 import type { MemberBand } from "@/lib/constants/member-band";
 import type { OfficialType } from "@/lib/constants/official-type";
 import type { CircleStatus } from "@/lib/constants/circle-status";
@@ -568,6 +569,15 @@ export type MyCircle = {
   inquiry_count: number;
   /** 모집 상태 — DB enum (recruitment_status_enum). 미설정 시 null 가능성 없음(DB 기본값 있음) */
   recruitment_status: RecruitmentStatus;
+  // ── 프로필 完成度(보강 게이지) 계산용 필드 ──
+  /** 소개글 — 빈 문자열이면 미작성 */
+  description: string;
+  /** 활동 시간대 배열 — 빈 배열이면 미설정 */
+  activity_time_band: ActivityTimeBand[];
+  /** 활동 요일 텍스트("月・水" 등) — 빈 문자열이면 미설정 */
+  activity_days: string;
+  /** 태그 slug 배열 — 빈 배열이면 미설정 */
+  tags: string[];
 };
 
 /**
@@ -607,9 +617,10 @@ export async function getMyCircles(userId: string): Promise<MyCircle[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("circles")
-    // member_count → member_band 로 교체 (마이그레이션 008)
+    // member_count → member_band 로 교체 (마이그레이션 008).
+    // description·activity_time_band·activity_days + circle_tags(tags(slug)) 는 完成度 계산용.
     .select(
-      "id, name, slug, category, official_type, status, rejection_reason, cover_image_url, created_at, view_count, member_band, inquiry_count, recruitment_status"
+      "id, name, slug, category, official_type, status, rejection_reason, cover_image_url, created_at, view_count, member_band, inquiry_count, recruitment_status, description, activity_time_band, activity_days, circle_tags(tags(slug))"
     )
     .eq("owner_id", userId)
     .order("created_at", { ascending: false });
@@ -635,6 +646,14 @@ export async function getMyCircles(userId: string): Promise<MyCircle[]> {
       member_band: (r.member_band as MemberBand | null) ?? null,
       inquiry_count: (r.inquiry_count as number) ?? 0,
       recruitment_status: r.recruitment_status as MyCircle["recruitment_status"],
+      // 完成度 계산용
+      description: (r.description as string | null) ?? "",
+      activity_time_band: (r.activity_time_band as ActivityTimeBand[] | null) ?? [],
+      activity_days: (r.activity_days as string | null) ?? "",
+      // circle_tags JOIN → [{tags:{slug}}, ...] → string[]
+      tags: ((r.circle_tags as { tags: { slug: string } | null }[] | null) ?? [])
+        .map((ct) => ct.tags?.slug)
+        .filter((s): s is string => Boolean(s)),
     };
   });
 }

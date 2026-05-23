@@ -58,6 +58,7 @@ import { type MyCircle } from "@/lib/supabase/queries/circles";
 import { cn } from "@/lib/utils";
 
 import { CircleMetrics } from "./circle-metrics";
+import { ProfileCompletion } from "./profile-completion";
 import { RecruitmentToggle } from "./recruitment-toggle";
 
 interface ManagedCircleCardProps {
@@ -277,6 +278,9 @@ function ApprovedContent({ circle }: { circle: MyCircle }) {
       {circle.recruitment_status && (
         <RecruitmentToggle circleId={circle.id} current={circle.recruitment_status} />
       )}
+
+      {/* 프로필 完成度 게이지 + 빠진 항목 — 등록 후 점진 보강 유도(2026-05 A안) */}
+      <ProfileCompletion circle={circle} />
 
       {/* 編集する — 편집 폼(/circles/[id]/edit) 으로 이동. */}
       <Button asChild className="h-10 w-full">
