@@ -17,6 +17,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAnonClient } from "@/lib/supabase/anon";
 import type { CircleDetail, CircleImage, CircleSummary } from "@/lib/types/domain";
 import type { CirclesSearchParams } from "@/lib/circles/search-params";
+import { IRREGULAR_DAY } from "@/lib/circles/filter-labels";
 import {
   getCurrentRecruitingStatuses,
   type RecruitmentStatus,
@@ -77,24 +78,22 @@ function applyCircleFilters<T>(
     query = query.overlaps("activity_time_band", params.activityTimeBand);
   }
 
-  // 회원수 범위 — small/mid/large/huge → 숫자 범위로 변환
-  if (params.memberSize) {
-    const ranges: Record<string, [number, number]> = {
-      small: [0, 30],
-      mid: [31, 100],
-      large: [101, 200],
-      huge: [201, 999999],
-    };
-    const [min, max] = ranges[params.memberSize];
-    query = query.gte("member_count", min).lte("member_count", max);
+  // 회원수 범위 — 등록 폼과 동일한 member_band(5밴드 enum) 다중 선택 매칭.
+  // 이전엔 deprecated member_count 를 숫자 범위로 조회해 등록값(member_band)과 어긋났음 → 교정.
+  if (params.memberBands && params.memberBands.length > 0) {
+    query = query.in("member_band", params.memberBands);
   }
 
-  // 활동 요일 — activity_weekdays(text[] 생성 컬럼)와 선택 요일의 교집합.
-  // overlaps(&&) = 선택 요일 중 하나라도 활동하면 매칭 (OR).
-  // 이전의 activity_days text ilike 방식은 "曜日"의 日 까지 잡는 false-positive 가 있어
-  // 요일만 정규 추출한 배열 컬럼으로 교체 (lib/types/database.ts activity_weekdays 참조).
+  // 활동 요일 — 「不定期」 는 요일과 배타적(UI 에서 보장).
+  // - 不定期 선택: activity_days 텍스트에 "不定期" 포함 여부로 매칭 (ilike).
+  // - 요일 선택: activity_weekdays(text[] 생성 컬럼)와 선택 요일의 교집합(overlaps, OR).
+  //   (activity_days text ilike 는 "曜日"의 日 false-positive 가 있어 정규 추출 배열 컬럼 사용)
   if (params.activityDays && params.activityDays.length > 0) {
-    query = query.overlaps("activity_weekdays", params.activityDays);
+    if (params.activityDays.includes(IRREGULAR_DAY)) {
+      query = query.ilike("activity_days", `%${IRREGULAR_DAY}%`);
+    } else {
+      query = query.overlaps("activity_weekdays", params.activityDays);
+    }
   }
 
   return query;
@@ -418,7 +417,7 @@ export async function filterCircles(
   }
 
   // 공통 WHERE 조건 적용 (q, category, frequency, officialType, recruitmentStatus,
-  // activityTimeBand, memberSize, activityDays)
+  // activityTimeBand, memberBands, activityDays)
   query = applyCircleFilters(query, params);
 
   // 정렬
@@ -427,7 +426,9 @@ export async function filterCircles(
   } else if (params.sort === "recent") {
     query = query.order("created_at", { ascending: false });
   } else if (params.sort === "large") {
-    query = query.order("member_count", { ascending: false });
+    // member_band enum 정의 순(under_10…over_100) 의 역순 정렬 → 대규모 우선.
+    // null(미입력) 은 마지막. (deprecated member_count 정렬에서 교체)
+    query = query.order("member_band", { ascending: false, nullsFirst: false });
   } else {
     // 기본 정렬: 인기순
     query = query.order("view_count", { ascending: false });

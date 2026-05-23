@@ -176,7 +176,7 @@ async function Results({ params }: { params: CirclesSearchParams }) {
     officialType: params.officialType,
     tags: params.tags,
     page: params.page,
-    memberSize: params.memberSize,
+    memberBands: params.memberBands,
     recruitmentStatus: params.recruitmentStatus,
     activityTimeBand: params.activityTimeBand,
     // 활동 요일 필터 — URL의 activity_days 파라미터를 filterCircles에 전달 (버그 수정)

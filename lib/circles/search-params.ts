@@ -6,7 +6,7 @@ import {
   RECRUITMENT_FILTER_STATUSES,
   type RecruitmentStatus,
 } from "@/lib/constants/recruitment-status";
-import type { MemberSize } from "@/lib/types/domain";
+import { MEMBER_BANDS, type MemberBand } from "@/lib/constants/member-band";
 
 /**
  * /circles 페이지가 URL 에서 파싱하는 검색·필터 파라미터 타입.
@@ -19,7 +19,7 @@ import type { MemberSize } from "@/lib/types/domain";
  *
  * URL 키 매핑 (신규 5종):
  * - activityDays → activity_days (콤마 구분 한자 토큰)
- * - memberSize → member_size (single)
+ * - memberBands → member_band (콤마 구분 — 등록 폼과 동일한 5밴드 enum)
  * - recruitmentStatus → recruit (콤마 구분)
  * - activityTimeBand → time_band (콤마 구분)
  * - sort → sort (single)
@@ -34,8 +34,8 @@ export interface CirclesSearchParams {
   page: number;
   /** 활동 요일 — 일본 한자 1자 토큰 배열 (月/火/水/木/金/土/日) */
   activityDays: string[];
-  /** 회원수 범위 단일 선택 */
-  memberSize?: MemberSize;
+  /** 회원수 범위 다중 선택 — 등록 폼과 동일한 member_band 5밴드 */
+  memberBands: MemberBand[];
   /** 모집 상태 다중 선택 */
   recruitmentStatus: RecruitmentStatus[];
   /** 활동 시간대 다중 선택 */
@@ -103,12 +103,11 @@ export function parseCirclesSearchParams(raw: RawSearchParams): CirclesSearchPar
   // 활동 요일: activity_days=月,火 → ["月","火"] (한자 토큰 그대로)
   const activityDays = splitCsv(pickString(raw, "activity_days"));
 
-  // 회원수 범위: member_size=small
-  const memberSizeRaw = pickString(raw, "member_size");
-  const MEMBER_SIZES: MemberSize[] = ["small", "mid", "large", "huge"];
-  const memberSize = MEMBER_SIZES.includes(memberSizeRaw as MemberSize)
-    ? (memberSizeRaw as MemberSize)
-    : undefined;
+  // 회원수 범위: member_band=under_10,from_31_to_50 (등록 폼과 동일한 5밴드 enum)
+  const memberBandAllow = new Set<string>(MEMBER_BANDS);
+  const memberBands = splitCsv(pickString(raw, "member_band")).filter((v) =>
+    memberBandAllow.has(v)
+  ) as MemberBand[];
 
   // 모집 상태: recruit=newcomer_only,year_round
   const recruitmentAllow = new Set<string>(RECRUITMENT_FILTER_STATUSES);
@@ -139,7 +138,7 @@ export function parseCirclesSearchParams(raw: RawSearchParams): CirclesSearchPar
     tags,
     page,
     activityDays,
-    memberSize,
+    memberBands,
     recruitmentStatus,
     activityTimeBand,
     sort,
@@ -176,8 +175,8 @@ export function buildCirclesUrl(params: Partial<CirclesSearchParams>): string {
   if (params.activityDays && params.activityDays.length > 0) {
     search.set("activity_days", params.activityDays.join(","));
   }
-  if (params.memberSize !== undefined) {
-    search.set("member_size", params.memberSize);
+  if (params.memberBands && params.memberBands.length > 0) {
+    search.set("member_band", params.memberBands.join(","));
   }
   if (params.recruitmentStatus && params.recruitmentStatus.length > 0) {
     search.set("recruit", params.recruitmentStatus.join(","));
@@ -223,7 +222,7 @@ export function isDiscoverMode(p: CirclesSearchParams): boolean {
     p.page === 1 &&
     // 신규 5필드 — 모두 기본값이어야 추천 모드
     p.activityDays.length === 0 &&
-    p.memberSize === undefined &&
+    p.memberBands.length === 0 &&
     p.recruitmentStatus.length === 0 &&
     p.activityTimeBand.length === 0 &&
     p.sort === undefined
@@ -243,7 +242,7 @@ export function countAppliedFilters(params: CirclesSearchParams): number {
   if (params.tags.length > 0) n += 1;
   // 신규 5필드 카운트
   if (params.activityDays.length > 0) n += 1;
-  if (params.memberSize !== undefined) n += 1;
+  if (params.memberBands.length > 0) n += 1;
   if (params.recruitmentStatus.length > 0) n += 1;
   if (params.activityTimeBand.length > 0) n += 1;
   if (params.sort !== undefined) n += 1;

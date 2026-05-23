@@ -27,14 +27,13 @@ import {
 } from "@/lib/constants/recruitment-status";
 import { buildCirclesUrl, type CirclesSearchParams } from "@/lib/circles/search-params";
 import {
-  MEMBER_SIZE_OPTIONS,
+  ACTIVITY_DAY_OPTIONS,
+  IRREGULAR_DAY,
   SORT_OPTIONS,
   TAG_SEEDS,
-  WEEKDAYS,
   type SortOption,
-  type Weekday,
 } from "@/lib/circles/filter-labels";
-import type { MemberSize } from "@/lib/types/domain";
+import { MEMBER_BANDS, MEMBER_BAND_LABELS, type MemberBand } from "@/lib/constants/member-band";
 import { cn } from "@/lib/utils";
 
 interface FilterPanelProps {
@@ -95,12 +94,20 @@ export function FilterPanel({ initial, mode, onApply }: FilterPanelProps) {
     }));
   }
 
-  // 活動曜日 토글
-  function toggleDay(val: Weekday) {
-    setDraft((prev) => ({
-      ...prev,
-      activityDays: toggleMulti(prev.activityDays, val),
-    }));
+  // 活動曜日 토글 — 「不定期」 는 요일과 배타적 (등록 폼과 동일 규칙)
+  function toggleDay(val: string) {
+    setDraft((prev) => {
+      const next =
+        val === IRREGULAR_DAY
+          ? prev.activityDays.includes(IRREGULAR_DAY)
+            ? []
+            : [IRREGULAR_DAY]
+          : toggleMulti(
+              prev.activityDays.filter((d) => d !== IRREGULAR_DAY),
+              val
+            );
+      return { ...prev, activityDays: next };
+    });
   }
 
   // 団体区分 토글
@@ -111,11 +118,11 @@ export function FilterPanel({ initial, mode, onApply }: FilterPanelProps) {
     }));
   }
 
-  // 会員数 단일 선택 토글
-  function toggleMemberSize(val: MemberSize) {
+  // 会員数 다중 선택 토글 (member_band)
+  function toggleMemberBand(val: MemberBand) {
     setDraft((prev) => ({
       ...prev,
-      memberSize: toggleSingle(prev.memberSize, val),
+      memberBands: toggleMulti(prev.memberBands, val),
     }));
   }
 
@@ -155,7 +162,7 @@ export function FilterPanel({ initial, mode, onApply }: FilterPanelProps) {
       tags: [],
       page: 1,
       activityDays: [],
-      memberSize: undefined,
+      memberBands: [],
       recruitmentStatus: [],
       activityTimeBand: [],
       sort: undefined,
@@ -240,11 +247,11 @@ export function FilterPanel({ initial, mode, onApply }: FilterPanelProps) {
           </div>
         </section>
 
-        {/* §4 活動曜日 — 다중 선택, 풀-블리드 가로 스크롤 (7옵션) */}
+        {/* §4 活動曜日 — 다중 선택(不定期 는 배타), 풀-블리드 가로 스크롤 (7요일 + 不定期) */}
         <section className="space-y-2">
           <h3 className="text-sm font-semibold">活動曜日</h3>
           <div className="-mx-4 flex snap-x snap-mandatory [scroll-padding-inline:1.25rem] gap-3 overflow-x-auto [overscroll-behavior-x:contain] px-5 pb-1">
-            {WEEKDAYS.map((day) => (
+            {ACTIVITY_DAY_OPTIONS.map((day) => (
               <SegmentedOption
                 key={day}
                 label={day}
@@ -271,16 +278,16 @@ export function FilterPanel({ initial, mode, onApply }: FilterPanelProps) {
           </div>
         </section>
 
-        {/* §6 会員数 — 단일 선택, 풀-블리드 가로 스크롤 (4옵션) */}
+        {/* §6 会員数 — 다중 선택, 풀-블리드 가로 스크롤 (등록 폼과 동일한 member_band 5밴드) */}
         <section className="space-y-2">
           <h3 className="text-sm font-semibold">会員数</h3>
           <div className="-mx-4 flex snap-x snap-mandatory [scroll-padding-inline:1.25rem] gap-3 overflow-x-auto [overscroll-behavior-x:contain] px-5 pb-1">
-            {MEMBER_SIZE_OPTIONS.map((opt) => (
+            {MEMBER_BANDS.map((band) => (
               <SegmentedOption
-                key={opt.value}
-                label={opt.label}
-                active={draft.memberSize === opt.value}
-                onClick={() => toggleMemberSize(opt.value)}
+                key={band}
+                label={MEMBER_BAND_LABELS[band]}
+                active={draft.memberBands.includes(band)}
+                onClick={() => toggleMemberBand(band)}
                 className="snap-start"
               />
             ))}

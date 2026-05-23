@@ -1,39 +1,29 @@
-import type { MemberSize } from "@/lib/types/domain";
-
 /**
  * 필터 라벨 상수 — FilterPanel (sheet) 과 SelectedFilters (검색 페이지 chip 영역) 공유.
  *
  * 정책:
  * - slug/enum 값을 일본어 사용자 라벨로 변환할 때 사용
  * - filter-panel.tsx 안의 내부 상수였던 것을 외부로 추출 (중복 회피)
+ *
+ * 회원수(会員数) 옵션은 등록 폼과 동일한 member_band(5밴드, lib/constants/member-band.ts)로
+ * 통일하여 별도 MEMBER_SIZE_OPTIONS 를 두지 않는다 (스케일 불일치 제거, 2026-05 개편).
  */
 
-/** 회원수 범위 옵션 — FilterPanel 의 「会員数」 섹션 + chip 영역의 라벨 매핑에 사용 */
-export const MEMBER_SIZE_OPTIONS: { value: MemberSize; label: string }[] = [
-  { value: "small", label: "〜30名" },
-  { value: "mid", label: "31〜100" },
-  { value: "large", label: "101〜200" },
-  { value: "huge", label: "200名+" },
-];
-
-/** value → label 빠른 조회용 record */
-export const MEMBER_SIZE_LABELS: Record<MemberSize, string> = Object.fromEntries(
-  MEMBER_SIZE_OPTIONS.map((o) => [o.value, o.label])
-) as Record<MemberSize, string>;
-
 /**
- * PRD 「태그 마스터」 시드 7종 — Phase 1.2 T-009 이후 tags 테이블 fetch 로 교체 예정.
- * 사용자 정책: 성별·술 관련 태그는 제외. 「活動頻度」 섹션과 의미 중복인 週1回(once_a_week) 는 제거.
+ * 「태그 마스터」 시드 — 특징 태그(검색 필터 「タグ」 섹션).
+ *
+ * 정책 (2026-05 적극 정리):
+ * - 성별·술 관련 태그 제외.
+ * - 「活動頻度」 섹션과 의미 중복인 ガチ/ゆるい(분위기) 제거 → 활동빈도 필터로 대체.
+ * - 留学生歓迎 ↔ 海外活動 모호함 해소를 위해 라벨을 「入部 대상」 / 「활동 장소」로 명확화.
  * slug 는 DB 키, label_ja 는 UI 라벨.
  */
 export const TAG_SEEDS: { slug: string; label_ja: string }[] = [
   { slug: "beginner_ok", label_ja: "初心者歓迎" },
   { slug: "kenser_ok", label_ja: "兼サー可" },
-  { slug: "yurui", label_ja: "ゆるい" },
-  { slug: "gachi", label_ja: "ガチ" },
   { slug: "has_camp", label_ja: "合宿あり" },
-  { slug: "foreign_welcome", label_ja: "留学生歓迎" },
-  { slug: "intl_activity", label_ja: "海外活動あり" },
+  { slug: "foreign_welcome", label_ja: "留学生の入部歓迎" },
+  { slug: "intl_activity", label_ja: "海外で活動あり" },
 ];
 
 /** slug → label_ja 빠른 조회용 record */
@@ -59,3 +49,12 @@ export const SORT_LABELS: Record<SortOption, string> = Object.fromEntries(
 /** 활동 요일 7종 — 일본 한자 1자 토큰 (chip 영역에서 그대로 사용) */
 export const WEEKDAYS = ["月", "火", "水", "木", "金", "土", "日"] as const;
 export type Weekday = (typeof WEEKDAYS)[number];
+
+/**
+ * 「不定期」(요일이 정해지지 않음) 옵션 — 등록·필터 공통.
+ * activity_days(text) 에 "不定期" 로 저장되며, 요일 토큰(月〜日)과는 배타적으로 선택한다.
+ */
+export const IRREGULAR_DAY = "不定期" as const;
+
+/** 활동 요일 칩 선택지 — 7요일 + 不定期 (등록 폼·필터 패널 공유) */
+export const ACTIVITY_DAY_OPTIONS = [...WEEKDAYS, IRREGULAR_DAY] as const;

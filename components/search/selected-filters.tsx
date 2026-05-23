@@ -8,7 +8,8 @@ import { ACTIVITY_TIME_BAND_LABELS } from "@/lib/constants/activity-time-band";
 import { CATEGORY_LABELS } from "@/lib/constants/category";
 import { getOfficialTypeDisplayLabel } from "@/lib/constants/official-type";
 import { RECRUITMENT_STATUS_LABELS } from "@/lib/constants/recruitment-status";
-import { MEMBER_SIZE_LABELS, TAG_LABELS } from "@/lib/circles/filter-labels";
+import { MEMBER_BAND_LABELS } from "@/lib/constants/member-band";
+import { TAG_LABELS } from "@/lib/circles/filter-labels";
 import type { CirclesSearchParams } from "@/lib/circles/search-params";
 
 interface SelectedFiltersProps {
@@ -52,7 +53,7 @@ export function SelectedFilters({ draft, setDraft }: SelectedFiltersProps) {
       officialType: [],
       tags: [],
       activityDays: [],
-      memberSize: undefined,
+      memberBands: [],
       recruitmentStatus: [],
       activityTimeBand: [],
       sort: undefined,
@@ -185,15 +186,18 @@ function extractChips(
     });
   });
 
-  // 会員数 — 접두어 (「会員数: 31〜100」)
-  if (draft.memberSize !== undefined) {
-    const size = draft.memberSize;
+  // 会員数 — 선택한 member_band 각각 칩 (「会員数: 51〜100名」)
+  draft.memberBands.forEach((band) => {
     chips.push({
-      id: `member:${size}`,
-      label: `会員数: ${MEMBER_SIZE_LABELS[size]}`,
-      remove: () => setDraft((prev) => ({ ...prev, memberSize: undefined })),
+      id: `member:${band}`,
+      label: `会員数: ${MEMBER_BAND_LABELS[band]}`,
+      remove: () =>
+        setDraft((prev) => ({
+          ...prev,
+          memberBands: prev.memberBands.filter((b) => b !== band),
+        })),
     });
-  }
+  });
 
   // タグ — 값만 (「初心者歓迎」, 「ゆるい」 등 — 값 자체로 명확)
   draft.tags.forEach((t) => {
