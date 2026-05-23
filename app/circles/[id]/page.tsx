@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { CircleActions } from "@/components/circles/circle-actions";
+import { CircleAlbum } from "@/components/circles/circle-album";
 import { CircleDetailTabs } from "@/components/circles/circle-detail-tabs";
 import { DetailPageHeader } from "@/components/circles/detail-page-header";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -127,21 +128,45 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
          * 「もっと見る」 클릭 시 내부 setTab("board") 으로 자동 전환.
          * isOwner: 소유자 전용 「＋ 投稿する」 버튼 표시 여부 전달.
          */}
-        <CircleDetailTabs
-          circleId={circle.id}
-          reports={reports}
-          isOwner={isOwner}
-          homeContent={
-            <>
-              <SummaryGrid circle={circle} />
-              <ExpandableDescription text={circle.description} />
-            </>
-          }
-          // 관련 동아리 — 「ホーム」 탭 맨 아래(활동 리포트 미리보기 뒤)에만 표시. 0건이면 미표시.
-          relatedContent={
-            relatedCircles.length > 0 ? <RelatedCircles circles={relatedCircles} /> : null
-          }
-        />
+        {/*
+         * 앨범 이미지 자동 집계 — 추가 쿼리 없음.
+         * 커버 이미지(isCover=true) 를 맨 앞, 이후 리포트 사진을 최신순으로 나열.
+         * reports 는 이미 최신순이므로 flatMap 순서가 최신순 보장.
+         */}
+        {(() => {
+          const albumImages = [
+            ...(circle.cover_image_url
+              ? [{ url: circle.cover_image_url, isCover: true as const }]
+              : []),
+            ...reports.flatMap((r) =>
+              r.images.map((img) => ({
+                url: img.image_url,
+                reportId: r.id,
+                reportTitle: r.title,
+              }))
+            ),
+          ];
+
+          return (
+            <CircleDetailTabs
+              circleId={circle.id}
+              reports={reports}
+              isOwner={isOwner}
+              homeContent={
+                <>
+                  <SummaryGrid circle={circle} />
+                  <ExpandableDescription text={circle.description} />
+                </>
+              }
+              // 관련 동아리 — 「ホーム」 탭 맨 아래(활동 리포트 미리보기 뒤)에만 표시. 0건이면 미표시.
+              relatedContent={
+                relatedCircles.length > 0 ? <RelatedCircles circles={relatedCircles} /> : null
+              }
+              // アルバム 탭 — 커버 + 리포트 사진 자동 집계
+              albumContent={<CircleAlbum images={albumImages} circleId={circle.id} />}
+            />
+          );
+        })()}
       </div>
 
       {/*

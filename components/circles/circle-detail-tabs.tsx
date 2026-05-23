@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * CircleDetailTabs — 상세 페이지 「ホーム / 掲示板」 controlled Tabs (Client Component).
+ * CircleDetailTabs — 상세 페이지 「ホーム / 掲示板 / アルバム」 controlled Tabs (Client Component).
  *
  * 왜 Client 인가:
  * - Radix Tabs 자체는 Client. uncontrolled (defaultValue) 면 RSC 안에서 직접 써도 OK.
@@ -9,12 +9,13 @@
  *
  * RSC children-as-prop 패턴:
  * - homeContent (SummaryGrid + Description) 는 부모 (page.tsx RSC) 에서 만들어진 Server Component 그대로 전달.
+ * - albumContent (CircleAlbum) 도 부모에서 생성해 전달.
  * - 자식 콘텐츠는 cacheComponents Suspense 안에서 정상 렌더링됨.
  *
  * 탭 트랙 슬라이드 (iOS 캐러셀 스타일):
- * - 두 TabsContent 를 가로로 나란히 배치한 "트랙" 구조. home → x=0, board → x=-width.
- * - 탭 전환은 "탭 클릭 / 「もっと見る」" 로만 한다(스와이프 제거). 세로 스크롤이 가로 드래그
- *   제스처와 경합하지 않아 스크롤이 매끄럽다.
+ * - 세 TabsContent 를 가로로 나란히 배치한 "트랙" 구조.
+ *   TAB_ORDER = ["home","board","album"] → target = -(index * width).
+ * - 탭 전환은 "탭 클릭 / 「もっと見る」" 로만 한다(스와이프 제거).
  * - tab state 가 단일 진실원천. x 는 파생값 — tab 변경 시 useEffect 가 animate 로 슬라이드.
  * - prefers-reduced-motion 시 x.set 으로 즉시 전환 (접근성).
  *
@@ -26,8 +27,8 @@
  *   첫 mount 가 flag 를 소비/삭제하면 후속 mount 가 default home 으로 다시 초기화되어 동작 실패.
  *
  * 패널 높이:
- * - items-start 로 각 패널이 자연 높이를 유지. 탭 전환 시 viewport 높이 점프 허용 (1차 구현).
- * - 거슬리면 viewport height 를 활성 패널 높이로 animate 하는 후속 보완 가능.
+ * - items-start 로 각 패널이 자연 높이를 유지. 탭 전환 시 viewport 높이가 활성 패널 높이로 전환.
+ * - panelHeights { home, board, album } 세 패널 모두 측정.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -62,9 +63,14 @@ interface CircleDetailTabsProps {
    * 서버에서 getClaims() + owner_id 비교로 계산 후 전달.
    */
   isOwner?: boolean;
+  /** 「アルバム」 탭에 표시할 콘텐츠 — CircleAlbum (부모 RSC 에서 생성해 전달) */
+  albumContent?: React.ReactNode;
 }
 
-type TabValue = "home" | "board";
+/** 탭 순서 — index 를 x 계산에 사용. board=1 이므로 DETAIL_RETURN_TAB_FLAG 로직 불변. */
+const TAB_ORDER = ["home", "board", "album"] as const;
+
+type TabValue = (typeof TAB_ORDER)[number];
 
 /** iOS 캐러셀 스타일 easing — 프로젝트 전체 통일 (swipe-card.tsx, template.tsx 와 동일) */
 const IOS_EASE: [number, number, number, number] = [0.32, 0.72, 0, 1];
@@ -75,6 +81,7 @@ export function CircleDetailTabs({
   homeContent,
   relatedContent,
   isOwner = false,
+  albumContent,
 }: CircleDetailTabsProps) {
   const [tab, setTab] = useState<TabValue>("home");
   const prefersReducedMotion = useReducedMotion();
@@ -94,12 +101,12 @@ export function CircleDetailTabs({
   // animation 없이 즉시 설정해야 초기 렌더에서 board 탭이 화면 밖으로 정확히 배치된다.
   const isFirstSync = useRef(true);
 
-  // 각 패널의 높이 — 두 패널 콘텐츠 길이가 다르므로(home: 요약+설명+캐러셀 / board: 리스트)
-  // 뷰포트 높이를 활성 패널 높이에 맞춰야 한다. 안 그러면 짧은 board 탭에서도 뷰포트가
-  // 긴 home 높이를 유지해 그 빈 영역에 home 패널 캐러셀이 삐져나와 보인다.
+  // 각 패널의 높이 — 세 패널 콘텐츠 길이가 다르므로 뷰포트 높이를 활성 패널 높이에 맞춰야 한다.
+  // 안 그러면 짧은 탭에서도 뷰포트가 긴 home 높이를 유지해 캐러셀이 빈 영역으로 삐져나와 보인다.
   const homePanelRef = useRef<HTMLDivElement | null>(null);
   const boardPanelRef = useRef<HTMLDivElement | null>(null);
-  const [panelHeights, setPanelHeights] = useState({ home: 0, board: 0 });
+  const albumPanelRef = useRef<HTMLDivElement | null>(null);
+  const [panelHeights, setPanelHeights] = useState({ home: 0, board: 0, album: 0 });
 
   // ── ResizeObserver — 뷰포트 너비 + 패널 높이 측정 ────────────────────────
   useEffect(() => {
@@ -117,23 +124,29 @@ export function CircleDetailTabs({
     return () => ro.disconnect();
   }, []);
 
-  // 패널 높이 측정 — 두 패널을 함께 관찰하다 콘텐츠 변동(이미지 로드 등) 시 갱신.
+  // 패널 높이 측정 — 세 패널을 함께 관찰하다 콘텐츠 변동(이미지 로드 등) 시 갱신.
   useEffect(() => {
     const homeEl = homePanelRef.current;
     const boardEl = boardPanelRef.current;
-    if (!homeEl || !boardEl) return;
+    const albumEl = albumPanelRef.current;
+    if (!homeEl || !boardEl || !albumEl) return;
 
     const ro = new ResizeObserver(() => {
-      setPanelHeights({ home: homeEl.offsetHeight, board: boardEl.offsetHeight });
+      setPanelHeights({
+        home: homeEl.offsetHeight,
+        board: boardEl.offsetHeight,
+        album: albumEl.offsetHeight,
+      });
     });
 
     ro.observe(homeEl);
     ro.observe(boardEl);
+    ro.observe(albumEl);
     return () => ro.disconnect();
   }, []);
 
   // 활성 패널 높이 — 뷰포트 height 에 적용. 측정 전(0)이면 undefined → auto 높이 fallback.
-  const activeHeight = tab === "home" ? panelHeights.home : panelHeights.board;
+  const activeHeight = panelHeights[tab];
 
   // ── tab ↔ x 동기화 ────────────────────────────────────────────────────────
   // tab 또는 width 가 바뀔 때마다 x 를 target 위치로 이동.
@@ -143,7 +156,8 @@ export function CircleDetailTabs({
     // width=0 이면 아직 측정 전 — 측정 완료(width>0) 후 다시 실행됨
     if (width === 0) return;
 
-    const target = tab === "home" ? 0 : -width;
+    // TAB_ORDER 인덱스 기반 일반화 — home=0, board=1, album=2
+    const target = -(TAB_ORDER.indexOf(tab) * width);
 
     if (isFirstSync.current || prefersReducedMotion) {
       // 첫 측정 직후 or 접근성 모드: 애니메이션 없이 즉시 배치
@@ -245,6 +259,18 @@ export function CircleDetailTabs({
         >
           掲示板
         </TabsTrigger>
+        {/* 3번째 탭 — アルバム. 기존 트리거 className 그대로 복제 */}
+        <TabsTrigger
+          value="album"
+          className={cn(
+            "h-auto px-5 pt-4 pb-3 text-base font-semibold group-data-[orientation=horizontal]/tabs:after:bottom-[-2px]",
+            "text-muted-foreground",
+            "data-[state=active]:text-keio-navy",
+            "data-[state=active]:after:bg-keio-navy data-[state=active]:after:h-[3px] data-[state=active]:after:rounded-full"
+          )}
+        >
+          アルバム
+        </TabsTrigger>
       </TabsList>
 
       {/*
@@ -275,7 +301,11 @@ export function CircleDetailTabs({
               : "height 0.35s cubic-bezier(0.32, 0.72, 0, 1)",
           }}
         >
-          <m.div className="flex items-start" style={{ x, width: width > 0 ? width * 2 : "200%" }}>
+          {/*
+           * 트랙 width: 뷰포트의 3배 (세 패널 나란히). width 미측정 시 "300%" fallback.
+           * 각 패널은 w-1/3 으로 뷰포트와 동일한 너비.
+           */}
+          <m.div className="flex items-start" style={{ x, width: width > 0 ? width * 3 : "300%" }}>
             {/*
              * ホーム 패널 — 비활성 시 inert + aria-hidden 으로 AT·포커스 차단.
              * forceMount 로 항상 DOM 에 존재하므로 접근성 처리 필수.
@@ -285,7 +315,7 @@ export function CircleDetailTabs({
              */}
             <div
               ref={homePanelRef}
-              className="w-1/2 shrink-0"
+              className="w-1/3 shrink-0 overflow-hidden"
               inert={tab !== "home" || undefined}
               aria-hidden={tab !== "home"}
             >
@@ -307,7 +337,7 @@ export function CircleDetailTabs({
              */}
             <div
               ref={boardPanelRef}
-              className="w-1/2 shrink-0"
+              className="w-1/3 shrink-0 overflow-hidden"
               inert={tab !== "board" || undefined}
               aria-hidden={tab !== "board"}
             >
@@ -324,6 +354,21 @@ export function CircleDetailTabs({
                 )}
                 {/* isOwner 를 전달해 각 row 에 ⋯ 수정·삭제 메뉴를 표시 */}
                 <ActivityReportsList circleId={circleId} reports={reports} isOwner={isOwner} />
+              </TabsContent>
+            </div>
+
+            {/*
+             * アルバム 패널 — 비활성 시 inert + aria-hidden 으로 AT·포커스 차단.
+             * albumContent 는 부모(page.tsx)에서 <CircleAlbum> 을 생성해 전달.
+             */}
+            <div
+              ref={albumPanelRef}
+              className="w-1/3 shrink-0 overflow-hidden"
+              inert={tab !== "album" || undefined}
+              aria-hidden={tab !== "album"}
+            >
+              <TabsContent value="album" forceMount className="pt-6">
+                {albumContent}
               </TabsContent>
             </div>
           </m.div>
