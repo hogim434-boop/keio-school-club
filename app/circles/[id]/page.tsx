@@ -62,13 +62,17 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
   const [circle, reports] = await Promise.all([getCircleById(id), getReportsByCircle(id)]);
   if (!circle) notFound();
 
+  // 승인 여부 — pending 상태이면 関連サークル 조회 생략 + 審査中 배너 표시
+  const isApproved = circle.status === "approved";
+
   /**
-   * 관련 동아리 — 같은 카테고리의 다른 公認 동아리(인기순). 자기 자신 제외 후 최대 8건.
-   * 9건 fetch 후 본인 제외 → 8건 보장. (getCirclesByCategory 는 approved 만 반환)
+   * 관련 동아리 — 승인된 서클만 조회. pending 상태이면 불필요한 쿼리 절약 겸 빈 배열 반환.
+   * (getCirclesByCategory 는 approved 만 반환하므로 pending 서클은 어차피 포함 안 됨)
+   * 9건 fetch 후 본인 제외 → 8건 보장.
    */
-  const relatedCircles = (await getCirclesByCategory(circle.category, 9))
-    .filter((c) => c.id !== circle.id)
-    .slice(0, 8);
+  const relatedCircles = isApproved
+    ? (await getCirclesByCategory(circle.category, 9)).filter((c) => c.id !== circle.id).slice(0, 8)
+    : [];
 
   const supabase = await createClient();
 
@@ -101,6 +105,18 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
       <CoverImage circle={circle} />
 
       <div className="container mx-auto max-w-6xl space-y-6 px-4">
+        {/* 審査中 배너 — pending 상태(소유자/관리자 미리보기) 일 때만 표시 */}
+        {!isApproved && (
+          <div
+            role="status"
+            className="flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200"
+          >
+            {/* 아이콘 — 장식용이므로 스크린리더 무시 */}
+            <Clock aria-hidden className="size-4 shrink-0" />
+            <p className="text-sm font-semibold">審査中です</p>
+          </div>
+        )}
+
         {/* 2. 헤더 — 뱃지 행 + 서클명 + 태그 칩 (데스크탑 inline 액션 제거됨) */}
         <Header circle={circle} />
 
