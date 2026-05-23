@@ -26,7 +26,7 @@
 import Image from "next/image";
 import { useContext, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Construction, Ellipsis, MessageSquareText } from "lucide-react";
+import { Construction, Ellipsis, MessageSquareText, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { SlideOutContext } from "@/app/circles/[id]/template";
@@ -246,19 +246,15 @@ function ReportListRow({ circleId, report, isOwner }: ReportListRowProps) {
                     <Ellipsis className="size-4" aria-hidden="true" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="min-w-32">
-                  {/* 編集する */}
-                  <DropdownMenuItem
-                    className="cursor-pointer text-sm"
-                    onSelect={handleEditMenuClick}
-                  >
+                <DropdownMenuContent align="end">
+                  {/* 編集する — 연필 아이콘 */}
+                  <DropdownMenuItem onSelect={handleEditMenuClick}>
+                    <Pencil aria-hidden="true" />
                     編集する
                   </DropdownMenuItem>
-                  {/* 削除する — destructive 색상으로 위험 동작 강조 */}
-                  <DropdownMenuItem
-                    className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer text-sm"
-                    onSelect={handleDeleteMenuClick}
-                  >
+                  {/* 削除する — destructive variant(빨강) + 휴지통 아이콘 */}
+                  <DropdownMenuItem variant="destructive" onSelect={handleDeleteMenuClick}>
+                    <Trash2 aria-hidden="true" />
                     削除する
                   </DropdownMenuItem>
                 </DropdownMenuContent>

@@ -26,7 +26,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Construction, Ellipsis, Users } from "lucide-react";
+import { Construction, Ellipsis, Trash2, Users } from "lucide-react";
 import { useReducedMotion } from "motion/react";
 import * as m from "motion/react-m";
 
@@ -189,12 +189,10 @@ export function ManagedCircleCard({ circle, onRequestDelete, className }: Manage
                       <Ellipsis className="size-4" aria-hidden="true" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-32">
-                    {/* 削除する — destructive 색상으로 위험 동작임을 시각화 */}
-                    <DropdownMenuItem
-                      className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer text-sm"
-                      onSelect={handleDeleteMenuClick}
-                    >
+                  <DropdownMenuContent align="end">
+                    {/* 削除する — destructive variant(빨강) + 휴지통 아이콘 */}
+                    <DropdownMenuItem variant="destructive" onSelect={handleDeleteMenuClick}>
+                      <Trash2 aria-hidden="true" />
                       削除する
                     </DropdownMenuItem>
                   </DropdownMenuContent>

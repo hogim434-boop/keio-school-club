@@ -63,7 +63,8 @@ const DropdownMenuContent = React.forwardRef<
       ref={ref}
       sideOffset={sideOffset}
       className={cn(
-        "bg-popover text-popover-foreground z-50 max-h-[var(--radix-dropdown-menu-content-available-height)] min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md border p-1 shadow-md",
+        // iOS 14 UIMenu 느낌: 더 둥근 모서리(rounded-xl) + 부드러운 큰 그림자 + 넉넉한 패딩/너비
+        "bg-popover text-popover-foreground border-border/60 z-50 max-h-[var(--radix-dropdown-menu-content-available-height)] min-w-[11rem] overflow-x-hidden overflow-y-auto rounded-xl border p-1.5 shadow-lg",
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-[--radix-dropdown-menu-content-transform-origin]",
         className
       )}
@@ -77,12 +78,22 @@ const DropdownMenuItem = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Item> & {
     inset?: boolean;
+    /**
+     * 파괴적 동작(삭제 등) 표시.
+     * destructive: 빨간 텍스트·아이콘 + hover/focus 시 옅은 빨강 배경.
+     * 각 사용처에서 className 으로 반복하던 destructive 스타일을 prop 하나로 통일.
+     */
+    variant?: "default" | "destructive";
   }
->(({ className, inset, ...props }, ref) => (
+>(({ className, inset, variant = "default", ...props }, ref) => (
   <DropdownMenuPrimitive.Item
     ref={ref}
     className={cn(
-      "focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm transition-colors outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:size-4 [&>svg]:shrink-0",
+      // iOS 14 UIMenu 느낌: rounded-lg + 넉넉한 px-2.5 py-2 + font-medium + 아이콘은 muted 톤
+      "relative flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:size-4 [&>svg]:shrink-0",
+      variant === "destructive"
+        ? "text-destructive focus:bg-destructive/10 focus:text-destructive [&>svg]:text-destructive"
+        : "focus:bg-accent focus:text-accent-foreground [&>svg]:text-muted-foreground",
       inset && "pl-8",
       className
     )}
