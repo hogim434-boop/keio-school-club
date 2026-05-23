@@ -3,8 +3,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { MapPin } from "lucide-react";
 
-import { ReportDetailMenu } from "@/components/circles/report-detail-menu";
-import { ReportPageHeader } from "@/components/circles/report-page-header";
+import { ReportDetailHeader } from "@/components/circles/report-detail-header";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ACTIVITY_REPORT_TYPE_LABELS } from "@/lib/constants/activity-report-type";
@@ -57,13 +56,11 @@ async function ReportDetailContent({ params }: Props) {
 
   return (
     <article className="space-y-6">
-      {/* 좌상단 floating 뒤로가기 — sticky 헤더 제거 후 floating 버튼만 */}
-      <ReportPageHeader />
+      {/* sticky 스크롤 반응형 헤더 — ← 뒤로가기 + 제목(스크롤 시 등장) + ⋯ 메뉴(소유자만) */}
+      <ReportDetailHeader circleId={id} report={report} isOwner={isOwner} />
 
-      {/* 우상단 floating ⋯ 편집/삭제 메뉴 — 소유자에게만 노출 */}
-      <ReportDetailMenu circleId={id} report={report} isOwner={isOwner} />
-
-      <div className="container mx-auto max-w-3xl space-y-6 px-4 pt-16">
+      {/* 헤더가 in-flow sticky 이므로 pt-16 불필요 — px-4 등 나머지 유지 */}
+      <div className="container mx-auto max-w-3xl space-y-6 px-4">
         {/* 헤더 섹션 — 활동 종류 배지 + 제목 + 날짜 + 장소 */}
         <header className="space-y-3">
           {/* 메타 행: 활동 종류 배지 + 날짜 */}
@@ -161,8 +158,9 @@ function formatJpDateLong(iso: string): string {
 function ReportDetailFallback() {
   return (
     <article className="space-y-6">
-      {/* floating 뒤로가기는 작아서 skeleton 불필요 — 헤더 바 skeleton 제거 */}
-      <div className="container mx-auto max-w-3xl space-y-6 px-4 pt-16">
+      {/* Suspense fallback — ReportDetailHeader 는 client 컴포넌트이므로 skeleton 으로 대체 */}
+      <div className="h-14" aria-hidden="true" />
+      <div className="container mx-auto max-w-3xl space-y-6 px-4">
         {/* 메타 + 제목 + 장소 skeleton */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">

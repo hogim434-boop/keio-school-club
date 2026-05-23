@@ -33,7 +33,8 @@ export const DETAIL_RETURN_TAB_FLAG = "kc-circle-detail-return-tab";
  * - easing: 진입 easeOut(페이드 자연), 이탈 iOS push cubic-bezier(슬라이드 자연)
  *
  * ⚠️ 이탈 시 transform (x) 을 쓰므로 자식 position:fixed 의 containing block 영향.
- * → ReportPageHeader (floating 뒤로가기) 는 createPortal 로 document.body 마운트 필요.
+ * → 상단 헤더(ReportDetailHeader)는 fixed 대신 sticky top-0 으로 구현해 이 함정을 회피하고,
+ *   이탈 애니메이션 시 본문과 함께 자연스럽게 슬라이드된다.
  *
  * Context 는 별개 (ReportSlideOutContext) — 이 페이지는 back 만 지원.
  */

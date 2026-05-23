@@ -1,15 +1,10 @@
 "use client";
 
 /**
- * ReportDetailMenu — 활동 리포트 상세 페이지 우상단 floating ⋯(점세개) 메뉴.
+ * ReportDetailMenu — 활동 리포트 상세 페이지 sticky 헤더 안 ⋯(점세개) 메뉴.
  *
- * 좌상단 ReportPageHeader(뒤로가기)와 대칭으로, 우상단에 소유자 전용 편집/삭제 메뉴를 띄운다.
- *
- * 마운트 전략 (createPortal → document.body):
- * - 부모 template.tsx 가 이탈 시 transform(x:100%) 을 적용하므로,
- *   transform 조상은 자식 position:fixed 의 containing block 을 가로챈다.
- * - createPortal 로 body 에 직접 마운트하면 viewport 기준 fixed 가 정상 동작 (우상단 고정 유지).
- *   (ReportPageHeader 와 동일한 이유)
+ * 헤더 컴포넌트(report-detail-header.tsx) 내부에 인라인으로 렌더되는 드롭다운 메뉴.
+ * (기존 createPortal + fixed 방식을 제거 → sticky 헤더 안 인라인으로 변경)
  *
  * 동작 (activity-reports-list.tsx 의 row ⋯ 메뉴 패턴 그대로 차용):
  * - 「編集する」: ReportComposeSheet(edit 모드) open → 성공 시 시트 내부에서 router.refresh().
@@ -19,10 +14,9 @@
  * 권한: isOwner=false 면 아무것도 렌더하지 않는다 (page.tsx 에서 서버 계산 후 전달).
  */
 
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Ellipsis } from "lucide-react";
+import { Ellipsis, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { DETAIL_RETURN_TAB_FLAG } from "@/app/circles/[id]/reports/[reportId]/template";
@@ -58,12 +52,6 @@ interface ReportDetailMenuProps {
 
 export function ReportDetailMenu({ circleId, report, isOwner }: ReportDetailMenuProps) {
   const router = useRouter();
-
-  // hydration 안전한 mount 가드 — SSR 시 document 미존재로 createPortal 호출 불가
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // ── 메뉴 controlled state (activity-reports-list.tsx 패턴) ──
   const [menuOpen, setMenuOpen] = useState(false);
@@ -113,40 +101,33 @@ export function ReportDetailMenu({ circleId, report, isOwner }: ReportDetailMenu
 
   // 소유자가 아니면 아무것도 렌더하지 않음
   if (!isOwner) return null;
-  // mounted 후에만 portal 활성화 — 첫 SSR 렌더는 null
-  if (!mounted) return null;
 
-  const menu = (
+  return (
     <>
-      {/* 우상단 floating ⋯ 버튼 — 뒤로가기 버튼과 대칭 (left-4 ↔ right-4) */}
+      {/* 헤더 안 인라인 ⋯ 버튼 — ghost 원형 스타일 */}
       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger
           aria-label="メニューを開く"
           className={cn(
-            // 위치: 우상단 fixed, safe-area-inset-top 회피
-            "fixed right-4 z-20 size-10",
-            // 모양: 원형 + glassmorphism + border + shadow (뒤로가기 버튼과 동일)
-            "inline-flex items-center justify-center rounded-full",
-            "bg-background/80 border shadow-md backdrop-blur",
-            "supports-backdrop-filter:bg-background/60",
-            // 인터랙션
-            "hover:bg-background transition-colors",
+            // 크기: 터치 영역 확보
+            "inline-flex size-10 shrink-0 items-center justify-center rounded-full",
+            // 색상: ghost (배경 없음 → hover 시 muted)
+            "text-foreground hover:bg-muted transition-colors",
+            // 포커스 링
             "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none"
           )}
-          style={{ top: "max(env(safe-area-inset-top), 1rem)" }}
         >
           <Ellipsis className="size-5" aria-hidden="true" />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-32">
-          {/* 編集する */}
-          <DropdownMenuItem className="cursor-pointer text-sm" onSelect={handleEditMenuClick}>
+        <DropdownMenuContent align="end">
+          {/* 編集する — 연필 아이콘 */}
+          <DropdownMenuItem onSelect={handleEditMenuClick}>
+            <Pencil aria-hidden="true" />
             編集する
           </DropdownMenuItem>
-          {/* 削除する — destructive 색상으로 위험 동작 강조 */}
-          <DropdownMenuItem
-            className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer text-sm"
-            onSelect={handleDeleteMenuClick}
-          >
+          {/* 削除する — destructive variant(빨강) + 휴지통 아이콘 */}
+          <DropdownMenuItem variant="destructive" onSelect={handleDeleteMenuClick}>
+            <Trash2 aria-hidden="true" />
             削除する
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -185,6 +166,4 @@ export function ReportDetailMenu({ circleId, report, isOwner }: ReportDetailMenu
       </AlertDialog>
     </>
   );
-
-  return createPortal(menu, document.body);
 }

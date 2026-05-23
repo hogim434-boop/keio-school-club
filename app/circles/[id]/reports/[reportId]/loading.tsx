@@ -18,8 +18,19 @@ export default function ReportDetailLoading() {
   return (
     <main className="pb-12">
       <article className="space-y-6">
-        {/* floating 뒤로가기는 작아서 skeleton 불필요 */}
-        <div className="container mx-auto max-w-3xl space-y-6 px-4 pt-16">
+        {/* 헤더 바 skeleton — h-14 + safe-area-inset-top 자리 확보 */}
+        <div
+          className="sticky top-0 z-30 flex h-14 items-center justify-between px-4"
+          style={{ paddingTop: "env(safe-area-inset-top)" }}
+          aria-hidden="true"
+        >
+          {/* 좌측: 뒤로가기 버튼 자리 */}
+          <Skeleton className="size-10 rounded-full" />
+          {/* 우측: ⋯ 버튼 자리 */}
+          <Skeleton className="size-10 rounded-full" />
+        </div>
+
+        <div className="container mx-auto max-w-3xl space-y-6 px-4">
           {/* 메타 + 제목 + 장소 skeleton */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
