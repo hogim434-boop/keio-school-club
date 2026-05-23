@@ -57,17 +57,14 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${notoJp.variable} ${logoFont.variable} overflow-x-hidden font-sans antialiased`}
       >
-        {/* 모든 페이지 공통 헤더 — sticky top-0, T-002 에서 도입.
-            Header 가 cookies() 의존(role 추출)이므로 cacheComponents 모드에서 Suspense 필수.
-            fallback 은 동일 높이의 빈 헤더로 layout shift 방지.
-            상세 페이지(/circles/{uuid}) 에서는 두 단계로 hide:
-            1. Header(RSC) 가 x-pathname (middleware forward) 검사 후 null — 직접 진입 시 SSR-safe.
-            2. HeaderClientGate(Client) 가 usePathname 으로 client-side soft navigation 도 hide. */}
+        {/* 모든 페이지 공통 헤더 — sticky top-0.
+            Header(RSC) 는 항상 헤더 내용을 렌더링하며 null 을 반환하지 않는다.
+            숨김 판단은 HeaderClientGate(Client) 가 usePathname 으로 단독 처리.
+            → SSR 직접 진입과 client soft navigation 양방향 모두 정확히 동작.
+            Header 는 동적 데이터(cookies 등)를 사용하지 않으므로 내부 Suspense 불필요. */}
         <Suspense fallback={null}>
           <HeaderClientGate>
-            <Suspense fallback={<header className="bg-background h-20" />}>
-              <Header />
-            </Suspense>
+            <Header />
           </HeaderClientGate>
         </Suspense>
         {/* 모바일 하단 탭 바가 본문을 가리지 않도록 모바일에서만 pb-16 추가
