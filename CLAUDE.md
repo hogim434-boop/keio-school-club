@@ -41,9 +41,13 @@ Next.js App Router + Supabase Auth + shadcn/ui로 구성된 SSR-first 스타터 
 
 `getClaims()` 호출 결과를 반드시 `return supabaseResponse` 그대로 반환해야 합니다. 새 `NextResponse`를 만들 경우 쿠키를 복사하지 않으면 세션이 끊깁니다 (`lib/supabase/proxy.ts` 상단 주석 참조).
 
-### `cacheComponents` 활성화 + Suspense 강제
+### `cacheComponents`는 의도적으로 OFF + Suspense/loading.tsx 권장
 
-`next.config.ts`에 `cacheComponents: true`가 켜져 있습니다. 이 모드에서는 동적 데이터에 접근하는 Server Component(예: `cookies()`를 사용하는 Supabase server client)를 호출하는 부모는 반드시 `<Suspense>`로 감싸야 합니다. `app/page.tsx`, `app/protected/page.tsx`, `app/instruments/page.tsx`가 모두 이 패턴을 따르고 있으니 새 페이지를 만들 때도 동일하게 적용하세요.
+`next.config.ts`의 `cacheComponents`는 **의도적으로 꺼져 있습니다** (커밋 `20b32e7`에서 제거). 켜 두면 dev(캐시 OFF)와 Vercel(캐시 적극 ON)의 동작이 갈려 「localhost 정상 / Vercel stale」 갭과 「이전 필터 결과 표시」 버그가 발생하기 때문입니다. 따라서 양쪽 모두 「매번 최신」(server-rendered on demand)으로 동작합니다.
+
+성능이 필요하면 전역 캐시 대신 **쿼리 단위 캐싱**(`unstable_cache` + `revalidateTag`)을 공개·비개인화 데이터에만 적용합니다 (예: `lib/supabase/queries/circles.ts`의 공개 목록 함수들, 쿠키 없는 `lib/supabase/anon.ts` 클라이언트로 읽고 `tags:["circles"]`로 무효화).
+
+동적 데이터에 접근하는 Server Component(예: `cookies()`를 사용하는 Supabase server client)를 호출하는 부모는 여전히 `<Suspense>`로 감싸고, 라우트에는 `loading.tsx`를 두어 진입 시 즉시 스켈레톤이 보이도록 하는 패턴을 권장합니다.
 
 ### 라우팅 구조
 
