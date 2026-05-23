@@ -13,23 +13,10 @@
  *
  * 탭 트랙 슬라이드 (iOS 캐러셀 스타일):
  * - 두 TabsContent 를 가로로 나란히 배치한 "트랙" 구조. home → x=0, board → x=-width.
- * - useMotionValue(x) + ResizeObserver(width) 로 트랙을 손가락/탭 클릭 따라 슬라이드.
- * - tab state 가 단일 진실원천. x 는 파생값 — tab 변경 시 useEffect 가 animate 로 동기화.
- * - onDragEnd: 거리(>30%) 또는 속도(>500px/s) 임계 초과 시 탭 전환, 미달 시 원위치 스냅.
- * - prefers-reduced-motion 시 drag 비활성, x.set 으로 즉시 전환 (접근성).
- *
- * touch-action 주의 (캐러셀 가로 스크롤과의 충돌):
- * - 트랙에 touch-action: pan-y 를 주면 그 자식인 캐러셀(overflow-x-auto)에서
- *   가로 터치 패닝이 브라우저 레벨에서 차단된다 (touch-action 은 조상 체인을 따라 교차 평가됨).
- * - 그래서 트랙은 touch-action 을 따로 설정하지 않는다(auto).
- *   캐러셀 바깥 영역엔 가로 스크롤 컨테이너가 없으므로, 가로 드래그는 motion 이 그대로 처리하고
- *   세로 스크롤은 페이지로 정상 전파된다. dragListener={false} 라 motion 도 인라인 touch-action 을 걸지 않음.
- *
- * 캐러셀 가로 스크롤 충돌 해결:
- * - dragListener={false} + useDragControls 조합.
- * - onPointerDown 에서 "[data-tab-carousel]" 내부 시작 여부를 검사.
- * - 캐러셀 위 → dragControls.start() 미호출 → native 가로 스크롤 동작.
- * - 캐러셀 밖 → dragControls.start(e) 호출 → 탭 트랙 드래그 시작.
+ * - 탭 전환은 "탭 클릭 / 「もっと見る」" 로만 한다(스와이프 제거). 세로 스크롤이 가로 드래그
+ *   제스처와 경합하지 않아 스크롤이 매끄럽다.
+ * - tab state 가 단일 진실원천. x 는 파생값 — tab 변경 시 useEffect 가 animate 로 슬라이드.
+ * - prefers-reduced-motion 시 x.set 으로 즉시 전환 (접근성).
  *
  * 활동 상세 → 뒤로가기 복귀 시 「掲示板」 탭 활성화:
  * - 활동 상세 template 이 router.back() 직전 sessionStorage 에 DETAIL_RETURN_TAB_FLAG="board" set.
@@ -46,13 +33,11 @@
 import { useEffect, useRef, useState } from "react";
 import {
   LazyMotion,
-  domMax,
+  domAnimation,
   m,
   useReducedMotion,
   useMotionValue,
   animate,
-  useDragControls,
-  type PanInfo,
 } from "motion/react";
 
 import { DETAIL_RETURN_TAB_FLAG } from "@/app/circles/[id]/reports/[reportId]/template";
@@ -81,14 +66,6 @@ interface CircleDetailTabsProps {
 
 type TabValue = "home" | "board";
 
-/**
- * 탭 전환 임계값.
- * - 거리: 컨테이너 너비의 30% 이상 drag 시 전환.
- * - 속도: 500px/s 이상 빠른 flick 시 거리 무관 전환 (swipe-card.tsx 와 동일 임계).
- */
-const VELOCITY_THRESHOLD = 500;
-const DISTANCE_RATIO_THRESHOLD = 0.3;
-
 /** iOS 캐러셀 스타일 easing — 프로젝트 전체 통일 (swipe-card.tsx, template.tsx 와 동일) */
 const IOS_EASE: [number, number, number, number] = [0.32, 0.72, 0, 1];
 
@@ -116,10 +93,6 @@ export function CircleDetailTabs({
   // 첫 동기화 여부 — 첫 ResizeObserver 콜백 후 x.set 으로 즉시 배치.
   // animation 없이 즉시 설정해야 초기 렌더에서 board 탭이 화면 밖으로 정확히 배치된다.
   const isFirstSync = useRef(true);
-
-  // useDragControls: dragListener={false} 와 조합해 onPointerDown 에서 수동으로 드래그 시작.
-  // 덕분에 캐러셀 위 포인터는 dragControls.start() 를 호출하지 않아 native 스크롤로 fallback.
-  const dragControls = useDragControls();
 
   // 각 패널의 높이 — 두 패널 콘텐츠 길이가 다르므로(home: 요약+설명+캐러셀 / board: 리스트)
   // 뷰포트 높이를 활성 패널 높이에 맞춰야 한다. 안 그러면 짧은 board 탭에서도 뷰포트가
@@ -213,48 +186,6 @@ export function CircleDetailTabs({
     handleValueChange("board");
   }
 
-  /**
-   * drag end 핸들러 — 거리(>30%) 또는 속도(>500px/s) 임계 초과 시 탭 전환, 미달 시 원위치 스냅.
-   *
-   * 통과 + 방향 일치 → setTab(next): tab↔x 동기화 effect 가 자동으로 슬라이드.
-   * 통과 + 방향 불일치 (현재 탭 방향으로 더 끌어당긴 경우) → 원위치 스냅.
-   * 미달 → 원위치 스냅.
-   */
-  function handleDragEnd(_e: unknown, info: PanInfo) {
-    const passed =
-      Math.abs(info.offset.x) > width * DISTANCE_RATIO_THRESHOLD ||
-      Math.abs(info.velocity.x) > VELOCITY_THRESHOLD;
-
-    const currentTarget = tab === "home" ? 0 : -width;
-
-    if (passed && info.offset.x < 0 && tab === "home") {
-      // 왼쪽으로 충분히 drag → board 전환 (effect 가 x 를 -width 로 슬라이드)
-      setTab("board");
-    } else if (passed && info.offset.x > 0 && tab === "board") {
-      // 오른쪽으로 충분히 drag → home 전환 (effect 가 x 를 0 으로 슬라이드)
-      setTab("home");
-    } else {
-      // 임계 미달 or 방향 불일치 → 현재 탭 위치로 원위치 스냅
-      animate(x, currentTarget, { duration: 0.3, ease: IOS_EASE });
-    }
-  }
-
-  /**
-   * onPointerDown 게이팅 — 캐러셀 내부에서 시작한 포인터는 탭 드래그를 시작하지 않는다.
-   *
-   * "[data-tab-carousel]" closest 검사:
-   * - 캐러셀 안 → dragControls.start() 미호출 → motion 드래그 비활성 → native 가로 스크롤 동작.
-   * - 캐러셀 밖 → dragControls.start(e) 호출 → 탭 트랙 드래그 시작.
-   *
-   * prefersReducedMotion 시에는 drag={false} 이므로 dragControls.start() 가 no-op.
-   * 그래도 early return 해 불필요한 호출을 막는다.
-   */
-  function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    if (prefersReducedMotion) return;
-    if ((e.target as HTMLElement).closest("[data-tab-carousel]")) return;
-    dragControls.start(e);
-  }
-
   return (
     <Tabs value={tab} onValueChange={handleValueChange} className="w-full">
       {/*
@@ -317,25 +248,23 @@ export function CircleDetailTabs({
       </TabsList>
 
       {/*
-       * 트랙 구조:
+       * 트랙 구조 (스와이프 없음 — 탭 클릭 전환 전용):
        * - overflow-hidden div: 뷰포트. 폭 측정용 containerRef 연결.
        * - m.div (트랙): 두 패널을 가로로 나란히 배치. width = 뷰포트 * 2 (or "200%").
-       *   translateX(x) 로 좌우 이동. drag="x" + dragControls 로 수동 제스처 시작.
+       *   translateX(x) 로 좌우 이동 — 탭 클릭 시 tab↔x 동기화 effect 가 animate 로 슬라이드.
        * - 각 패널 div (w-1/2 shrink-0): 뷰포트와 동일한 너비. 각각 home / board 콘텐츠 담음.
        *
        * forceMount: 두 패널이 항상 DOM 에 유지돼야 트랙이 가로로 이어진다.
        *   비활성 패널은 inert + aria-hidden 으로 AT(보조기술) / 포커스에서 차단.
        *
-       * dragListener={false}: 트랙 m.div 자체가 pointer listener 를 자동 등록하지 않음.
-       *   onPointerDown 에서 캐러셀 게이팅 후 dragControls.start(e) 로 수동 시작.
-       *
-       * touch-action 미설정(auto): 자식 캐러셀의 가로 스크롤을 막지 않기 위함 (상단 docstring 참조).
+       * 드래그 제거: 가로 스와이프 제스처가 세로 스크롤과 경합하던 문제 해소.
+       *   세로 스크롤은 100% 네이티브로 매끄럽게 동작.
        *
        * height: 활성 패널 높이로 고정 + overflow-hidden. 짧은 board 탭에서 긴 home 패널의
        *   캐러셀이 빈 영역으로 삐져나오는 것을 클립한다. 탭 전환 시 슬라이드(x)와 같은 곡선/시간으로
        *   height 도 transition 시켜 자연스럽게 늘었다 줄었다 하게 한다.
        */}
-      <LazyMotion features={domMax}>
+      <LazyMotion features={domAnimation}>
         <div
           ref={containerRef}
           className="overflow-hidden"
@@ -346,17 +275,7 @@ export function CircleDetailTabs({
               : "height 0.35s cubic-bezier(0.32, 0.72, 0, 1)",
           }}
         >
-          <m.div
-            className="flex items-start"
-            style={{ x, width: width > 0 ? width * 2 : "200%" }}
-            drag={prefersReducedMotion ? false : "x"}
-            dragControls={dragControls}
-            dragListener={false}
-            dragConstraints={{ left: -width, right: 0 }}
-            dragElastic={0.15}
-            onDragEnd={handleDragEnd}
-            onPointerDown={handlePointerDown}
-          >
+          <m.div className="flex items-start" style={{ x, width: width > 0 ? width * 2 : "200%" }}>
             {/*
              * ホーム 패널 — 비활성 시 inert + aria-hidden 으로 AT·포커스 차단.
              * forceMount 로 항상 DOM 에 존재하므로 접근성 처리 필수.
