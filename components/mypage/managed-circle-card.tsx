@@ -22,7 +22,7 @@
  * 접근성: useReducedMotion() 으로 whileTap 우회.
  */
 
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -100,30 +100,49 @@ export function ManagedCircleCard({ circle, onRequestDelete, className }: Manage
   /* 카드 클릭 시 상세 페이지로 이동시키기 위한 router */
   const router = useRouter();
 
-  /**
-   * 카드 클릭/Enter → 상세 페이지 이동.
-   * 미승인(審査中·却下) 서클도 소유자는 RLS 로 상세(프리뷰)를 볼 수 있다.
-   * 카드 내부의 버튼·토글·메뉴는 stopPropagation 으로 이 이동에서 제외된다.
-   */
-  const goToDetail = () => router.push(`/circles/${circle.id}`);
-
-  /* official_type 표시 라벨: athletics/intercollegiate 만 반환, 나머지 null */
-  const officialTypeLabel = getOfficialTypeDisplayLabel(circle.official_type);
-
   /*
    * DropdownMenu + AlertDialog 포커스 충돌 방지를 위해 controlled state 사용.
-   * - menuOpen: 드롭다운 열림 여부
-   * - dialogOpen: 삭제 확인 다이얼로그 열림 여부
-   *
-   * 「削除する」 클릭 시:
-   *   1. 메뉴를 먼저 닫음(setMenuOpen(false))
-   *   2. 다음 틱에서 다이얼로그를 열어 포커스 이동을 올바르게 처리
+   * - menuOpen: 드롭다운 열림 여부 / dialogOpen: 삭제 확인 다이얼로그 열림 여부
+   * (goToDetail 의 click-through 가드에서 두 상태를 참조하므로 먼저 선언)
    */
   const [menuOpen, setMenuOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  /*
+   * 내비게이션 잠금(navGrace):
+   * Radix DropdownMenu/AlertDialog(modal)를 닫을 때, 그 click 이 카드 뒤로 "관통"되어
+   * 카드 루트의 onClick(goToDetail)이 잘못 호출되는 click-through 버그가 있다.
+   * (예: ⋯ 메뉴에서 「削除する」 선택 → 메뉴 닫힘 → 클릭이 카드로 떨어져 상세 페이지로 이동)
+   * → 메뉴/다이얼로그가 열려 있는 동안 + 닫힌 직후 짧은 유예 동안 goToDetail 을 차단한다.
+   */
+  const navGraceRef = useRef(false);
+  const graceTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const startNavGrace = useCallback(() => {
+    navGraceRef.current = true;
+    if (graceTimerRef.current) clearTimeout(graceTimerRef.current);
+    graceTimerRef.current = setTimeout(() => {
+      navGraceRef.current = false;
+    }, 300);
+  }, []);
+
+  /**
+   * 카드 클릭/Enter → 상세 페이지 이동.
+   * 미승인(審査中·却下) 서클도 소유자는 RLS 로 상세(프리뷰)를 볼 수 있다.
+   * 카드 내부의 버튼·토글·메뉴는 stopPropagation 으로 이 이동에서 제외된다.
+   * 메뉴/다이얼로그가 열려 있거나 막 닫힌 직후(navGrace)에는 이동을 막아 click-through 를 차단.
+   */
+  const goToDetail = () => {
+    if (menuOpen || dialogOpen || navGraceRef.current) return;
+    router.push(`/circles/${circle.id}`);
+  };
+
+  /* official_type 표시 라벨: athletics/intercollegiate 만 반환, 나머지 null */
+  const officialTypeLabel = getOfficialTypeDisplayLabel(circle.official_type);
+
   /** 메뉴의 「削除する」 클릭 핸들러 */
   const handleDeleteMenuClick = () => {
+    // 메뉴 닫힘 → 카드로의 click-through 방지를 위해 내비게이션 잠금 시작
+    startNavGrace();
     // 메뉴를 먼저 닫은 뒤 다이얼로그 열기
     setMenuOpen(false);
     // setTimeout 0: 메뉴 close 애니메이션이 끝나고 포커스가 트리거로 돌아온 뒤 다이얼로그 열림
@@ -177,7 +196,14 @@ export function ManagedCircleCard({ circle, onRequestDelete, className }: Manage
               <div className="flex shrink-0 items-center gap-1">
                 <StatusBadge status={circle.status} />
                 {/* ⋯ 더보기 메뉴 (삭제 등) */}
-                <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+                <DropdownMenu
+                  open={menuOpen}
+                  onOpenChange={(open) => {
+                    setMenuOpen(open);
+                    // 메뉴 열림/닫힘 시 카드 click-through 방지
+                    startNavGrace();
+                  }}
+                >
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
@@ -222,7 +248,14 @@ export function ManagedCircleCard({ circle, onRequestDelete, className }: Manage
       </m.div>
 
       {/* ── 삭제 확인 AlertDialog (카드 외부에 렌더해 포커스 트랩 충돌 방지) ── */}
-      <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <AlertDialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          // 다이얼로그 닫힘 시 카드 click-through 방지
+          startNavGrace();
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
