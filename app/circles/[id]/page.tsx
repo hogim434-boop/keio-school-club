@@ -49,14 +49,18 @@ export default function CircleDetailPage({ params }: CircleDetailPageProps) {
 
 async function CircleDetailContent({ params }: CircleDetailPageProps) {
   const { id } = await params;
-  const circle = await getCircleById(id);
-  if (!circle) notFound();
-
   /**
-   * 활동 리포트 — 최신순 정렬된 전체 목록.
-   * 「ホーム」 탭 미리보기 (slice 5건) + 「掲示板」 탭 전체 리스트 둘 다 같은 데이터 source.
+   * circle 조회 + 활동 리포트 조회를 병렬 실행 (성능 개선 Phase 1).
+   *
+   * - getReportsByCircle 인자를 circle.id 대신 id(route param)로 전달해도 동일.
+   *   report 테이블의 circle_id 컬럼이 circles.id와 같은 UUID이므로
+   *   URL param id === circle.id 가 항상 성립.
+   * - circle가 null(존재하지 않는 서클)인 경우엔 reports 조회는 빈 배열로 무해하게 끝남.
+   *   notFound() 는 Promise.all 이후에 호출하므로 불필요한 쿼리가 한 번 더 실행되지만,
+   *   없는 서클 상세 조회는 극히 드문 케이스이므로 허용.
    */
-  const reports = await getReportsByCircle(circle.id);
+  const [circle, reports] = await Promise.all([getCircleById(id), getReportsByCircle(id)]);
+  if (!circle) notFound();
 
   /**
    * 관련 동아리 — 같은 카테고리의 다른 公認 동아리(인기순). 자기 자신 제외 후 최대 8건.
