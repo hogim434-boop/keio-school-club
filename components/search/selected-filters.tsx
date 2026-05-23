@@ -9,7 +9,7 @@ import { CATEGORY_LABELS } from "@/lib/constants/category";
 import { getOfficialTypeDisplayLabel } from "@/lib/constants/official-type";
 import { RECRUITMENT_STATUS_LABELS } from "@/lib/constants/recruitment-status";
 import { MEMBER_BAND_LABELS } from "@/lib/constants/member-band";
-import { TAG_LABELS } from "@/lib/circles/filter-labels";
+import { IRREGULAR_DAY, TAG_LABELS } from "@/lib/circles/filter-labels";
 import type { CirclesSearchParams } from "@/lib/circles/search-params";
 
 interface SelectedFiltersProps {
@@ -158,11 +158,11 @@ function extractChips(
     });
   });
 
-  // 活動曜日 — 값만 (한자 1자 「金」 ← 짧으므로 「曜日: 金」 보다 단독)
+  // 活動曜日 — 요일 1자는 「金曜日」, 不定期 는 그대로 (「不定期曜日」 방지)
   draft.activityDays.forEach((d) => {
     chips.push({
       id: `day:${d}`,
-      label: `${d}曜日`,
+      label: d === IRREGULAR_DAY ? d : `${d}曜日`,
       remove: () =>
         setDraft((prev) => ({
           ...prev,
