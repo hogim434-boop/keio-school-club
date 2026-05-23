@@ -88,18 +88,22 @@ export function CircleListCard({ circle, isNew = false }: CircleListCardProps) {
             )}
           </div>
 
-          {/* 2행: 태그 칩 — 0 개일 땐 행 자체 생략. flex-nowrap + overflow-hidden 으로 1행 고정 */}
-          {tags.length > 0 && (
+          {/* 2행: 태그 칩 — 라벨 정의된(현행) 태그만. 정리로 제거된 태그는 숨김.
+              0 개일 땐 행 자체 생략. flex-nowrap + overflow-hidden 으로 1행 고정 */}
+          {tags.some((tag) => TAG_LABELS[tag]) && (
             <div className="flex flex-nowrap items-center gap-1 overflow-hidden">
-              {tags.slice(0, 3).map((tag) => (
-                <Badge
-                  key={tag}
-                  variant="outline"
-                  className="shrink-0 px-1.5 py-0 text-[10px] leading-4 font-normal"
-                >
-                  {TAG_LABELS[tag] ?? tag}
-                </Badge>
-              ))}
+              {tags
+                .filter((tag) => TAG_LABELS[tag])
+                .slice(0, 3)
+                .map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant="outline"
+                    className="shrink-0 px-1.5 py-0 text-[10px] leading-4 font-normal"
+                  >
+                    {TAG_LABELS[tag]}
+                  </Badge>
+                ))}
             </div>
           )}
 

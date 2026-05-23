@@ -27,6 +27,7 @@ interface QuickFilter {
 
 // 자주 쓰는 칩 3개만 노출 — 「もっと絞り込む」 가 첫 화면에서 보이도록 개수를 줄임.
 // 모집 상태(新歓シーズン/通年募集) 등 나머지 필터는 「もっと絞り込む」 시트에서 제공.
+// 정리된 특징 태그(beginner_ok / kenser_ok / has_camp)로 구성 — ガチ/ゆるい 는 제거(2026-05 개편).
 const QUICK_FILTERS: QuickFilter[] = [
   {
     label: "初心者歓迎",
@@ -38,17 +39,21 @@ const QUICK_FILTERS: QuickFilter[] = [
     }),
   },
   {
-    label: "ゆるい",
-    isActive: (p) => p.tags.includes("yurui"),
+    label: "兼サー可",
+    isActive: (p) => p.tags.includes("kenser_ok"),
     toggle: (p) => ({
-      tags: p.tags.includes("yurui") ? p.tags.filter((t) => t !== "yurui") : [...p.tags, "yurui"],
+      tags: p.tags.includes("kenser_ok")
+        ? p.tags.filter((t) => t !== "kenser_ok")
+        : [...p.tags, "kenser_ok"],
     }),
   },
   {
-    label: "ガチ",
-    isActive: (p) => p.tags.includes("gachi"),
+    label: "合宿あり",
+    isActive: (p) => p.tags.includes("has_camp"),
     toggle: (p) => ({
-      tags: p.tags.includes("gachi") ? p.tags.filter((t) => t !== "gachi") : [...p.tags, "gachi"],
+      tags: p.tags.includes("has_camp")
+        ? p.tags.filter((t) => t !== "has_camp")
+        : [...p.tags, "has_camp"],
     }),
   },
 ];

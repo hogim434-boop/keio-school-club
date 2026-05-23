@@ -84,14 +84,18 @@ export function CircleCard({ circle }: CircleCardProps) {
             </p>
           )}
 
-          {/* 태그 칩 최대 5개 */}
-          {tags.length > 0 && (
+          {/* 태그 칩 최대 5개 — 라벨이 정의된(현행) 태그만 노출.
+              정리로 제거된 태그(ガチ/ゆるい 등)가 기존 데이터에 남아 있어도 카드엔 표시하지 않음. */}
+          {tags.some((tag) => TAG_LABELS[tag]) && (
             <div className="flex flex-wrap gap-1">
-              {tags.slice(0, 5).map((tag) => (
-                <Badge key={tag} variant="outline" className="text-xs font-normal">
-                  {TAG_LABELS[tag] ?? tag}
-                </Badge>
-              ))}
+              {tags
+                .filter((tag) => TAG_LABELS[tag])
+                .slice(0, 5)
+                .map((tag) => (
+                  <Badge key={tag} variant="outline" className="text-xs font-normal">
+                    {TAG_LABELS[tag]}
+                  </Badge>
+                ))}
             </div>
           )}
 

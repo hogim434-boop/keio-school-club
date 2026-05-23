@@ -61,8 +61,8 @@ export const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function Sw
   { circle, stackPosition, onSwipe },
   ref
 ) {
-  // 태그는 최대 3개만 노출
-  const visibleTags = circle.tags.slice(0, 3);
+  // 태그는 라벨 정의된(현행) 것만, 최대 3개 노출 — 정리로 제거된 태그는 숨김
+  const visibleTags = circle.tags.filter((tag) => TAG_LABELS[tag]).slice(0, 3);
 
   // 접근성: 사용자가 OS 에서 "줄인 모션" 설정 시 drag 비활성
   const reducedMotion = useReducedMotion();
@@ -287,7 +287,7 @@ export const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function Sw
                   key={tag}
                   className="bg-muted text-foreground inline-flex h-6 items-center rounded-full px-2.5 text-xs"
                 >
-                  #{TAG_LABELS[tag] ?? tag}
+                  #{TAG_LABELS[tag]}
                 </span>
               ))}
             </div>

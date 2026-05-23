@@ -228,17 +228,21 @@ function Header({ circle }: { circle: CircleDetail }) {
         })()}
       </div>
       <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{circle.name}</h1>
-      {circle.tags.length > 0 && (
+      {circle.tags.some((tag) => TAG_LABELS[tag]) && (
         <div className="flex flex-wrap gap-1.5">
-          {circle.tags.slice(0, 5).map((tag) => (
-            // 태그 칩: muted/60 배경 + muted-foreground — 세번째 계층 정보
-            <span
-              key={tag}
-              className="text-muted-foreground bg-muted/60 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs"
-            >
-              {TAG_LABELS[tag] ?? tag}
-            </span>
-          ))}
+          {/* 라벨 정의된(현행) 태그만 노출 — 정리로 제거된 태그는 숨김 */}
+          {circle.tags
+            .filter((tag) => TAG_LABELS[tag])
+            .slice(0, 5)
+            .map((tag) => (
+              // 태그 칩: muted/60 배경 + muted-foreground — 세번째 계층 정보
+              <span
+                key={tag}
+                className="text-muted-foreground bg-muted/60 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs"
+              >
+                {TAG_LABELS[tag]}
+              </span>
+            ))}
         </div>
       )}
     </header>
