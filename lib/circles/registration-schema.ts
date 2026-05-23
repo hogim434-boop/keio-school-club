@@ -34,11 +34,35 @@
 import { z } from "zod";
 
 import { ACTIVITY_FREQUENCIES } from "@/lib/constants/activity-frequency";
+import { ACTIVITY_TIME_BANDS } from "@/lib/constants/activity-time-band";
+import { IRREGULAR_DAY } from "@/lib/circles/filter-labels";
 import { CATEGORIES } from "@/lib/constants/category";
 import { MEMBER_BANDS } from "@/lib/constants/member-band";
 import { OFFICIAL_TYPES } from "@/lib/constants/official-type";
+import { RECRUITMENT_STATUSES } from "@/lib/constants/recruitment-status";
 import type { CircleDetail } from "@/lib/types/domain";
 import { instagramUrlToHandle, xUrlToHandle, lineUrlToId } from "@/lib/circles/sns";
+
+/**
+ * 활동 요일 한자 토큰 7종 (月〜日).
+ * activity_days 텍스트(예: "月・水・金" / "毎週火曜")에서 요일만 정규 추출할 때 사용.
+ * (lib/dummy/circles.ts 의 parseActivityWeekdays · DB 의 parse_activity_weekdays 와 동일 규칙)
+ */
+const WEEKDAY_TOKENS = ["月", "火", "水", "木", "金", "土", "日"] as const;
+
+/**
+ * activity_days 텍스트 → 요일 토큰 배열로 역변환 (수정 폼 초기값 복원용).
+ *  - "X曜" 형식: 曜 앞 글자만 요일로 인정 ("曜日"의 日 같은 false-positive 차단)
+ *  - bare 형식("月・水・金"): 曜 가 없으면 구분자로 분리한 토큰이 요일
+ */
+function parseWeekdayTokens(src: string | null | undefined): string[] {
+  if (!src) return [];
+  const hasYou = src.includes("曜");
+  const bareTokens = hasYou ? [] : src.split(/[・･,、\s]+/).map((s) => s.trim());
+  return WEEKDAY_TOKENS.filter(
+    (wd) => src.includes(`${wd}曜`) || (!hasYou && bareTokens.includes(wd))
+  );
+}
 
 // ─────────────────────────────────────────
 // SNS 핸들/ID 형식 검증 정규식
@@ -92,6 +116,28 @@ const baseSchema = z.object({
 
   /** 활동 빈도 (DB enum 값) */
   activity_frequency: z.enum(ACTIVITY_FREQUENCIES, "活動頻度を選択してください"),
+
+  /**
+   * 모집 상태 (DB enum, 필수).
+   * 사용자 검색 필터의 「募集状態」 와 매칭되도록 등록 시 운영자가 직접 선택한다.
+   * (이전엔 DB default year_round 로만 들어가 필터와 어긋났던 문제 해소)
+   */
+  recruitment_status: z.enum(RECRUITMENT_STATUSES, "募集状況を選択してください"),
+
+  /**
+   * 활동 시간대 (복수 가능, 任意).
+   * 칩 다중 선택 → ActivityTimeBand[] 배열로 보관 → DB activity_time_band(enum[]) 저장.
+   * 미선택 시 빈 배열. 사용자 검색 필터 「活動時間帯」 와 매칭.
+   */
+  activity_time_band: z.array(z.enum(ACTIVITY_TIME_BANDS)),
+
+  /**
+   * 활동 요일 (한자 토큰 복수, 任意).
+   * 칩 다중 선택 → ["月","水"] 배열로 보관 → 제출 시 "月・水" text 로 join 하여
+   * DB activity_days(text) 저장 → 생성 컬럼 activity_weekdays 가 자동 파싱.
+   * 사용자 검색 필터 「活動曜日」 와 매칭.
+   */
+  activity_weekdays: z.array(z.string()),
 
   /**
    * 부원 수 범위 (5구간 enum, 任意).
@@ -228,6 +274,9 @@ export const STEP_FIELDS = {
     "category",
     "official_type",
     "activity_frequency",
+    "recruitment_status",
+    "activity_time_band",
+    "activity_weekdays",
     "member_band",
     "description",
   ] as const,
@@ -260,6 +309,18 @@ export function circleToEditValues(circle: CircleDetail): RegistrationValues {
     category: circle.category,
     official_type: circle.official_type,
     activity_frequency: circle.activity_frequency,
+    // 모집 상태: null 이면 year_round(募集中) 로 폴백 (필수 필드라 빈 값 불가)
+    recruitment_status: circle.recruitment_status ?? "year_round",
+    // 활동 시간대: 신규 enum(ACTIVITY_TIME_BANDS) 값만 — 레거시(weekday_*) 는 제외해
+    // 편집 제출 시 z.enum 검증을 통과시킨다.
+    activity_time_band: (circle.activity_time_band ?? []).filter(
+      (b): b is (typeof ACTIVITY_TIME_BANDS)[number] =>
+        (ACTIVITY_TIME_BANDS as readonly string[]).includes(b)
+    ),
+    // 활동 요일: "不定期" 면 [不定期], 아니면 "月・水" → ["月","水"] 토큰 배열로 역변환
+    activity_weekdays: (circle.activity_days ?? "").includes(IRREGULAR_DAY)
+      ? [IRREGULAR_DAY]
+      : parseWeekdayTokens(circle.activity_days),
     // member_count → member_band 로 교체 (수정 폼에서 기존 범위 칩 반영)
     member_band: circle.member_band ?? undefined,
     description: circle.description,

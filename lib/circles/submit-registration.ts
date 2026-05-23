@@ -93,6 +93,12 @@ export async function submitRegistration(
       category: values.category,
       official_type: values.official_type,
       activity_frequency: values.activity_frequency,
+      // 모집 상태: 등록 폼에서 선택한 값 (필수). 사용자 검색 필터와 매칭.
+      recruitment_status: values.recruitment_status,
+      // 활동 시간대: 칩 다중 선택 배열 그대로 (빈 배열이면 '{}' 저장).
+      activity_time_band: values.activity_time_band,
+      // 활동 요일: ["月","水"] → "月・水" text 로 저장 → 생성 컬럼 activity_weekdays 자동 파싱.
+      activity_days: values.activity_weekdays.join("・"),
       slug,
       // DB default 가 '' 이므로 undefined/null 대신 빈 문자열 보장
       description: values.description ?? "",
@@ -255,6 +261,10 @@ export async function updateCircle(
       category: values.category,
       official_type: values.official_type,
       activity_frequency: values.activity_frequency,
+      // 모집 상태·활동 시간대·활동 요일 — 등록과 동일하게 수정 시에도 반영
+      recruitment_status: values.recruitment_status,
+      activity_time_band: values.activity_time_band,
+      activity_days: values.activity_weekdays.join("・"),
       description: values.description ?? "",
       // member_count → member_band 로 교체. 未選択(undefined) 은 null 로 저장.
       member_band: values.member_band ?? null,

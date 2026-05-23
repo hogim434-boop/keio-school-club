@@ -162,6 +162,11 @@ export function CircleRegistrationForm({
       // 단계 1: 기본 정보
       name: "",
       // category, official_type, activity_frequency: 선택 전 undefined (스키마 필수값)
+      // 모집 상태: 가장 흔한 「募集中」 을 기본 선택 (필수 필드)
+      recruitment_status: "year_round",
+      // 활동 시간대·요일: 任意 다중 선택 — 빈 배열로 시작
+      activity_time_band: [],
+      activity_weekdays: [],
       // member_count → member_band 로 교체 (범위 칩 단일 선택, 任意)
       member_band: undefined,
       description: "",

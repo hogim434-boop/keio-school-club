@@ -30,6 +30,12 @@ import {
   ACTIVITY_FREQUENCIES,
   ACTIVITY_FREQUENCY_LABELS,
 } from "@/lib/constants/activity-frequency";
+import { ACTIVITY_TIME_BANDS, ACTIVITY_TIME_BAND_LABELS } from "@/lib/constants/activity-time-band";
+import {
+  RECRUITMENT_STATUSES,
+  RECRUITMENT_STATUS_LABELS,
+} from "@/lib/constants/recruitment-status";
+import { ACTIVITY_DAY_OPTIONS, IRREGULAR_DAY } from "@/lib/circles/filter-labels";
 import { cn } from "@/lib/utils";
 
 // ── 스타일 토큰 ────────────────────────────────────────────────────────────────
@@ -95,6 +101,32 @@ export function StepBasic({ existingCoverUrl = null }: StepBasicProps = {}) {
   // ── 현재 선택된 부원 수 범위 실시간 감시 ─────────────────────────────────
   // watch 로 렌더 트리거 보장 (register 대신 watch + setValue 패턴 — step-tags 와 동일)
   const selectedBand = watch("member_band");
+  // 활동 시간대·요일 다중 선택 실시간 감시 (배열 칩 토글용)
+  const selectedTimeBands = watch("activity_time_band") ?? [];
+  const selectedWeekdays = watch("activity_weekdays") ?? [];
+
+  /** 배열 필드 칩 토글 — 이미 있으면 제거, 없으면 추가 (다중 선택) */
+  function toggleArrayValue<T>(arr: T[], val: T): T[] {
+    return arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val];
+  }
+
+  /**
+   * 활동 요일 칩 토글 — 「不定期」 는 요일과 배타적.
+   * - 不定期 선택: 다른 요일을 모두 비우고 ["不定期"] 로 설정 (재클릭 시 해제)
+   * - 특정 요일 선택: 不定期 를 먼저 제거한 뒤 해당 요일을 토글
+   */
+  function toggleWeekday(day: string) {
+    const next =
+      day === IRREGULAR_DAY
+        ? selectedWeekdays.includes(IRREGULAR_DAY)
+          ? []
+          : [IRREGULAR_DAY]
+        : toggleArrayValue(
+            selectedWeekdays.filter((d) => d !== IRREGULAR_DAY),
+            day
+          );
+    setValue("activity_weekdays", next, { shouldValidate: true });
+  }
 
   // ── 접근성: 감소된 모션 사용자 대응 ─────────────────────────────────────
   const reducedMotion = useReducedMotion();
@@ -334,6 +366,120 @@ export function StepBasic({ existingCoverUrl = null }: StepBasicProps = {}) {
                 {errors.activity_frequency.message}
               </p>
             )}
+          </div>
+
+          {/* 모집 상태 select (필수) — 사용자 검색 필터 「募集状態」 와 매칭 */}
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="recruitment_status" className={FIELD_LABEL_CLS}>
+              募集状況
+              <span className="ml-1 text-red-500" aria-hidden="true">
+                *
+              </span>
+            </label>
+            <select
+              id="recruitment_status"
+              aria-invalid={!!errors.recruitment_status}
+              aria-describedby={errors.recruitment_status ? "error-recruitment-status" : undefined}
+              aria-required="true"
+              className={cn(
+                SELECT_CLS,
+                errors.recruitment_status && "ring-2 ring-red-400 focus:ring-red-400"
+              )}
+              {...register("recruitment_status")}
+            >
+              {RECRUITMENT_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {RECRUITMENT_STATUS_LABELS[status]}
+                </option>
+              ))}
+            </select>
+            {errors.recruitment_status && (
+              <p id="error-recruitment-status" role="alert" className={ERROR_MSG_CLS}>
+                {errors.recruitment_status.message}
+              </p>
+            )}
+          </div>
+        </m.div>
+
+        {/* ── 活動時間帯 · 活動曜日 (선택, 다중) ───────────────────────────── */}
+        <m.div
+          className="flex flex-col gap-5"
+          variants={FADE_UP_VARIANTS}
+          initial={initial}
+          animate="visible"
+          transition={makeFadeTransition(0.23)}
+        >
+          {/* 활동 시간대 칩 (任意·다중) */}
+          <div className="flex flex-col gap-1.5">
+            <p className={FIELD_LABEL_CLS}>
+              活動時間帯
+              <span className="text-muted-foreground ml-1.5 text-xs font-normal">
+                （任意・複数可）
+              </span>
+            </p>
+            <ul className="flex flex-wrap gap-2" aria-label="活動時間帯">
+              {ACTIVITY_TIME_BANDS.map((band) => {
+                const isSelected = selectedTimeBands.includes(band);
+                return (
+                  <li key={band}>
+                    <button
+                      type="button"
+                      aria-pressed={isSelected}
+                      onClick={() =>
+                        setValue("activity_time_band", toggleArrayValue(selectedTimeBands, band), {
+                          shouldValidate: true,
+                        })
+                      }
+                      className={cn(
+                        "flex h-12 shrink-0 items-center justify-center rounded-md border-2",
+                        "px-4 text-sm whitespace-nowrap transition-colors",
+                        isSelected
+                          ? "border-keio-navy bg-keio-navy text-keio-navy-foreground font-semibold"
+                          : "border-border text-muted-foreground hover:border-muted-foreground"
+                      )}
+                    >
+                      {ACTIVITY_TIME_BAND_LABELS[band]}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+
+          {/* 활동 요일 칩 (任意·다중) */}
+          <div className="flex flex-col gap-1.5">
+            <p className={FIELD_LABEL_CLS}>
+              活動曜日
+              <span className="text-muted-foreground ml-1.5 text-xs font-normal">
+                （任意・複数可）
+              </span>
+            </p>
+            <ul className="flex flex-wrap gap-2" aria-label="活動曜日">
+              {ACTIVITY_DAY_OPTIONS.map((day) => {
+                const isSelected = selectedWeekdays.includes(day);
+                // 不定期 칩은 글자가 길어 가로 패딩, 요일 1자 칩은 정사각
+                const isIrregular = day === IRREGULAR_DAY;
+                return (
+                  <li key={day}>
+                    <button
+                      type="button"
+                      aria-pressed={isSelected}
+                      onClick={() => toggleWeekday(day)}
+                      className={cn(
+                        "flex h-12 shrink-0 items-center justify-center rounded-md border-2",
+                        "text-sm transition-colors",
+                        isIrregular ? "px-4 whitespace-nowrap" : "w-12",
+                        isSelected
+                          ? "border-keio-navy bg-keio-navy text-keio-navy-foreground font-semibold"
+                          : "border-border text-muted-foreground hover:border-muted-foreground"
+                      )}
+                    >
+                      {day}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         </m.div>
 
