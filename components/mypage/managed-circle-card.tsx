@@ -323,7 +323,7 @@ function ApprovedContent({ circle }: { circle: MyCircle }) {
   );
 }
 
-/** pending: 審査中 안내 박스 + 編集 링크(재제출) */
+/** pending: 審査中 안내 박스 + 完成度 게이지 + 編集 링크(재제출) */
 function PendingContent({ circle }: { circle: MyCircle }) {
   return (
     <>
@@ -331,6 +331,9 @@ function PendingContent({ circle }: { circle: MyCircle }) {
       <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800 dark:border-amber-800/40 dark:bg-amber-950/30 dark:text-amber-300">
         審査中です。公開までお待ちください。
       </div>
+
+      {/* 프로필 完成度 — 심사 중에도 미리 프로필을 채워둘 수 있게 표시(2026-05) */}
+      <ProfileCompletion circle={circle} />
 
       {/* 編集する — 審査中에도 수정 가능(재제출). 편집 폼으로 이동. */}
       <Button asChild variant="outline" className="h-10 w-full">
