@@ -20,7 +20,8 @@
  */
 
 import * as React from "react";
-import { motion, useReducedMotion } from "motion/react";
+import { LazyMotion, domAnimation, useReducedMotion } from "motion/react";
+import * as m from "motion/react-m";
 
 import { cn } from "@/lib/utils";
 
@@ -75,27 +76,33 @@ export function Pressable({
   const scale = INTENSITY_SCALE[intensity];
 
   return (
-    <motion.button
-      /** 눌릴 때 scale 축소 + spring 복귀 — reduced-motion 시 비활성 */
-      whileTap={prefersReducedMotion ? undefined : { scale }}
-      transition={{
-        type: "spring",
-        stiffness: 400,
-        damping: 15,
-      }}
-      style={{
-        /* iOS 기본 탭 하이라이트(파란 반투명) 제거 */
-        WebkitTapHighlightColor: "transparent",
-      }}
-      type={type}
-      className={cn(
-        /* 터치 딜레이 300ms 제거 + 텍스트 선택 방지 */
-        "touch-manipulation select-none",
-        className
-      )}
-      {...props}
-    >
-      {children}
-    </motion.button>
+    /*
+     * LazyMotion + m.button: full `motion` 대신 지연 로드되는 m 컴포넌트 사용으로 번들 최소화.
+     * Pressable 은 여러 곳에서 단독 import 되므로 자체 LazyMotion 으로 감싸 자족적으로 동작시킨다.
+     */
+    <LazyMotion features={domAnimation}>
+      <m.button
+        /** 눌릴 때 scale 축소 + spring 복귀 — reduced-motion 시 비활성 */
+        whileTap={prefersReducedMotion ? undefined : { scale }}
+        transition={{
+          type: "spring",
+          stiffness: 400,
+          damping: 15,
+        }}
+        style={{
+          /* iOS 기본 탭 하이라이트(파란 반투명) 제거 */
+          WebkitTapHighlightColor: "transparent",
+        }}
+        type={type}
+        className={cn(
+          /* 터치 딜레이 300ms 제거 + 텍스트 선택 방지 */
+          "touch-manipulation select-none",
+          className
+        )}
+        {...props}
+      >
+        {children}
+      </m.button>
+    </LazyMotion>
   );
 }

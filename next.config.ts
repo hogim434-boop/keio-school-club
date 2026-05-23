@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
   // next/image 외부 도메인 허용
   // - picsum.photos: Phase 1.1 의 더미 데이터 placeholder (lib/dummy/circles.ts)
   // - Supabase Storage URL 은 Phase 1.2 T-008 에서 추가 예정
+  // 번들 최적화 — barrel import 가 큰 패키지를 자동으로 개별 모듈 import 로 변환(tree-shaking↑).
+  // 동작 변화 없음. cacheComponents 는 위 주석대로 의도적으로 OFF 유지.
+  experimental: {
+    optimizePackageImports: ["lucide-react", "radix-ui"],
+  },
   images: {
     remotePatterns: [
       {
