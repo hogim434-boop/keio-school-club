@@ -163,9 +163,7 @@ export function StepContact({ onRegistered, mode = "create", circleId }: StepCon
             {isEdit ? "連絡先" : "連絡先・規約への同意"}
           </h1>
           <p className="text-muted-foreground text-sm">
-            {isEdit
-              ? "公式 SNS の URL を入力してください"
-              : "公式 SNS の URL を入力し、利用規約に同意してください"}
+            サークル公式アカウントのIDを入力（1つ以上必須）
           </p>
         </m.div>
 
@@ -177,37 +175,29 @@ export function StepContact({ onRegistered, mode = "create", circleId }: StepCon
           animate="visible"
           transition={makeFadeTransition(0.12)}
         >
-          {/* 공식 계정 안내 문구 */}
-          <p className="text-muted-foreground rounded-lg bg-neutral-100 px-4 py-3 text-sm leading-relaxed dark:bg-neutral-800">
-            個人アカウントではなく、サークル公式アカウントのURLを入力してください。
-            <br />
-            Instagram・X・LINE のいずれか1つ以上が必須です。
-          </p>
-
-          {/* Instagram URL 필드 */}
+          {/* Instagram ID 입력 필드 (도메인 접두사 없이 ID 직접 입력) */}
           <div className="flex flex-col gap-1.5">
             <label htmlFor="contact_instagram" className={FIELD_LABEL_CLS}>
-              Instagram の URL
+              Instagram ID
             </label>
             <Input
               id="contact_instagram"
-              type="url"
-              inputMode="url"
-              placeholder="https://www.instagram.com/your_circle"
+              type="text"
+              inputMode="text"
+              placeholder="例：keio_tennis"
               autoComplete="off"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               className={cn(
                 AUTH_INPUT_CLS,
-                // 에러 시 붉은 ring 으로 시각적 피드백
                 errors.contact_instagram && "ring-2 ring-red-400 focus-visible:ring-red-400"
               )}
               aria-invalid={!!errors.contact_instagram}
               aria-describedby={errors.contact_instagram ? "error-instagram" : undefined}
               {...register("contact_instagram")}
             />
-            {/*
-              SNS 최소1 에러는 superRefine 에 의해 contact_instagram path 에 붙음.
-              화이트리스트 에러와 동일 위치에 표시된다.
-            */}
+            {/* SNS 최소1 에러는 superRefine 에 의해 contact_instagram path 에 붙음 */}
             {errors.contact_instagram && (
               <p id="error-instagram" role="alert" className={ERROR_MSG_CLS}>
                 {errors.contact_instagram.message}
@@ -215,17 +205,20 @@ export function StepContact({ onRegistered, mode = "create", circleId }: StepCon
             )}
           </div>
 
-          {/* X (구 Twitter) URL 필드 */}
+          {/* X (구 Twitter) ID 입력 필드 */}
           <div className="flex flex-col gap-1.5">
             <label htmlFor="contact_x" className={FIELD_LABEL_CLS}>
-              X（旧 Twitter）の URL
+              X（旧 Twitter）ID
             </label>
             <Input
               id="contact_x"
-              type="url"
-              inputMode="url"
-              placeholder="https://x.com/your_circle"
+              type="text"
+              inputMode="text"
+              placeholder="例：keio_tennis"
               autoComplete="off"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               className={cn(
                 AUTH_INPUT_CLS,
                 errors.contact_x && "ring-2 ring-red-400 focus-visible:ring-red-400"
@@ -241,17 +234,20 @@ export function StepContact({ onRegistered, mode = "create", circleId }: StepCon
             )}
           </div>
 
-          {/* LINE URL 필드 */}
+          {/* LINE ID 입력 필드 */}
           <div className="flex flex-col gap-1.5">
             <label htmlFor="contact_line" className={FIELD_LABEL_CLS}>
-              LINE オープンチャット / 公式アカウントの URL
+              LINE ID
             </label>
             <Input
               id="contact_line"
-              type="url"
-              inputMode="url"
-              placeholder="https://line.me/ti/g2/xxxxxxxxxx"
+              type="text"
+              inputMode="text"
+              placeholder="例：@keio_tennis"
               autoComplete="off"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               className={cn(
                 AUTH_INPUT_CLS,
                 errors.contact_line && "ring-2 ring-red-400 focus-visible:ring-red-400"

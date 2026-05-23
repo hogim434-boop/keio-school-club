@@ -3,9 +3,17 @@
  *
  * 역할:
  *  - 서클 등록 폼의 Zod 검증 스키마 정의
- *  - SNS URL 화이트리스트 검증 함수 제공
+ *  - SNS 핸들/ID 형식 검증 (2026-05 개편: URL 화이트리스트 → 핸들/ID 형식으로 교체)
  *  - react-hook-form 의 단계별 부분검증(trigger)을 위한 STEP_FIELDS 상수 제공
  *  - UI 에이전트가 이 파일의 타입·상수를 그대로 import 해서 사용하므로 SSOT 역할
+ *
+ * SNS 입력 방식 변경 (2026-05):
+ *  - 이전: 전체 URL 직접 입력 (URL 화이트리스트 검증)
+ *  - 이후: 핸들/ID 만 입력, 폼↔저장 경계에서 변환
+ *    · Instagram: 핸들 "keio_tennis" → DB 저장 "https://instagram.com/keio_tennis"
+ *    · X        : 핸들 "keio_tennis" → DB 저장 "https://x.com/keio_tennis"
+ *    · LINE     : ID   "@keio_tennis"→ DB 저장 "https://line.me/R/ti/p/%40keio_tennis"
+ *  - DB 저장 형식(전체 URL)은 변경 없음 — join-channel-modal 등 표시 로직 그대로
  *
  * 주의:
  *  - 이 파일은 브라우저·서버 양쪽에서 import 가능한 순수 로직 파일
@@ -30,53 +38,25 @@ import { CATEGORIES } from "@/lib/constants/category";
 import { MEMBER_BANDS } from "@/lib/constants/member-band";
 import { OFFICIAL_TYPES } from "@/lib/constants/official-type";
 import type { CircleDetail } from "@/lib/types/domain";
+import { instagramUrlToHandle, xUrlToHandle, lineUrlToId } from "@/lib/circles/sns";
 
 // ─────────────────────────────────────────
-// SNS URL 화이트리스트 허용 호스트 목록
-// ─────────────────────────────────────────
-
-/** Instagram 허용 호스트 */
-const INSTAGRAM_ALLOWED = ["instagram.com"] as const;
-
-/** X (구 Twitter) 허용 호스트 */
-const X_ALLOWED = ["x.com", "twitter.com"] as const;
-
-/** LINE 허용 호스트 */
-const LINE_ALLOWED = ["line.me", "lin.ee"] as const;
-
-// ─────────────────────────────────────────
-// URL 화이트리스트 검증 헬퍼
+// SNS 핸들/ID 형식 검증 정규식
 // ─────────────────────────────────────────
 
 /**
- * SNS URL 이 허용된 호스트 목록에 속하는지 검증합니다.
- *
- * 정규화 방식:
- *  - `new URL(url).hostname` 으로 호스트 추출
- *  - `www.` 접두어 제거 후 **정확 매칭** (부분일치 우회 차단)
- *  - URL 파싱 실패(상대경로, 빈 문자열 등) 시 false 반환
- *
- * @param url - 검증할 URL 문자열
- * @param allowed - 허용된 호스트 배열 (예: ["instagram.com"])
- * @returns 허용된 호스트면 true, 아니면 false
- *
- * @example
- * isAllowedSnsUrl("https://www.instagram.com/circle", ["instagram.com"]) // true
- * isAllowedSnsUrl("https://fake-instagram.com", ["instagram.com"])        // false
- * isAllowedSnsUrl("not-a-url", ["instagram.com"])                         // false
+ * Instagram/X 핸들 허용 패턴.
+ * 영숫자·언더스코어·점, 1~30자, 선행 @ 허용.
+ * 예: "keio_tennis", "@keio.tennis"
  */
-export function isAllowedSnsUrl(url: string, allowed: readonly string[]): boolean {
-  try {
-    const hostname = new URL(url).hostname;
-    // www. 접두어를 제거해 www.instagram.com → instagram.com 으로 정규화
-    const normalized = hostname.replace(/^www\./, "");
-    // 허용 목록에 정확히 포함되는지 확인 (includes 는 완전 일치)
-    return allowed.includes(normalized);
-  } catch {
-    // URL 파싱 실패 (상대경로, 빈 문자열 등) → 유효하지 않은 URL
-    return false;
-  }
-}
+const SNS_HANDLE_REGEX = /^@?[A-Za-z0-9_.]{1,30}$/;
+
+/**
+ * LINE Basic ID 허용 패턴.
+ * 영숫자·언더스코어·점·하이픈, 1~30자, 선행 @ 허용.
+ * 예: "@keio_tennis", "keio-tennis"
+ */
+const LINE_ID_REGEX = /^@?[A-Za-z0-9_.\\-]{1,30}$/;
 
 // ─────────────────────────────────────────
 // Zod 등록 스키마
@@ -90,9 +70,9 @@ export function isAllowedSnsUrl(url: string, allowed: readonly string[]): boolea
  *  2. tags   — 태그 선택 (최대 5개)
  *  3. contact — SNS 연락처 + 서약 2종
  *
- * 검증 규칙:
+ * 검증 규칙 (2026-05 개편):
  *  - Instagram/X/LINE 중 최소 1개 입력 필수 (.superRefine)
- *  - 각 SNS URL 은 도메인 화이트리스트 통과 필수
+ *  - 각 SNS 는 핸들/ID 형식 검증 (URL 화이트리스트 검증 폐지)
  *  - pledge1, pledge2 는 반드시 true (체크박스 동의 필수)
  */
 const baseSchema = z.object({
@@ -135,36 +115,45 @@ const baseSchema = z.object({
   // ── 단계 3: 연락처 + 서약 ──────────────
 
   /**
-   * Instagram URL (공식 계정 URL)
-   * 화이트리스트: instagram.com
+   * Instagram 핸들 (공식 계정 ユーザー名).
+   * 입력: "keio_tennis" または "@keio_tennis"
+   * 저장: submit 시 "https://instagram.com/keio_tennis" 로 변환됨 (submit-registration.ts 담당)
+   * 형식: 영숫자·언더스코어·점, 1~30자, 선행 @ 허용
    */
   contact_instagram: z
     .string()
     .optional()
     .refine(
-      (val) => !val || isAllowedSnsUrl(val, INSTAGRAM_ALLOWED),
-      "公式 SNS の URL を入力してください"
+      (val) => !val || SNS_HANDLE_REGEX.test(val.trim()),
+      "Instagram のユーザー名を入力してください（例: keio_tennis）"
     ),
 
   /**
-   * X (구 Twitter) URL (공식 계정 URL)
-   * 화이트리스트: x.com, twitter.com
+   * X (구 Twitter) 핸들 (공식 계정 ユーザー名).
+   * 입력: "keio_tennis" または "@keio_tennis"
+   * 저장: submit 시 "https://x.com/keio_tennis" 로 변환됨 (submit-registration.ts 담당)
+   * 형식: 영숫자·언더스코어·점, 1~30자, 선행 @ 허용
    */
   contact_x: z
     .string()
     .optional()
-    .refine((val) => !val || isAllowedSnsUrl(val, X_ALLOWED), "公式 SNS の URL を入力してください"),
+    .refine(
+      (val) => !val || SNS_HANDLE_REGEX.test(val.trim()),
+      "X のユーザー名を入力してください（例: keio_tennis）"
+    ),
 
   /**
-   * LINE 오픈채팅 또는 공식 계정 URL
-   * 화이트리스트: line.me, lin.ee
+   * LINE 공식계정 Basic ID.
+   * 입력: "@keio_tennis" または "keio_tennis"（@ は自動付与）
+   * 저장: submit 시 "https://line.me/R/ti/p/%40keio_tennis" 로 변환됨 (submit-registration.ts 담당)
+   * 형식: 영숫자·언더스코어·점·하이픈, 1~30자, 선행 @ 허용
    */
   contact_line: z
     .string()
     .optional()
     .refine(
-      (val) => !val || isAllowedSnsUrl(val, LINE_ALLOWED),
-      "公式 SNS の URL を入力してください"
+      (val) => !val || LINE_ID_REGEX.test(val.trim()),
+      "LINE 公式アカウントの ID を入力してください（例: @keio_tennis）"
     ),
 
   /** 서약 1: 정보 정확성 동의 (반드시 체크) */
@@ -260,7 +249,8 @@ export type RegistrationValues = z.infer<typeof registrationSchema>;
 /**
  * DB 의 CircleDetail 을 수정 폼 초기값(RegistrationValues)으로 변환한다.
  * - tags 는 toCircleDetail 결과가 이미 slug 배열이므로 그대로 사용
- * - contact_* 는 null → "" 로 변환(폼 input 은 빈 문자열 기준)
+ * - contact_* 는 DB 에 저장된 전체 URL → 핸들/ID 로 역변환하여 폼에 표시
+ *   (snsFromUrl 를 사용. 역변환 불가 시 best-effort 로 원본 반환)
  * - cover 는 새 파일 선택 전까지 undefined(기존 cover_image_url 은 폼 밖에서 미리보기로 표시)
  * - pledge1/2 는 등록 시 이미 동의했으므로 true 로 채워 검증을 통과시킨다(수정 화면은 서약 UI 숨김)
  */
@@ -274,9 +264,13 @@ export function circleToEditValues(circle: CircleDetail): RegistrationValues {
     member_band: circle.member_band ?? undefined,
     description: circle.description,
     tags: circle.tags,
-    contact_instagram: circle.contact_instagram ?? "",
-    contact_x: circle.contact_x ?? "",
-    contact_line: circle.contact_line ?? "",
+    // DB URL → 핸들/ID 역변환: 편집 모드에서 사용자에게 핸들이 보이도록
+    // instagramUrlToHandle: "https://instagram.com/keio_tennis" → "keio_tennis"
+    // xUrlToHandle       : "https://x.com/keio_tennis"         → "keio_tennis"
+    // lineUrlToId        : "https://line.me/R/ti/p/%40keio"     → "@keio"
+    contact_instagram: instagramUrlToHandle(circle.contact_instagram ?? ""),
+    contact_x: xUrlToHandle(circle.contact_x ?? ""),
+    contact_line: lineUrlToId(circle.contact_line ?? ""),
     pledge1: true,
     pledge2: true,
     cover: undefined,

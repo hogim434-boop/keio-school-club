@@ -27,6 +27,7 @@ import { uploadCoverImage } from "@/lib/storage/strip-exif";
 
 import { makeCircleSlug } from "./slug";
 import type { RegistrationValues } from "./registration-schema";
+import { instagramHandleToUrl, xHandleToUrl, lineIdToUrl } from "./sns";
 
 // ─────────────────────────────────────────
 // 반환 타입
@@ -98,10 +99,14 @@ export async function submitRegistration(
       // member_count → member_band 로 교체. 未選択(undefined) 은 null 로 저장.
       member_band: values.member_band ?? null,
       owner_id: ownerId,
-      // 빈 문자열은 null 로 변환 (DB 컬럼 nullable, 빈 문자열 혼재 방지)
-      contact_instagram: values.contact_instagram?.trim() || null,
-      contact_x: values.contact_x?.trim() || null,
-      contact_line: values.contact_line?.trim() || null,
+      // 핸들/ID → 전체 URL 변환 후 저장
+      // 빈 값(handleToUrl 결과가 "") 은 null 로 변환 (DB 컬럼 nullable)
+      // instagramHandleToUrl("keio_tennis") → "https://instagram.com/keio_tennis"
+      // xHandleToUrl("keio_tennis")         → "https://x.com/keio_tennis"
+      // lineIdToUrl("@keio_tennis")         → "https://line.me/R/ti/p/%40keio_tennis"
+      contact_instagram: instagramHandleToUrl(values.contact_instagram?.trim()) || null,
+      contact_x: xHandleToUrl(values.contact_x?.trim()) || null,
+      contact_line: lineIdToUrl(values.contact_line?.trim()) || null,
       // 서약 동의 시각 기록 (pledge1·pledge2 모두 z.literal(true) 로 보증됨)
       pledge_accepted_at: new Date().toISOString(),
       // status, annual_fee_yen 은 DB default('pending', 0) 을 사용하므로 미지정
@@ -253,9 +258,10 @@ export async function updateCircle(
       description: values.description ?? "",
       // member_count → member_band 로 교체. 未選択(undefined) 은 null 로 저장.
       member_band: values.member_band ?? null,
-      contact_instagram: values.contact_instagram?.trim() || null,
-      contact_x: values.contact_x?.trim() || null,
-      contact_line: values.contact_line?.trim() || null,
+      // 핸들/ID → 전체 URL 변환 후 저장 (submitRegistration 과 동일 로직)
+      contact_instagram: instagramHandleToUrl(values.contact_instagram?.trim()) || null,
+      contact_x: xHandleToUrl(values.contact_x?.trim()) || null,
+      contact_line: lineIdToUrl(values.contact_line?.trim()) || null,
       updated_at: new Date().toISOString(),
       // 재신청 시에만 status/rejection_reason 포함, 나머지는 현재 값 유지
       ...statusFields,
