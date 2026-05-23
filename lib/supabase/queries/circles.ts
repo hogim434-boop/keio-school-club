@@ -11,7 +11,10 @@
  * - activity_days 컬럼은 text 타입 (예: "月・水・金") — .or() + ilike 로 다중 요일 OR 필터
  */
 
+import { unstable_cache } from "next/cache";
+
 import { createClient } from "@/lib/supabase/server";
+import { createAnonClient } from "@/lib/supabase/anon";
 import type { CircleDetail, CircleImage, CircleSummary } from "@/lib/types/domain";
 import type { CirclesSearchParams } from "@/lib/circles/search-params";
 import {
@@ -185,45 +188,67 @@ function toCircleDetail(row: Record<string, unknown>): CircleDetail {
 // 공개 fetch 함수
 // ============================================================
 
+/*
+ * ── 공개 목록 캐싱 정책 (성능 개선 3단계) ──────────────────────────
+ * 아래 4개 함수(getPopularCircles/getNewCircles/getRecruitingCircles/getCirclesByCategory)는
+ * "status='approved' 공개·비개인화" 목록만 반환하므로 unstable_cache 로 60초 캐싱한다.
+ *
+ * - 쿠키 없는 createAnonClient() 사용: unstable_cache 안에서는 cookies() 호출이 금지되므로,
+ *   인증 컨텍스트가 필요 없는 공개 데이터는 익명 클라이언트로 읽는다.
+ *   (RLS: circles_select_public_or_owner_or_admin — anon 이 approved 동아리 SELECT 허용)
+ * - tags:["circles"] — 동아리 mutation(승인/모집상태/삭제 등) 시 revalidateTag("circles")로 즉시 무효화.
+ * - 60초는 안전망. 클라이언트 사이드 updateCircle(브라우저 함수)은 revalidateTag 불가지만
+ *   최대 60초 TTL 내 자동 갱신되고, 신규 등록은 pending 상태라 approved 캐시에 영향 없음.
+ * - getCircleById/getReportsByCircle/filterCircles/개인화 쿼리는 캐싱하지 않음(항상 최신).
+ */
+
 /**
  * 인기 서클 목록 — view_count 내림차순.
  * 홈 Discover 섹션 (인기 6건)에서 사용.
  */
-export async function getPopularCircles(limit = 6): Promise<CircleSummary[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("circles")
-    .select("*, circle_tags(tags(slug))")
-    .eq("status", "approved")
-    .order("view_count", { ascending: false })
-    .limit(limit);
+export const getPopularCircles = unstable_cache(
+  async (limit = 6): Promise<CircleSummary[]> => {
+    const supabase = createAnonClient();
+    const { data, error } = await supabase
+      .from("circles")
+      .select("*, circle_tags(tags(slug))")
+      .eq("status", "approved")
+      .order("view_count", { ascending: false })
+      .limit(limit);
 
-  if (error) {
-    console.error("[getPopularCircles]", error.message);
-    return [];
-  }
-  return (data ?? []).map((row) => toCircleSummary(row as Record<string, unknown>));
-}
+    if (error) {
+      console.error("[getPopularCircles]", error.message);
+      return [];
+    }
+    return (data ?? []).map((row) => toCircleSummary(row as Record<string, unknown>));
+  },
+  ["circles", "popular"],
+  { revalidate: 60, tags: ["circles"] }
+);
 
 /**
  * 신규 서클 목록 — created_at 내림차순.
  * 홈 Discover 섹션 (새로 온 10건)에서 사용.
  */
-export async function getNewCircles(limit = 10): Promise<CircleSummary[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("circles")
-    .select("*, circle_tags(tags(slug))")
-    .eq("status", "approved")
-    .order("created_at", { ascending: false })
-    .limit(limit);
+export const getNewCircles = unstable_cache(
+  async (limit = 10): Promise<CircleSummary[]> => {
+    const supabase = createAnonClient();
+    const { data, error } = await supabase
+      .from("circles")
+      .select("*, circle_tags(tags(slug))")
+      .eq("status", "approved")
+      .order("created_at", { ascending: false })
+      .limit(limit);
 
-  if (error) {
-    console.error("[getNewCircles]", error.message);
-    return [];
-  }
-  return (data ?? []).map((row) => toCircleSummary(row as Record<string, unknown>));
-}
+    if (error) {
+      console.error("[getNewCircles]", error.message);
+      return [];
+    }
+    return (data ?? []).map((row) => toCircleSummary(row as Record<string, unknown>));
+  },
+  ["circles", "new"],
+  { revalidate: 60, tags: ["circles"] }
+);
 
 /**
  * 「現在募集中」(지금 가입 가능)인 서클 — 홈 Discover 「現在募集中のサークル」 섹션에서 사용.
@@ -235,62 +260,71 @@ export async function getNewCircles(limit = 10): Promise<CircleSummary[]> {
  *
  * 정렬: 시급한 모집(newcomer_only)을 통년(year_round)보다 앞에, 동일 우선순위 내 인기순(view_count).
  */
-export async function getRecruitingCircles(limit = 12): Promise<CircleSummary[]> {
-  const supabase = await createClient();
+export const getRecruitingCircles = unstable_cache(
+  async (limit = 12): Promise<CircleSummary[]> => {
+    const supabase = createAnonClient();
 
-  // 시기 기반 「現在募集中」 상태 (新歓 시즌이면 newcomer_only 포함, 아니면 year_round 만)
-  const statuses = getCurrentRecruitingStatuses();
+    // 시기 기반 「現在募集中」 상태 (新歓 시즌이면 newcomer_only 포함, 아니면 year_round 만)
+    // 60초 TTL 내에서는 시즌이 바뀌지 않으므로 캐시 키에 미포함해도 안전.
+    const statuses = getCurrentRecruitingStatuses();
 
-  const { data, error } = await supabase
-    .from("circles")
-    .select("*, circle_tags(tags(slug))")
-    .eq("status", "approved")
-    .in("recruitment_status", statuses)
-    .order("view_count", { ascending: false })
-    .limit(24);
+    const { data, error } = await supabase
+      .from("circles")
+      .select("*, circle_tags(tags(slug))")
+      .eq("status", "approved")
+      .in("recruitment_status", statuses)
+      .order("view_count", { ascending: false })
+      .limit(24);
 
-  if (error) {
-    console.error("[getRecruitingCircles]", error.message);
-    return [];
-  }
+    if (error) {
+      console.error("[getRecruitingCircles]", error.message);
+      return [];
+    }
 
-  // 모집 상태 우선순위 — newcomer_only(新歓シーズン·시급) 를 year_round(통년) 앞으로
-  const priority: Record<RecruitmentStatus, number> = {
-    newcomer_only: 0,
-    year_round: 1,
-    not_recruiting: 2,
-  };
-  return (data ?? [])
-    .map((row) => toCircleSummary(row as Record<string, unknown>))
-    .sort(
-      (a, b) =>
-        priority[a.recruitment_status ?? "year_round"] -
-        priority[b.recruitment_status ?? "year_round"]
-    )
-    .slice(0, limit);
-}
+    // 모집 상태 우선순위 — newcomer_only(新歓シーズン·시급) 를 year_round(통년) 앞으로
+    const priority: Record<RecruitmentStatus, number> = {
+      newcomer_only: 0,
+      year_round: 1,
+      not_recruiting: 2,
+    };
+    return (data ?? [])
+      .map((row) => toCircleSummary(row as Record<string, unknown>))
+      .sort(
+        (a, b) =>
+          priority[a.recruitment_status ?? "year_round"] -
+          priority[b.recruitment_status ?? "year_round"]
+      )
+      .slice(0, limit);
+  },
+  ["circles", "recruiting"],
+  { revalidate: 60, tags: ["circles"] }
+);
 
 /**
  * 카테고리별 서클 — 홈 category strip에서 사용.
  * @param category circles.category enum 값
  * @param limit 취득 건수 (기본 8건)
  */
-export async function getCirclesByCategory(category: string, limit = 8): Promise<CircleSummary[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("circles")
-    .select("*, circle_tags(tags(slug))")
-    .eq("status", "approved")
-    .eq("category", category)
-    .order("view_count", { ascending: false })
-    .limit(limit);
+export const getCirclesByCategory = unstable_cache(
+  async (category: string, limit = 8): Promise<CircleSummary[]> => {
+    const supabase = createAnonClient();
+    const { data, error } = await supabase
+      .from("circles")
+      .select("*, circle_tags(tags(slug))")
+      .eq("status", "approved")
+      .eq("category", category)
+      .order("view_count", { ascending: false })
+      .limit(limit);
 
-  if (error) {
-    console.error("[getCirclesByCategory]", error.message);
-    return [];
-  }
-  return (data ?? []).map((row) => toCircleSummary(row as Record<string, unknown>));
-}
+    if (error) {
+      console.error("[getCirclesByCategory]", error.message);
+      return [];
+    }
+    return (data ?? []).map((row) => toCircleSummary(row as Record<string, unknown>));
+  },
+  ["circles", "by-category"],
+  { revalidate: 60, tags: ["circles"] }
+);
 
 /**
  * 서클 상세 1건 — circles/[id] 페이지에서 사용.

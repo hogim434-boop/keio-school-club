@@ -14,7 +14,7 @@
  * 본인 동아리가 아니면 DB 레벨에서 막힌다. (이중 방어로 인증도 확인)
  */
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import type { RecruitmentStatus } from "@/lib/constants/recruitment-status";
@@ -52,6 +52,8 @@ export async function updateRecruitmentStatus(
 
   // 마이페이지 재검증 — 서버 데이터(getMyCircles)를 최신 상태로
   revalidatePath("/mypage");
+  // 공개 목록 캐시("circles" 태그) 무효화 — 모집 상태 변경이 홈/모집중 섹션에 즉시 반영
+  revalidateTag("circles", { expire: 0 });
   return { ok: true };
 }
 
@@ -85,5 +87,7 @@ export async function deleteCircle(circleId: string): Promise<{ ok: boolean; err
 
   // 마이페이지 재검증 — 서버 데이터(getMyCircles)를 최신 상태로
   revalidatePath("/mypage");
+  // 공개 목록 캐시("circles" 태그) 무효화 — 삭제된 동아리가 홈/카테고리 목록에서 즉시 사라지도록
+  revalidateTag("circles", { expire: 0 });
   return { ok: true };
 }
