@@ -318,20 +318,25 @@ KCircle은 慶應義塾大学 신입생(특히 4월 新歓 시즌 입학자)을 
 
 ### Phase 1.4 — 관리자·알림·QA (T-019 ~ T-022)
 
-| ID        | 작업                                 | 상태    | 공수 | 선행                       | 관련 기능 |
-| --------- | ------------------------------------ | ------- | ---- | -------------------------- | --------- |
-| **T-019** | 관리자 승인 큐 페이지                | pending | 1.5d | T-005, T-006, T-018        | F006      |
-| **T-020** | 이메일 알림 인프라 (Resend)          | pending | 1.5d | T-019                      | F006 운영 |
-| **T-021** | 다중 admin 부여 + 신청 일시정지 토글 | pending | 0.5d | T-019                      | 운영      |
-| **T-022** | Phase 1 통합 E2E 테스트              | pending | 1.5d | T-014, T-018, T-019, T-020 | 전 기능   |
+| ID        | 작업                                                 | 상태    | 공수 | 선행                       | 관련 기능 |
+| --------- | ---------------------------------------------------- | ------- | ---- | -------------------------- | --------- |
+| **T-019** | 관리자 승인 큐 페이지 (가드·스키마 완료, 큐 UI 남음) | pending | 1d   | T-005, T-006, T-018        | F006      |
+| **T-020** | 이메일 알림 인프라 (Resend)                          | pending | 1.5d | T-019                      | F006 운영 |
+| **T-021** | 다중 admin 부여 + 신청 일시정지 토글                 | pending | 0.5d | T-019                      | 운영      |
+| **T-022** | Phase 1 통합 E2E 테스트                              | pending | 1.5d | T-014, T-018, T-019, T-020 | 전 기능   |
 
 - **T-019: 관리자 승인 큐 페이지**
-  - `app/admin/circles/page.tsx`: `is_admin()` 헬퍼로 RSC 단에서 권한 확인, 미인가 시 홈으로 리디렉션.
-  - pending 서클 목록 (신청일 순) + 인라인 미리보기 (이름·카테고리·`official_type`·대표자·대표자 이메일·`keio_verified`·제출일·`submission_note`).
-  - 「承認」 / 「却下」 버튼 → Server Action 으로 status 갱신 + `reviewed_by` / `reviewed_at` 기록. 거절 시 `rejection_reason` 필수 입력.
-  - 처리 후 `revalidatePath('/admin/circles')` + 오너에게 이메일 알림 트리거 (T-020).
+  - **선행 인프라 완료 (2026-05 현황)**: 권한 가드와 DB 스키마는 이미 구축됨 → 본 작업의 남은 범위는 **큐 UI 구현(현 `ComingSoon` 플레이스홀더 교체)** 뿐.
+    - **권한 가드 (구현 완료)**: `app/admin/layout.tsx` 의 `AdminGuard` 가 2단계 검증 담당 — ① `lib/supabase/proxy.ts` `isPublicPath()` 가 `/admin/*` 를 인증 필수로 막는 1차 가드, ② layout 이 `is_admin()` RPC(`profiles.role`, SECURITY DEFINER, T-006)로 role 검증하는 2차 가드. 비관리자(일반 로그인)는 `/circles` 로 **조용히 리다이렉트**(관리자 페이지 존재 비노출), 미로그인은 `/auth/login?next=<원래 경로>`. → **page.tsx 에서 별도 권한 확인 불필요**.
+    - **DB 스키마 (존재 확인)**: `circles.status`(pending/approved/rejected)·`rejection_reason`·`reviewed_by`·`reviewed_at`·`submission_note` + `profiles.role` + `is_admin()` 모두 존재 → **신규 마이그레이션 불필요**.
+  - **남은 작업**: `app/admin/circles/page.tsx` 의 `ComingSoon` 을 실제 큐 UI 로 교체.
+    - pending 서클 목록 (신청일 순) + 인라인 미리보기 (이름·카테고리·`official_type`·대표자·대표자 이메일·`keio_verified`·제출일·`submission_note`).
+    - 「承認」 / 「却下」 버튼 → Server Action 으로 status 갱신 + `reviewed_by` / `reviewed_at` 기록. 거절 시 `rejection_reason` 필수 입력.
+    - 처리 후 `revalidatePath('/admin/circles')` + 오너에게 이메일 알림 트리거 (T-020).
   - **모바일 (예외 — 데스크탑 우선)**: 본 페이지는 운영자 환경(데스크탑/태블릿)을 1차 타깃으로 한다. 모바일에서는 정보 밀도가 낮은 1열 카드 스택으로 fallback (각 신청 카드 = 인라인 미리보기 요약 + 「承認」/「却下」 버튼). 거절 사유 입력은 모바일에서 Sheet 로 표시.
-  - **테스트**: 일반 사용자가 `/admin/circles` 접근 시 홈으로 리디렉션.
+  - **테스트**:
+    - (가드 — 이미 구현됨) 일반 로그인 사용자가 `/admin/circles` 접근 시 `/circles` 로 리다이렉트되는지, 미로그인은 `/auth/login?next=/admin/circles` 로 가는지.
+    - (큐 UI — 신규) 「承認」/「却下」 Server Action 이 `status`·`reviewed_by`·`reviewed_at`·`rejection_reason` 을 올바르게 기록하고, 거절 사유 미입력 시 차단되는지.
 
 - **T-020: 이메일 알림 인프라 (Resend)**
   - 검증 이슈 **C-3** 대응: Resend SDK 추가 + Supabase Edge Function `notify-circle-status` 배포.
