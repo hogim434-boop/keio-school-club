@@ -151,8 +151,8 @@ const baseSchema = z.object({
    */
   member_band: z.enum(MEMBER_BANDS).optional(),
 
-  /** 서클 소개 (최대 1000자, 미입력 가능) */
-  description: z.string().max(1000, "説明は1000文字以内で入力してください").optional(),
+  /** 서클 소개 (최대 2000자, 미입력 가능). 이모지·줄바꿈·리스트 등 자유 서식 권장 */
+  description: z.string().max(2000, "説明は2000文字以内で入力してください").optional(),
 
   // ── 단계 2: 태그 ───────────────────────
 

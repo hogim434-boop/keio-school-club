@@ -645,22 +645,33 @@ export function StepBasic({
                 <label htmlFor="description" className={FIELD_LABEL_CLS}>
                   サークル紹介
                   <span className="text-muted-foreground ml-1.5 text-xs font-normal">
-                    （任意・1000文字以内）
+                    （任意・2000文字以内）
                   </span>
                 </label>
                 <textarea
                   id="description"
-                  rows={5}
-                  maxLength={1000}
-                  placeholder="サークルの活動内容・雰囲気・新入生へのメッセージなどを自由に記入してください"
+                  rows={8}
+                  maxLength={2000}
+                  placeholder={
+                    "🎾「こんな人におすすめ！」など、つかみの一言\n" +
+                    "📍 活動日程・場所\n" +
+                    "👉 活動内容や特徴\n" +
+                    "✅ こんな人を歓迎します\n" +
+                    "‼️ 注意事項（勧誘・出会い目的お断り など）"
+                  }
                   aria-invalid={!!errors.description}
-                  aria-describedby={errors.description ? "error-description" : undefined}
+                  aria-describedby={
+                    errors.description ? "error-description hint-description" : "hint-description"
+                  }
                   className={cn(
                     TEXTAREA_CLS,
                     errors.description && "ring-2 ring-red-400 focus-visible:ring-red-400"
                   )}
                   {...register("description")}
                 />
+                <p id="hint-description" className="text-muted-foreground text-xs">
+                  改行・絵文字・箇条書きはそのまま表示されます。見出しごとに区切ると読みやすくなります。
+                </p>
                 {errors.description && (
                   <p id="error-description" role="alert" className={ERROR_MSG_CLS}>
                     {errors.description.message}
@@ -729,7 +740,7 @@ export function StepBasic({
                     onClick={() => handleRemoveExistingImage(img.id)}
                     aria-label="この画像を削除"
                     className={cn(
-                      "absolute right-1 top-1 flex size-6 items-center justify-center rounded-full",
+                      "absolute top-1 right-1 flex size-6 items-center justify-center rounded-full",
                       "bg-black/60 text-white transition-colors hover:bg-black/80"
                     )}
                   >
@@ -762,7 +773,7 @@ export function StepBasic({
                       onClick={() => handleRemoveNewImage(idx)}
                       aria-label="この画像を削除"
                       className={cn(
-                        "absolute right-1 top-1 flex size-6 items-center justify-center rounded-full",
+                        "absolute top-1 right-1 flex size-6 items-center justify-center rounded-full",
                         "bg-black/60 text-white transition-colors hover:bg-black/80"
                       )}
                     >
