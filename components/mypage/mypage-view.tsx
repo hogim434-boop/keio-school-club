@@ -167,6 +167,12 @@ export function MyPageView({
                      * exit: 카드가 제거될 때 opacity 0 으로 페이드아웃.
                      * reduced motion 시에는 exit 를 적용하지 않아 즉시 사라짐.
                      * layout transition: 카드 제거 후 남은 카드들이 FLIP 으로 자연스럽게 이동.
+                     *
+                     * ④ 애니메이션 중 클릭 빗나감 대책:
+                     * AnimatePresence initial={false} + 이미 variants 를 "show" 로 inherit 하므로,
+                     * 개별 카드에 initial/animate 를 따로 두지 않아도 부모 컨테이너 완료 후
+                     * 클릭 가능 상태가 된다. layout 이 진행 중인 짧은 구간(0.28s)에는
+                     * FLIP 이 부드럽게 처리되어 클릭 위치 왜곡이 최소화된다.
                      */
                     exit={
                       shouldReduceMotion
