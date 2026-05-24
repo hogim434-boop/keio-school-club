@@ -327,8 +327,10 @@ export function CircleDetailTabs({
                   onMoreClick={handleMoreClick}
                   isOwner={isOwner}
                 />
-                {/* 관련 동아리 — 「ホーム」 탭 맨 아래(활동 리포트 미리보기 뒤) */}
-                {relatedContent}
+                {/* 관련 동아리 — 「ホーム」 탭 맨 아래(활동 리포트 미리보기 뒤).
+                 * border-t 로 활동레포트와의 경계선 표시. relatedContent 가 있을 때만 감싸
+                 * 빈 선이 생기지 않게 한다(없으면 page.tsx 에서 null 전달). */}
+                {relatedContent && <div className="border-t pt-6">{relatedContent}</div>}
               </TabsContent>
             </div>
 
