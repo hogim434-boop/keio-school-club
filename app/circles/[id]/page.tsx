@@ -139,14 +139,15 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
          */}
         {/*
          * 앨범 이미지 자동 집계 — 추가 쿼리 없음.
-         * 커버 이미지(isCover=true) 를 맨 앞, 이후 리포트 사진을 최신순으로 나열.
-         * reports 는 이미 최신순이므로 flatMap 순서가 최신순 보장.
+         * 커버 이미지(복수, isCover=true) 를 sort_order 순으로 맨 앞, 이후 리포트 사진을 최신순으로 나열.
+         * circle.images 는 circle_images(복수 커버) — 레거시 동아리는 쿼리 fallback 으로 cover_image_url 1장이 채워짐.
          */}
         {(() => {
           const albumImages = [
-            ...(circle.cover_image_url
-              ? [{ url: circle.cover_image_url, isCover: true as const }]
-              : []),
+            ...circle.images.map((img) => ({
+              url: img.image_url,
+              isCover: true as const,
+            })),
             ...reports.flatMap((r) =>
               r.images.map((img) => ({
                 url: img.image_url,
