@@ -1,30 +1,36 @@
-import { Skeleton } from "@/components/ui/skeleton";
-
 /**
- * /notifications 라우트 진입 즉시 표시되는 loading UI.
- *
- * 현재 NotificationsPage 는 ComingSoon 컴포넌트(데이터 fetch 없음)를 렌더하므로
- * 실질적으로 이 loading.tsx 가 노출될 시간이 매우 짧다.
- * 그럼에도 라우트 전환 시 빈 화면 점프를 방지하기 위해 추가한다.
- *
- * 레이아웃: ComingSoon 컴포넌트의 카드 구조(아이콘 원 + 타이틀 + 배지)를 skeleton 으로 모사.
+ * /notifications 진입 시 즉시 표시되는 스켈레톤.
+ * cacheComponents OFF + loading.tsx 정책에 따라 서버에서 getFeed()를 가져오는
+ * 동안 리스트 골격을 먼저 보여준다.
  */
-export default function NotificationsLoading() {
+export default function Loading() {
   return (
-    <main className="container mx-auto flex min-h-[calc(100vh-5rem)] items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md space-y-6 rounded-xl border p-6 text-center">
-        {/* 아이콘 원 */}
-        <div className="flex flex-col items-center gap-3">
-          <Skeleton className="size-12 rounded-full" />
-          {/* 타이틀 */}
-          <Skeleton className="h-8 w-32" />
-          {/* 설명 */}
-          <Skeleton className="h-4 w-64" />
-        </div>
-        {/* 배지 */}
-        <div className="flex justify-center">
-          <Skeleton className="h-6 w-36 rounded-full" />
-        </div>
+    <main className="mx-auto w-full max-w-2xl px-4 py-6">
+      {/* 헤더 스켈레톤 */}
+      <header className="mb-5 space-y-2">
+        <div className="bg-muted h-6 w-24 animate-pulse rounded" />
+        <div className="bg-muted h-4 w-56 animate-pulse rounded" />
+      </header>
+
+      {/* 알림 행 스켈레톤 — 5줄 */}
+      <div className="rounded-xl border">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="flex items-start gap-3 border-b px-4 py-3.5 last:border-b-0">
+            {/* 안읽음 점 자리 */}
+            <div className="w-3 shrink-0 pt-1.5" />
+
+            {/* 아이콘 원형 */}
+            <div className="bg-muted size-9 shrink-0 animate-pulse rounded-full" />
+
+            {/* 텍스트 영역 */}
+            <div className="flex-1 space-y-1.5 py-0.5">
+              <div className="bg-muted h-4 w-3/4 animate-pulse rounded" />
+              {/* 본문 줄: 짝수 행에만 표시해 자연스럽게 */}
+              {i % 2 === 0 && <div className="bg-muted h-3 w-5/6 animate-pulse rounded" />}
+              <div className="bg-muted h-3 w-16 animate-pulse rounded" />
+            </div>
+          </div>
+        ))}
       </div>
     </main>
   );
