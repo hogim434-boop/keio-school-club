@@ -163,7 +163,7 @@ export function ManagedCircleCard({ circle, onRequestDelete, className }: Manage
           className={cn(
             "absolute inset-0 z-0 rounded-[inherit]",
             // navGrace 중에는 클릭 차단 (메뉴/다이얼로그 닫힘 click-through 방지)
-            (navGraceActive || menuOpen || dialogOpen) && "pointer-events-none",
+            (navGraceActive || menuOpen || dialogOpen) && "pointer-events-none"
           )}
           tabIndex={-1}
           aria-hidden="true"
@@ -319,18 +319,14 @@ function ApprovedContent({ circle }: { circle: MyCircle }) {
       {/* 모집 상태 빠른 토글 — relative z-10: stretched-link 위에 배치해 토글이 독립 동작
           stopPropagation 은 내부 Switch 에 이미 있으나, wrapper 에도 추가해 이중 보호 */}
       {circle.recruitment_status && (
-        <div
-          className="relative z-10"
-          onClick={(e) => e.stopPropagation()}
-        >
+        <div className="relative z-10" onClick={(e) => e.stopPropagation()}>
           <RecruitmentToggle circleId={circle.id} current={circle.recruitment_status} />
         </div>
       )}
 
-      {/* 프로필 完成度 게이지 — 내부에 <Link> 있음: relative z-10 으로 stretched-link 위에 배치 */}
-      <div className="relative z-10" onClick={(e) => e.stopPropagation()}>
-        <ProfileCompletion circle={circle} />
-      </div>
+      {/* 프로필 完成度 게이지 — 라벨·%·진행 막대 영역은 stretched-link 로 상세 이동.
+          내부 「次のおすすめ」 추천 카드(편집폼 Link)만 자체 relative z-10 으로 분리돼 편집폼으로 이동. */}
+      <ProfileCompletion circle={circle} />
 
       {/* 編集する 버튼 — relative z-10 + stopPropagation: stretched-link 보다 위에서 독립 동작
           내부가 <Link href=".../edit"> 이므로 <a> 중첩 없이 Button asChild + Link 조합 사용 */}
@@ -352,10 +348,9 @@ function PendingContent({ circle }: { circle: MyCircle }) {
         審査中です。公開までお待ちください。
       </div>
 
-      {/* 프로필 完成度 — 내부에 <Link> 있음: relative z-10 으로 stretched-link 위에 배치(2026-05) */}
-      <div className="relative z-10" onClick={(e) => e.stopPropagation()}>
-        <ProfileCompletion circle={circle} />
-      </div>
+      {/* 프로필 完成度 — 라벨·%·진행 막대 영역은 stretched-link 로 상세 이동.
+          내부 「次のおすすめ」 추천 카드(편집폼 Link)만 자체 relative z-10 으로 분리됨. */}
+      <ProfileCompletion circle={circle} />
 
       {/* 編集する 버튼 — relative z-10 + stopPropagation: stretched-link 위에서 독립 동작 */}
       <div className="relative z-10" onClick={(e) => e.stopPropagation()}>

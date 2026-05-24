@@ -166,7 +166,9 @@ export function ProfileCompletion({ circle }: { circle: CompletionCircle }) {
               <p className="text-muted-foreground text-[11px] font-medium">次のおすすめ</p>
               <Link
                 href={editHref(nextRecommended.key)}
-                className="group border-border bg-card hover:border-keio-navy/30 hover:bg-muted/40 flex items-center gap-3 rounded-xl border p-2.5 transition-colors"
+                // relative z-10: 마이페이지 카드의 stretched-link(상세 이동) 위로 올려
+                // 이 추천 카드만 편집폼으로 이동하게 분리 (상세 카드 컨텍스트엔 무영향)
+                className="group border-border bg-card hover:border-keio-navy/30 hover:bg-muted/40 relative z-10 flex items-center gap-3 rounded-xl border p-2.5 transition-colors"
               >
                 {/* 항목 컬러 아이콘 */}
                 <span
