@@ -45,11 +45,12 @@ async function ReportDetailContent({ params }: Props) {
   if (!circle || !report || report.circle_id !== id) notFound();
 
   // 소유자 여부 — 우상단 ⋯ 편집/삭제 메뉴 표시 권한 (서클 page.tsx 와 동일한 계산)
+  // getClaims(): 로컬 JWT 서명 검증만 수행 → 네트워크 왕복 없음(getUser() 대비 빠름).
+  // claims.sub === user UUID. 미로그인 시 data.claims null → uid undefined → isOwner false.
   const supabase = await createClient();
-  const {
-    data: { user: currentUser },
-  } = await supabase.auth.getUser();
-  const isOwner = !!currentUser && circle.owner_id === currentUser.id;
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const uid = claimsData?.claims?.sub;
+  const isOwner = !!uid && circle.owner_id === uid;
 
   const typeLabel = report.activity_type ? ACTIVITY_REPORT_TYPE_LABELS[report.activity_type] : null;
   const formattedDate = formatJpDateLong(report.created_at);
