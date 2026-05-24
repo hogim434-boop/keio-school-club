@@ -18,12 +18,13 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useFormContext } from "react-hook-form";
 import { LazyMotion, domAnimation, m, useReducedMotion } from "motion/react";
-import { ImageIcon } from "lucide-react";
+import { ImageIcon, Plus, X } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { AUTH_INPUT_CLS } from "@/lib/auth/input-class";
 import { validateUpload } from "@/lib/storage/strip-exif";
 import type { RegistrationValues } from "@/lib/circles/registration-schema";
+import type { CircleImage } from "@/lib/types/domain";
 import { CATEGORIES, CATEGORY_LABELS } from "@/lib/constants/category";
 import { MEMBER_BANDS, MEMBER_BAND_LABELS, type MemberBand } from "@/lib/constants/member-band";
 import { OFFICIAL_TYPES, OFFICIAL_TYPE_LABELS } from "@/lib/constants/official-type";
@@ -34,6 +35,9 @@ import {
 import { ACTIVITY_TIME_BANDS, ACTIVITY_TIME_BAND_LABELS } from "@/lib/constants/activity-time-band";
 import { ACTIVITY_DAY_OPTIONS, IRREGULAR_DAY } from "@/lib/circles/filter-labels";
 import { cn } from "@/lib/utils";
+
+/** 최대 커버 이미지 장수 */
+const MAX_COVER_IMAGES = 5;
 
 // ── 스타일 토큰 ────────────────────────────────────────────────────────────────
 // step-contact.tsx 와 동일한 상수명/값 사용
@@ -75,15 +79,26 @@ const TEXTAREA_CLS =
 /**
  * 서클 기본 정보 입력 스텝.
  *
- * 커버 이미지 저장 규약:
- *  - 사용자가 파일을 선택하면 validateUpload() 검증 후 setValue("cover", file) 로 보관
+ * 커버 이미지 저장 규약 (복수화 버전):
+ *  - 사용자가 파일을 선택하면 validateUpload() 검증 후 setValue("cover", File[]) 로 보관 (누적 방식)
+ *  - 최대 5장까지 추가 가능. 초과 시 인라인 에러 표시.
+ *  - edit 모드: existingImages(기존 CircleImage[]) prop 으로 기존 커버 미리보기 표시.
+ *    삭제 버튼(×)으로 keepImages 에서 제외 → 부모(CircleRegistrationForm)에 콜백으로 전달.
  *  - STEP_FIELDS.basic 에 cover 는 포함되지 않으므로 "次へ" trigger 대상 아님
- *  - 제출 시 StepContact 가 getValues("cover") instanceof File 로 꺼내감
+ *  - 제출 시 StepContact 가 getValues("cover") as File[] 로 꺼내감
  */
 /** StepBasic props */
 interface StepBasicProps {
-  /** edit 모드 기존 커버 이미지 URL — 새 파일 미선택 시 미리보기로 표시 */
-  existingCoverUrl?: string | null;
+  /**
+   * edit 모드 기존 커버 이미지 목록 — 복수 커버 미리보기 표시용.
+   * 신규 등록(create) 모드에서는 빈 배열 또는 미전달.
+   */
+  existingImages?: CircleImage[];
+  /**
+   * 기존 이미지 keep 목록 변경 시 부모에 알리는 콜백.
+   * edit 모드에서 ×버튼으로 삭제하면 호출되어 CircleRegistrationForm 이 keepImageUrls 를 갱신한다.
+   */
+  onKeepImagesChange?: (keepImages: CircleImage[]) => void;
   /**
    * 선택 항목(活動時間帯·活動曜日·会員数·サークル紹介) 노출 여부.
    * - true(기본·edit): 전체 노출 — 사후 보강 입력처.
@@ -93,7 +108,8 @@ interface StepBasicProps {
 }
 
 export function StepBasic({
-  existingCoverUrl = null,
+  existingImages = [],
+  onKeepImagesChange,
   showOptionalFields = true,
 }: StepBasicProps = {}) {
   // ── FormContext 접근 ─────────────────────────────────────────────────────
@@ -101,6 +117,7 @@ export function StepBasic({
     register,
     watch,
     setValue,
+    getValues,
     clearErrors,
     formState: { errors },
   } = useFormContext<RegistrationValues>();
@@ -166,62 +183,105 @@ export function StepBasic({
   const makeFadeTransition = (delay: number) =>
     reducedMotion ? { duration: 0 } : { duration: 0.42, ease: EASE_EXPO_OUT, delay };
 
-  // ── 커버 이미지 state ────────────────────────────────────────────────────
-  /** 미리보기 objectURL — 변경 시 이전 URL 해제(cleanup) */
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  /** 파일 검증 실패 시 인라인 에러 메시지 */
+  // ── 커버 이미지 state (복수화) ─────────────────────────────────────────
+  /**
+   * 새로 선택한 파일의 objectURL 목록 — 추가 순서 유지.
+   * 언마운트 시 또는 파일 삭제 시 해당 URL을 revoke 해 메모리 누수 방지.
+   */
+  const [newPreviewUrls, setNewPreviewUrls] = useState<{ file: File; url: string }[]>([]);
+  /**
+   * edit 모드에서 유지할 기존 이미지 목록 (×버튼으로 제외 가능).
+   * 초기값은 existingImages prop.
+   */
+  const [keepImages, setKeepImages] = useState<CircleImage[]>(existingImages);
+  /** 파일 검증 실패 또는 상한 초과 시 인라인 에러 메시지 */
   const [coverError, setCoverError] = useState<string | null>(null);
   /** 숨겨진 file input 참조 — 커스텀 버튼에서 클릭 트리거 */
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // objectURL 메모리 정리: previewUrl 이 바뀌거나 언마운트 시
+  // objectURL 메모리 정리 — 언마운트 시 전체 revoke
   useEffect(() => {
     return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      newPreviewUrls.forEach(({ url }) => URL.revokeObjectURL(url));
     };
-  }, [previewUrl]);
+    // 마운트/언마운트 한 번만 실행 (의존성 배열 비움)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // ── 커버 이미지 변경 핸들러 ─────────────────────────────────────────────
+  // 현재 총 이미지 수 (유지 기존 + 신규)
+  const totalImageCount = keepImages.length + newPreviewUrls.length;
+
+  // ── 커버 이미지 추가 핸들러 ─────────────────────────────────────────────
   /**
-   * 파일 input onChange 에서 호출됩니다.
-   * 1. validateUpload() 로 크기(4MB) · MIME(jpeg/png/webp) 검증
-   * 2. 실패: coverError 상태에 메시지 → 인라인 에러 표시
-   * 3. 통과: setValue("cover", file) 로 RHF 에 보관 + objectURL 미리보기 갱신
+   * 파일 input onChange 에서 호출됩니다 (multiple 가능).
+   * 1. 상한(5장) 초과 체크 → 초과 시 에러 표시 + 차단
+   * 2. 각 파일 validateUpload() 검증
+   * 3. 통과 파일만 objectURL 생성 후 누적, RHF cover 배열 갱신
    */
   function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0] ?? null;
-    if (!file) return;
+    const selected = Array.from(e.target.files ?? []);
+    // input 값을 즉시 초기화해 같은 파일 재선택을 허용
+    e.target.value = "";
+    if (selected.length === 0) return;
 
-    // 로컬 에러 및 RHF 에러 모두 초기화
     setCoverError(null);
     clearErrors("cover");
 
-    // 파일 검증 (validateUpload 는 브라우저·서버 모두 사용 가능)
-    const result = validateUpload(file);
-    if (!result.ok) {
-      // 에러 메시지를 일본어로 변환해 표시
-      // (validateUpload 의 에러 메시지는 한국어 — UI는 일본어로 재작성)
-      if (file.size > 4 * 1024 * 1024) {
-        setCoverError("ファイルサイズは4MB以下にしてください");
-      } else {
-        setCoverError("JPEG・PNG・WebP 形式の画像を選択してください");
-      }
-      // input 값 초기화 (같은 파일 재선택 허용)
-      e.target.value = "";
+    // 추가 가능한 슬롯 수 계산
+    const remaining = MAX_COVER_IMAGES - totalImageCount;
+    if (remaining <= 0) {
+      setCoverError(`カバー画像は最大${MAX_COVER_IMAGES}枚まで追加できます`);
       return;
     }
 
-    // 이전 objectURL 해제 후 새 URL 생성
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    const newUrl = URL.createObjectURL(file);
-    setPreviewUrl(newUrl);
+    // 검증 통과 파일만 추가 (슬롯 한도 내)
+    const toAdd = selected.slice(0, remaining);
+    const valid: { file: File; url: string }[] = [];
 
-    // RHF 상태에 File 보관 (shouldValidate 불필요 — cover 는 trigger 대상 외)
-    setValue("cover", file);
+    for (const file of toAdd) {
+      const result = validateUpload(file);
+      if (!result.ok) {
+        // 에러 메시지를 일본어로 변환
+        if (file.size > 4 * 1024 * 1024) {
+          setCoverError("ファイルサイズは4MB以下にしてください");
+        } else {
+          setCoverError("JPEG・PNG・WebP 形式の画像を選択してください");
+        }
+        // 검증 실패 시 그 이후 파일도 중단
+        break;
+      }
+      valid.push({ file, url: URL.createObjectURL(file) });
+    }
+
+    if (valid.length === 0) return;
+
+    // 누적 state 갱신
+    setNewPreviewUrls((prev) => [...prev, ...valid]);
+
+    // RHF cover 필드에 File[] 저장 (shouldValidate 불필요 — trigger 대상 외)
+    const currentFiles = (getValues("cover") as File[] | undefined) ?? [];
+    setValue("cover", [...currentFiles, ...valid.map((v) => v.file)]);
   }
 
-  // 미리보기 대상 URL — 새로 선택한 파일(previewUrl) 우선, 없으면 기존 커버(edit).
-  const displayUrl = previewUrl ?? existingCoverUrl;
+  // ── 기존 이미지 삭제 핸들러 (edit 모드) ─────────────────────────────────
+  function handleRemoveExistingImage(imageId: string) {
+    const updated = keepImages.filter((img) => img.id !== imageId);
+    setKeepImages(updated);
+    onKeepImagesChange?.(updated);
+  }
+
+  // ── 신규 이미지 삭제 핸들러 ─────────────────────────────────────────────
+  function handleRemoveNewImage(index: number) {
+    setNewPreviewUrls((prev) => {
+      const removed = prev[index];
+      if (removed) URL.revokeObjectURL(removed.url);
+      return prev.filter((_, i) => i !== index);
+    });
+    // RHF cover 배열에서도 해당 파일 제거
+    const currentFiles = (getValues("cover") as File[] | undefined) ?? [];
+    const updated = currentFiles.filter((_, i) => i !== index);
+    setValue("cover", updated.length > 0 ? updated : undefined);
+  }
 
   return (
     <LazyMotion features={domAnimation}>
@@ -611,7 +671,7 @@ export function StepBasic({
           </>
         )}
 
-        {/* ── 커버 이미지 (선택) ──────────────────────────────────────────── */}
+        {/* ── 커버 이미지 (복수, 최대 5장) ──────────────────────────────── */}
         <m.div
           id="field-cover"
           className={cn(
@@ -625,74 +685,147 @@ export function StepBasic({
         >
           <p className={FIELD_LABEL_CLS}>
             カバー画像
-            {/* 필수 표시 — 다른 필수 필드(サークル名 등)와 동일한 붉은 * 스타일 */}
+            {/* 필수 표시 */}
             <span className="ml-1 text-red-500" aria-hidden="true">
               *
             </span>
             <span className="text-muted-foreground ml-1.5 text-xs font-normal">
-              （JPEG/PNG/WebP・4MB以内）
+              （最大{MAX_COVER_IMAGES}枚・JPEG/PNG/WebP・4MB以内）
             </span>
           </p>
 
-          {/* 숨겨진 file input — 커스텀 버튼으로 트리거 */}
+          {/* 숨겨진 file input — multiple 허용, 커스텀 버튼으로 트리거 */}
           <input
             ref={fileInputRef}
             type="file"
             accept="image/jpeg,image/png,image/webp"
-            aria-label="カバー画像を選択"
+            multiple
+            aria-label="カバー画像を追加"
             className="sr-only"
             onChange={handleCoverChange}
           />
 
-          {displayUrl ? (
-            /* 미리보기 영역: 이미지 + 변경 버튼 (새 파일 또는 기존 커버) */
-            <div className="flex flex-col gap-2">
-              <div className="relative overflow-hidden rounded-xl">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={displayUrl}
-                  alt="カバー画像プレビュー"
-                  className="h-48 w-full object-cover"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className={cn(
-                  "border-border rounded-xl border bg-neutral-100 py-2.5 text-sm font-medium",
-                  "transition-colors hover:bg-neutral-200 active:bg-neutral-300"
-                )}
-              >
-                画像を変更する
-              </button>
-            </div>
-          ) : (
-            /* 이미지 미선택 상태: 플레이스홀더 영역 + 선택 버튼 */
+          {/* 썸네일 그리드 — 기존 이미지 + 신규 이미지 혼합 표시 */}
+          {totalImageCount > 0 && (
+            <ul className="grid grid-cols-3 gap-2" aria-label="カバー画像プレビュー">
+              {/* 기존 이미지 (edit 모드) */}
+              {keepImages.map((img) => (
+                <li key={img.id} className="relative aspect-square overflow-hidden rounded-xl">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={img.image_url}
+                    alt="カバー画像"
+                    className="h-full w-full object-cover"
+                  />
+                  {/* 첫 장 대표 배지 */}
+                  {img.sort_order === 0 && keepImages[0]?.id === img.id && (
+                    <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                      代表
+                    </span>
+                  )}
+                  {/* 삭제 버튼 */}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveExistingImage(img.id)}
+                    aria-label="この画像を削除"
+                    className={cn(
+                      "absolute right-1 top-1 flex size-6 items-center justify-center rounded-full",
+                      "bg-black/60 text-white transition-colors hover:bg-black/80"
+                    )}
+                  >
+                    <X className="size-3.5" aria-hidden="true" />
+                  </button>
+                </li>
+              ))}
+
+              {/* 신규 선택 이미지 */}
+              {newPreviewUrls.map((item, idx) => {
+                // 대표 여부: 기존 이미지가 없고 첫 번째 신규 이미지인 경우
+                const isFirst = keepImages.length === 0 && idx === 0;
+                return (
+                  <li key={item.url} className="relative aspect-square overflow-hidden rounded-xl">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={item.url}
+                      alt="カバー画像プレビュー"
+                      className="h-full w-full object-cover"
+                    />
+                    {/* 첫 장 대표 배지 */}
+                    {isFirst && (
+                      <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                        代表
+                      </span>
+                    )}
+                    {/* 삭제 버튼 */}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveNewImage(idx)}
+                      aria-label="この画像を削除"
+                      className={cn(
+                        "absolute right-1 top-1 flex size-6 items-center justify-center rounded-full",
+                        "bg-black/60 text-white transition-colors hover:bg-black/80"
+                      )}
+                    >
+                      <X className="size-3.5" aria-hidden="true" />
+                    </button>
+                  </li>
+                );
+              })}
+
+              {/* 추가 타일 — 썸네일과 동일 크기(aspect-square)로 그리드 마지막 칸(오른쪽)에 배치.
+                  상한 미도달 시에만 노출. 이미지 0장일 때는 아래 큰 버튼이 대신 표시되므로 여기선 1장 이상에서만. */}
+              {totalImageCount > 0 && totalImageCount < MAX_COVER_IMAGES && (
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className={cn(
+                      "flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-xl",
+                      "border-border text-muted-foreground border-2 border-dashed bg-neutral-50",
+                      "hover:border-muted-foreground transition-colors hover:bg-neutral-100 active:bg-neutral-200"
+                    )}
+                    aria-label="カバー画像を追加する"
+                  >
+                    <Plus className="size-5 opacity-60" aria-hidden="true" />
+                    <span className="text-[11px]">
+                      {totalImageCount}/{MAX_COVER_IMAGES}
+                    </span>
+                  </button>
+                </li>
+              )}
+            </ul>
+          )}
+
+          {/* 이미지 0장: 첫 선택용 큰 버튼 (1장 이상은 위 그리드의 추가 타일이 대신함) */}
+          {totalImageCount === 0 && (
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               className={cn(
                 "flex h-40 w-full flex-col items-center justify-center gap-2 rounded-xl",
                 "border-border text-muted-foreground border-2 border-dashed bg-neutral-50",
-                "hover:border-muted-foreground transition-colors hover:bg-neutral-100",
-                "active:bg-neutral-200"
+                "hover:border-muted-foreground transition-colors hover:bg-neutral-100 active:bg-neutral-200"
               )}
-              aria-label="カバー画像を選択する"
+              aria-label="カバー画像を追加する"
             >
-              {/* 이미지 아이콘 */}
               <ImageIcon className="size-8 opacity-40" aria-hidden="true" />
               <span className="text-sm">カバー画像を選択</span>
             </button>
           )}
 
-          {/* 커버 검증 에러 메시지 — 파일 형식/크기 에러 또는 필수 미선택 에러 */}
-          {/* coverError: 파일 형식·크기 검증 실패 (로컬 state) */}
+          {/* 상한 도달 안내 — 추가 타일이 사라지므로 안내 문구로 보완 */}
+          {totalImageCount >= MAX_COVER_IMAGES && (
+            <p className="text-muted-foreground text-center text-xs">
+              カバー画像は最大{MAX_COVER_IMAGES}枚です
+            </p>
+          )}
+
+          {/* 커버 검증 에러 메시지 */}
           {coverError && (
             <p role="alert" className={ERROR_MSG_CLS}>
               {coverError}
             </p>
           )}
-          {/* errors.cover: goNext 에서 파일 미선택 시 RHF setError 로 세팅되는 필수 에러 */}
           {!coverError && errors.cover && (
             <p id="error-cover" role="alert" className={ERROR_MSG_CLS}>
               {String(errors.cover.message)}

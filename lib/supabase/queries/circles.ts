@@ -159,14 +159,25 @@ function toCircleSummary(row: Record<string, unknown>): CircleSummary {
 function toCircleDetail(row: Record<string, unknown>): CircleDetail {
   const summary = toCircleSummary(row);
 
-  // circle_images JOIN → CircleImage[]
-  const images = ((row.circle_images as Record<string, unknown>[]) ?? []).map(
+  // circle_images JOIN → CircleImage[] (sort_order 오름차순 정렬)
+  const rawImages = ((row.circle_images as Record<string, unknown>[]) ?? []).map(
     (img): CircleImage => ({
       id: img.id as string,
       image_url: img.image_url as string,
       sort_order: (img.sort_order as number) ?? 0,
     })
   );
+  rawImages.sort((a, b) => a.sort_order - b.sort_order);
+
+  // 레거시 동아리 호환 fallback: circle_images 가 비어 있고 cover_image_url 만 있으면
+  // 단일 엔트리를 합성해 캐러셀 입력을 일관화한다.
+  const coverImageUrl = (row.cover_image_url as string | null) ?? null;
+  const images: CircleImage[] =
+    rawImages.length > 0
+      ? rawImages
+      : coverImageUrl
+        ? [{ id: `legacy-cover-${row.id as string}`, image_url: coverImageUrl, sort_order: 0 }]
+        : [];
 
   return {
     ...summary,

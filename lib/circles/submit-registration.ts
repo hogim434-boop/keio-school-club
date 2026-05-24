@@ -23,7 +23,7 @@
  */
 
 import { createClient } from "@/lib/supabase/client";
-import { uploadCoverImage } from "@/lib/storage/strip-exif";
+import { uploadCoverCollectionImage } from "@/lib/storage/strip-exif";
 
 import { makeCircleSlug } from "./slug";
 import type { RegistrationValues } from "./registration-schema";
@@ -50,11 +50,11 @@ export type SubmitRegistrationResult = SubmitSuccess | SubmitError;
  * 서클 등록 폼 데이터를 Supabase 에 저장합니다.
  *
  * @param values - registrationSchema 로 검증된 폼 값
- * @param coverFile - 커버 이미지 파일 (null 이면 업로드 생략)
+ * @param coverFiles - 커버 이미지 파일 배열 (최대 5장, 빈 배열이면 업로드 생략)
  * @returns 성공 시 { ok: true; id: string }, 실패 시 { error: string }
  *
  * @example
- * const result = await submitRegistration(formValues, selectedFile);
+ * const result = await submitRegistration(formValues, selectedFiles);
  * if ("error" in result) {
  *   toast.error(result.error);
  * } else {
@@ -63,7 +63,7 @@ export type SubmitRegistrationResult = SubmitSuccess | SubmitError;
  */
 export async function submitRegistration(
   values: RegistrationValues,
-  coverFile: File | null
+  coverFiles: File[]
 ): Promise<SubmitRegistrationResult> {
   // 브라우저 클라이언트 생성 (Client Component 전용)
   const supabase = createClient();
@@ -128,32 +128,47 @@ export async function submitRegistration(
 
   const circleId = circleRow.id;
 
-  // ── 단계 3: 커버 이미지 업로드 (best-effort) ──────────
+  // ── 단계 3: 커버 이미지 복수 업로드 → circle_images INSERT → cover_image_url 동기화 (best-effort) ──
 
-  if (coverFile) {
+  const safeFiles = coverFiles.slice(0, 5); // 최대 5장 방어
+  if (safeFiles.length > 0) {
     try {
-      const uploadResult = await uploadCoverImage(supabase, circleId, coverFile);
+      // 각 파일을 순차 업로드해 URL 수집 (EXIF 제거 포함 — uploadCoverCollectionImage 내부)
+      const uploadedUrls: string[] = [];
+      for (const file of safeFiles) {
+        const result = await uploadCoverCollectionImage(supabase, circleId, file);
+        if ("url" in result) {
+          uploadedUrls.push(result.url);
+        } else {
+          console.error("[submitRegistration] 커버 이미지 업로드 실패:", result.error);
+        }
+      }
 
-      if ("url" in uploadResult) {
-        // 업로드 성공 → cover_image_url 업데이트
-        // 캐시 버스팅: 같은 경로(cover.jpg)에 덮어쓰기 하므로 URL 자체는 불변.
-        // ?v=timestamp 를 붙여 브라우저·CDN·next/image 캐시를 무효화한다.
-        const coverUrlWithBuster = `${uploadResult.url}?v=${Date.now()}`;
+      if (uploadedUrls.length > 0) {
+        // circle_images 다건 INSERT (sort_order = 배열 인덱스)
+        const imageRows = uploadedUrls.map((url, idx) => ({
+          circle_id: circleId,
+          image_url: url,
+          sort_order: idx,
+        }));
+        const { error: imgInsertError } = await supabase.from("circle_images").insert(imageRows);
+        if (imgInsertError) {
+          console.error("[submitRegistration] circle_images INSERT 실패:", imgInsertError);
+        }
+
+        // 첫 장 URL 을 cover_image_url 에 동기화 (캐시 버스팅 포함)
+        // 캐시 버스팅: 경로가 UUID 기반으로 항상 다르지만, 동일 URL 의 재업로드 방어용
+        const firstCoverUrl = `${uploadedUrls[0]}?v=${Date.now()}`;
         const { error: updateError } = await supabase
           .from("circles")
-          .update({ cover_image_url: coverUrlWithBuster })
+          .update({ cover_image_url: firstCoverUrl })
           .eq("id", circleId);
-
         if (updateError) {
-          // 이미지 URL 업데이트 실패 — 서클은 이미 생성됨, best-effort
           console.error("[submitRegistration] cover_image_url 업데이트 실패:", updateError);
         }
-      } else {
-        // 이미지 업로드 실패 — 서클은 이미 생성됨, best-effort
-        console.error("[submitRegistration] 커버 이미지 업로드 실패:", uploadResult.error);
       }
     } catch (err) {
-      // 예상치 못한 에러 — best-effort
+      // 예상치 못한 에러 — best-effort (서클은 이미 생성됨)
       console.error("[submitRegistration] 커버 이미지 처리 중 예외 발생:", err);
     }
   }
@@ -207,20 +222,22 @@ export async function submitRegistration(
  *  - 권한은 RLS circles_update_owner_or_admin 이 강제하지만, .eq("id") 만으로도
  *    owner 본인 행만 매칭된다(RLS 가 다른 owner 행 UPDATE 를 차단).
  *
- * 제출 순서 (submitRegistration 과 동일하게 순차·best-effort):
+ * 제출 순서 (circle_tags DELETE→재INSERT 패턴과 동일하게 순차·best-effort):
  *  1. 인증 확인
  *  2. circles UPDATE (핵심)
- *  3. coverFile 있으면 Storage 업로드 → cover_image_url UPDATE (best-effort)
+ *  3. 커버 이미지 재설정: circle_images 전체 DELETE → (keepImageUrls + 신규 업로드 URL) 재INSERT → 첫 장 cover_image_url 동기화 (best-effort)
  *  4. circle_tags 전체 DELETE 후 신규 INSERT (best-effort)
  *
  * @param circleId - 수정할 서클 UUID
  * @param values - registrationSchema 로 검증된 폼 값 (수정 화면은 서약 UI 를 숨기고 pledge=true 로 채움)
- * @param coverFile - 새 커버 이미지 (null 이면 기존 cover_image_url 유지)
+ * @param coverFiles - 새로 추가할 커버 이미지 파일 배열 (빈 배열이면 신규 업로드 없음)
+ * @param keepImageUrls - 유지할 기존 circle_images URL 배열 (삭제하지 않을 이미지)
  */
 export async function updateCircle(
   circleId: string,
   values: RegistrationValues,
-  coverFile: File | null
+  coverFiles: File[],
+  keepImageUrls: string[] = []
 ): Promise<SubmitRegistrationResult> {
   const supabase = createClient();
 
@@ -285,25 +302,62 @@ export async function updateCircle(
     return { error: updateError.message };
   }
 
-  // ── 단계 3: 커버 이미지 교체 (best-effort) ────────────
-  if (coverFile) {
-    try {
-      const uploadResult = await uploadCoverImage(supabase, circleId, coverFile);
+  // ── 단계 3: 커버 이미지 재설정 (best-effort) ─────────────────────────────
+  // circle_tags 의 DELETE→재INSERT 패턴을 차용.
+  // 1) 기존 circle_images 전부 DELETE
+  // 2) (keepImageUrls + 신규 업로드 URL) 을 sort_order 순으로 재INSERT
+  // 3) 첫 장 URL 을 cover_image_url 에 동기화
+  // keepImageUrls + coverFiles 합산이 0장이면 cover_image_url 를 건드리지 않는다(기존 유지).
+  const safeNewFiles = coverFiles.slice(0, 5);
+  const totalCount = keepImageUrls.length + safeNewFiles.length;
 
-      if ("url" in uploadResult) {
-        // 캐시 버스팅: 같은 경로(cover.jpg)에 덮어쓰기 하므로 URL 자체는 불변.
-        // ?v=timestamp 를 붙여 브라우저·CDN·next/image 캐시를 무효화한다.
-        const coverUrlWithBuster = `${uploadResult.url}?v=${Date.now()}`;
+  if (totalCount > 0) {
+    try {
+      // 기존 circle_images 전부 제거
+      const { error: deleteImgError } = await supabase
+        .from("circle_images")
+        .delete()
+        .eq("circle_id", circleId);
+      if (deleteImgError) {
+        console.error("[updateCircle] 기존 circle_images DELETE 실패:", deleteImgError);
+      }
+
+      // 신규 파일 업로드 → URL 수집
+      const newUploadedUrls: string[] = [];
+      for (const file of safeNewFiles) {
+        const result = await uploadCoverCollectionImage(supabase, circleId, file);
+        if ("url" in result) {
+          newUploadedUrls.push(result.url);
+        } else {
+          console.error("[updateCircle] 커버 이미지 업로드 실패:", result.error);
+        }
+      }
+
+      // (유지 URL 먼저, 이후 신규 URL) 순서로 sort_order 재부여
+      const allUrls = [...keepImageUrls, ...newUploadedUrls].slice(0, 5);
+      const imageRows = allUrls.map((url, idx) => ({
+        circle_id: circleId,
+        image_url: url,
+        sort_order: idx,
+      }));
+
+      if (imageRows.length > 0) {
+        const { error: imgInsertError } = await supabase
+          .from("circle_images")
+          .insert(imageRows);
+        if (imgInsertError) {
+          console.error("[updateCircle] circle_images INSERT 실패:", imgInsertError);
+        }
+
+        // 첫 장 URL 을 cover_image_url 에 동기화 (캐시 버스팅 포함)
+        const firstCoverUrl = `${allUrls[0]}?v=${Date.now()}`;
         const { error: coverError } = await supabase
           .from("circles")
-          .update({ cover_image_url: coverUrlWithBuster })
+          .update({ cover_image_url: firstCoverUrl })
           .eq("id", circleId);
-
         if (coverError) {
           console.error("[updateCircle] cover_image_url 업데이트 실패:", coverError);
         }
-      } else {
-        console.error("[updateCircle] 커버 이미지 업로드 실패:", uploadResult.error);
       }
     } catch (err) {
       console.error("[updateCircle] 커버 이미지 처리 중 예외 발생:", err);

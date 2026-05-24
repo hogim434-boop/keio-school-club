@@ -58,6 +58,12 @@ export interface StepContactProps {
   mode?: "create" | "edit";
   /** edit 모드 대상 서클 id — updateCircle 호출에 사용. */
   circleId?: string;
+  /**
+   * edit 모드에서 유지할 기존 커버 이미지 URL 목록.
+   * CircleRegistrationForm 의 keepImagesRef 에서 최신값으로 전달.
+   * updateCircle 의 네 번째 인수로 전달됨.
+   */
+  keepImageUrls?: string[];
 }
 
 // ── 스타일 토큰 ──────────────────────────────────────────────────────────────
@@ -84,7 +90,12 @@ const ERROR_MSG_CLS = "text-xs text-red-500";
  *  - 본문: <form id={CIRCLE_REGISTRATION_FORM_ID} onSubmit={handleSubmit(onSubmit)}>
  *  - 제출 버튼: 컨테이너 footer 의 <Button type="submit" form={CIRCLE_REGISTRATION_FORM_ID}>
  */
-export function StepContact({ onRegistered, mode = "create", circleId }: StepContactProps) {
+export function StepContact({
+  onRegistered,
+  mode = "create",
+  circleId,
+  keepImageUrls = [],
+}: StepContactProps) {
   const isEdit = mode === "edit";
 
   // ── FormContext 접근 ─────────────────────────────────────────────────────
@@ -116,16 +127,20 @@ export function StepContact({ onRegistered, mode = "create", circleId }: StepCon
   const onSubmit = async (values: RegistrationValues) => {
     setSubmitError(null);
 
-    // 커버 이미지: StepBasic 에서 setValue("cover", file) 로 저장된 값을 꺼냄
-    // cover 필드는 z.any().optional() 이므로 File 여부를 직접 확인
+    // 커버 이미지: StepBasic 에서 setValue("cover", File[]) 로 저장된 값을 꺼냄
+    // cover 필드는 z.any().optional() 이므로 File[] 여부를 직접 확인
     const rawCover = getValues("cover");
-    const coverFile = rawCover instanceof File ? rawCover : null;
+    const coverFiles: File[] = Array.isArray(rawCover)
+      ? rawCover.filter((f): f is File => f instanceof File)
+      : rawCover instanceof File
+        ? [rawCover] // 레거시 단일 File 방어
+        : [];
 
     // edit: updateCircle(UPDATE) / create: submitRegistration(INSERT)
     const result =
       isEdit && circleId
-        ? await updateCircle(circleId, values, coverFile)
-        : await submitRegistration(values, coverFile);
+        ? await updateCircle(circleId, values, coverFiles, keepImageUrls)
+        : await submitRegistration(values, coverFiles);
 
     if ("error" in result) {
       // 제출 실패 — 에러 메시지 표시 후 재시도 가능 상태로 복원

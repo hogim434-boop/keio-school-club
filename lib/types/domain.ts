@@ -54,7 +54,7 @@ export interface CircleDetail extends CircleSummary {
   contact_instagram: string | null;
   contact_x: string | null;
   contact_line: string | null;
-  /** 갤러리 — 최대 8장, sort_order 오름차순 */
+  /** 커버 이미지 컬렉션 — 최대 5장, sort_order 오름차순, 첫 장=대표 커버 */
   images: CircleImage[];
   /** 단체 대표자 UUID */
   owner_id: string;
@@ -65,7 +65,8 @@ export interface CircleDetail extends CircleSummary {
 }
 
 /**
- * 갤러리 한 장 — circle_images 행을 UI 가 받는 형태로 좁힘 (circle_id 는 부모에서 추론).
+ * 커버 이미지 컬렉션 한 장 — circle_images 행을 UI 가 받는 형태로 좁힘 (circle_id 는 부모에서 추론).
+ * sort_order 오름차순, 첫 장(sort_order 0)이 대표 커버(circles.cover_image_url 동기화).
  */
 export interface CircleImage {
   id: string;

@@ -206,6 +206,25 @@ export async function uploadCoverImage(
 }
 
 /**
+ * 동아리 커버 컬렉션 이미지(복수)를 업로드합니다.
+ *
+ * path: circles/{circleId}/cover/{uuid}.jpg (upsert=false — 파일마다 새 경로)
+ * 기존 uploadCoverImage(cover.jpg upsert)와 병존 — 레거시 호환 유지.
+ *
+ * @param supabase - Client Component 용 Supabase 클라이언트
+ * @param circleId - 동아리 UUID
+ * @param file - 업로드할 이미지 파일
+ */
+export async function uploadCoverCollectionImage(
+  supabase: SB,
+  circleId: string,
+  file: File
+): Promise<UploadResult> {
+  const path = `circles/${circleId}/cover/${crypto.randomUUID()}.jpg`;
+  return uploadToStorage(supabase, path, file, false);
+}
+
+/**
  * 동아리 갤러리 이미지를 업로드합니다.
  *
  * path: circles/{circleId}/gallery/{uuid}.jpg (중복 없음)

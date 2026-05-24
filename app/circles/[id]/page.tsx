@@ -1,10 +1,8 @@
 import React, { Suspense } from "react";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import {
   Calendar,
   Clock,
-  Construction,
   RefreshCw,
   UserCheck,
   Users,
@@ -13,10 +11,10 @@ import {
 
 import { CircleActions } from "@/components/circles/circle-actions";
 import { CircleAlbum } from "@/components/circles/circle-album";
+import { CoverCarousel } from "@/components/circles/cover-carousel";
 import { CircleDetailFadeIn } from "@/components/circles/circle-detail-fade-in";
 import { CircleDetailSkeleton } from "@/components/circles/circle-detail-skeleton";
 import { CircleDetailTabs } from "@/components/circles/circle-detail-tabs";
-import { DetailPageHeader } from "@/components/circles/detail-page-header";
 import { OwnerProfileCard } from "@/components/circles/owner-profile-card";
 import { TAG_LABELS } from "@/lib/circles/filter-labels";
 import { ACTIVITY_FREQUENCY_LABELS } from "@/lib/constants/activity-frequency";
@@ -109,8 +107,8 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
        * CircleActions(fixed)는 래퍼 밖에 두어 transform 영향을 받지 않게 한다(아래 주석 참조).
        */}
       <CircleDetailFadeIn>
-        {/* 1. 커버 이미지 — 모바일 16:9 / 데스크탑 21:9 */}
-        <CoverImage circle={circle} />
+        {/* 1. 커버 캐러셀 — 복수 커버 지원 (1장: 단일 이미지 / 2장~: 스냅 캐러셀) */}
+        <CoverCarousel images={circle.images} circleName={circle.name} />
 
         <div className="container mx-auto max-w-6xl space-y-6 px-4">
         {/* 審査中 배너 — pending 상태(소유자/관리자 미리보기) 일 때만 표시 */}
@@ -188,32 +186,6 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
        */}
       <CircleActions circle={circle} />
     </article>
-  );
-}
-
-// 커버 이미지 — 모바일 16:9, 데스크탑 21:9 와이드. priority 로 LCP 개선
-// 메루카리 패턴: 글로벌 헤더 hide + cover 가 viewport 최상단부터 풀-블리드.
-// cover 위 absolute overlay 로 DetailPageHeader (뒤로가기·홈·공유) 노출.
-function CoverImage({ circle }: { circle: CircleDetail }) {
-  return (
-    <div className="bg-muted relative aspect-[16/9] w-full md:aspect-[21/9]">
-      {circle.cover_image_url ? (
-        <Image
-          src={circle.cover_image_url}
-          alt={circle.name}
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover"
-        />
-      ) : (
-        <div className="text-muted-foreground flex h-full w-full items-center justify-center">
-          <Construction className="h-12 w-12" />
-        </div>
-      )}
-      {/* 메루카리 패턴 absolute overlay 헤더 — 뒤로가기 슬라이드 아웃 / 홈 / 공유 */}
-      <DetailPageHeader circleName={circle.name} />
-    </div>
   );
 }
 

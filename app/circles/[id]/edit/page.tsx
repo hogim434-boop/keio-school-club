@@ -61,7 +61,7 @@ async function EditContent({ params }: EditCirclePageProps) {
       initialValues={initialValues}
       circleId={id}
       basePath={`/circles/${id}/edit`}
-      existingCoverUrl={circle.cover_image_url ?? undefined}
+      existingImages={circle.images}
     />
   );
 }

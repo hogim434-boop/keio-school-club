@@ -32,7 +32,7 @@
  * useSearchParams() 를 사용하므로 page.tsx 에서 반드시 <Suspense> 로 감싸야 한다.
  */
 
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, FormProvider } from "react-hook-form";
@@ -50,6 +50,7 @@ import {
   type RegistrationValues,
   STEP_FIELDS,
 } from "@/lib/circles/registration-schema";
+import type { CircleImage } from "@/lib/types/domain";
 
 import { StepBasic } from "@/components/circles/new/step-basic";
 import { StepTags } from "@/components/circles/new/step-tags";
@@ -102,8 +103,11 @@ interface CircleRegistrationFormProps {
   circleId?: string;
   /** step 라우팅 base 경로. create=/circles/new, edit=/circles/{id}/edit */
   basePath?: string;
-  /** edit 모드에서 기존 커버 이미지 URL — StepBasic 미리보기에 전달 */
-  existingCoverUrl?: string | null;
+  /**
+   * edit 모드에서 기존 커버 이미지 목록 — StepBasic 미리보기에 전달.
+   * 복수 커버 지원(circle_images). 레거시 동아리는 빈 배열 → fallback cover_image_url 표시.
+   */
+  existingImages?: CircleImage[];
 }
 
 /**
@@ -119,7 +123,7 @@ export function CircleRegistrationForm({
   initialValues,
   circleId,
   basePath = "/circles/new",
-  existingCoverUrl = null,
+  existingImages = [],
 }: CircleRegistrationFormProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -192,6 +196,19 @@ export function CircleRegistrationForm({
 
   const { trigger } = methods;
 
+  /**
+   * edit 모드에서 StepBasic 이 ×버튼으로 기존 이미지를 삭제할 때 갱신되는 ref.
+   * 제출 시 StepContact 에 keepImageUrls 로 전달된다.
+   * ref 를 쓰는 이유: state로 관리하면 StepBasic 내부 onKeepImagesChange 콜백마다 폼 전체가
+   * 리렌더되어 포커스가 풀리는 문제가 생기기 때문.
+   */
+  const keepImagesRef = useRef<CircleImage[]>(existingImages);
+
+  /** StepBasic 의 onKeepImagesChange 콜백 — keepImagesRef 를 최신값으로 갱신 */
+  const handleKeepImagesChange = useCallback((updated: CircleImage[]) => {
+    keepImagesRef.current = updated;
+  }, []);
+
   // ── 다음 단계로 이동 (부분검증 통과 시에만) ──
   const goNext = useCallback(async () => {
     // 현재 단계에 해당하는 필드만 trigger 로 부분검증.
@@ -212,10 +229,13 @@ export function CircleRegistrationForm({
 
     // ── 커버 이미지 필수 체크 (basic 단계에서만) ──────────────────────────
     // cover 는 SSR File 문제로 Zod 스키마 검증 불가 → 컨테이너 레벨에서 수동 검증.
-    // 신규(create): 새 파일이 없으면 차단.
-    // 편집(edit) : 기존 커버(existingCoverUrl) 또는 새 파일 중 하나라도 있으면 통과.
+    // 신규(create): 새 파일(File[])이 1장 이상 있어야 통과.
+    // 편집(edit) : 기존 이미지(keepImagesRef) 또는 새 파일 중 하나라도 있으면 통과.
     if (step === "basic") {
-      const hasCover = !!methods.getValues("cover") || !!existingCoverUrl;
+      const newFiles = (methods.getValues("cover") as File[] | undefined) ?? [];
+      const hasNewFiles = newFiles.length > 0;
+      const hasKeepImages = keepImagesRef.current.length > 0;
+      const hasCover = hasNewFiles || hasKeepImages;
       if (!hasCover) {
         // RHF cover 필드에 수동 에러 세팅 → StepBasic 의 errors.cover 로 표시됨
         methods.setError("cover", {
@@ -235,7 +255,7 @@ export function CircleRegistrationForm({
     if (next) {
       router.push(`${basePath}?step=${next}`);
     }
-  }, [step, isEdit, trigger, router, basePath, methods, existingCoverUrl]);
+  }, [step, isEdit, trigger, router, basePath, methods]);
 
   // ── contact 단계 제출 성공 콜백 ──
   // create: 完了(審査中) 단계로 / edit: 마이페이지로 복귀.
@@ -343,7 +363,9 @@ export function CircleRegistrationForm({
   // watch 로 실시간 구독해, 필수 입력이 채워지기 전까지 버튼을 회색(미채움)+비활성으로 둔다.
   // (형식 검증은 클릭 시 zod 가 담당 — 여기서는 "값 존재" 수준만 판단)
   const watched = methods.watch();
-  const hasCover = !!watched.cover || !!existingCoverUrl;
+  // 새 파일(File[]) 또는 유지 중인 기존 이미지가 있으면 커버 충족
+  const newCoverFiles = (watched.cover as File[] | undefined) ?? [];
+  const hasCover = newCoverFiles.length > 0 || keepImagesRef.current.length > 0;
   // basic 핵심 필수: 이름·카테고리·단체구분·활동빈도 + 커버
   const basicFilled =
     !!watched.name?.trim() &&
@@ -467,11 +489,20 @@ export function CircleRegistrationForm({
               create 모드는 시간대·요일·회원수·소개를 숨기고(showOptionalFields=false),
               태그 단계 자체를 스킵한다(사후 마이페이지 보강). edit 모드는 전체 노출. */}
           {step === "basic" && (
-            <StepBasic existingCoverUrl={existingCoverUrl} showOptionalFields={isEdit} />
+            <StepBasic
+              existingImages={existingImages}
+              onKeepImagesChange={handleKeepImagesChange}
+              showOptionalFields={isEdit}
+            />
           )}
           {step === "tags" && isEdit && <StepTags />}
           {step === "contact" && (
-            <StepContact onRegistered={handleRegistered} mode={mode} circleId={circleId} />
+            <StepContact
+              onRegistered={handleRegistered}
+              mode={mode}
+              circleId={circleId}
+              keepImageUrls={keepImagesRef.current.map((img) => img.image_url)}
+            />
           )}
         </AuthScreen>
       </FormProvider>

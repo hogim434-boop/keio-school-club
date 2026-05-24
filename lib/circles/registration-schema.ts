@@ -23,8 +23,8 @@
  *  cover 필드는 브라우저 File 객체를 RHF 상태로 보관하기 위한 필드입니다.
  *
  *  규약 (다음 에이전트가 StepBasic 에서 커버 입력을 구현할 때 반드시 따를 것):
- *   - 저장: StepBasic 에서 사용자가 파일을 선택하면 setValue("cover", file) 로 보관
- *   - 제출: StepContact 에서 최종 제출 시 (getValues("cover") as File) ?? null 로 꺼냄
+ *   - 저장: StepBasic 에서 사용자가 파일들을 선택하면 setValue("cover", File[]) 로 보관
+ *   - 제출: StepContact 에서 최종 제출 시 (getValues("cover") as File[]) ?? [] 로 꺼냄
  *   - Zod 검증: z.any().optional() — 브라우저 File 은 SSR 에서 존재하지 않으므로
  *     Zod 검증 대신 컴포넌트에서 직접 타입 확인
  *   - STEP_FIELDS.basic 에는 포함하지 않음 — trigger 대상 외(컨테이너 레벨에서 수동 검증)
@@ -216,12 +216,12 @@ const baseSchema = z.object({
 
   // ── 커버 이미지 (필수, 브라우저 File 보관용) ─
   /**
-   * 커버 이미지 파일 (★ 필수 항목 — 2026-05 변경).
+   * 커버 이미지 파일 배열 (★ 필수 항목 — 2026-05 변경, 최대 5장).
    *
    * 보관 규약:
-   *  - StepBasic 에서 setValue("cover", file) 로 RHF 상태에 저장
-   *  - StepContact 제출 시 (getValues("cover") as File) ?? null 로 꺼내
-   *    submitRegistration(values, coverFile) 의 두 번째 인수로 전달
+   *  - StepBasic 에서 setValue("cover", File[]) 로 RHF 상태에 저장 (누적 선택 방식)
+   *  - StepContact 제출 시 (getValues("cover") as File[]) ?? [] 로 꺼내
+   *    submitRegistration(values, coverFiles) 의 두 번째 인수로 전달
    *  - SSR 에서 File 클래스가 없으므로 z.any().optional() 로 선언 (Zod 검증 없음)
    *  - 필수 검증은 circle-registration-form.tsx 의 goNext 에서 수동으로 처리
    *    (hasCover 체크 → 미선택 시 setError("cover"), 선택 시 clearErrors("cover"))
