@@ -1,13 +1,6 @@
 import React, { Suspense } from "react";
 import { notFound } from "next/navigation";
-import {
-  Calendar,
-  Clock,
-  RefreshCw,
-  UserCheck,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
+import { Calendar, Clock, RefreshCw, UserCheck, Users, type LucideIcon } from "lucide-react";
 
 import { CircleActions } from "@/components/circles/circle-actions";
 import { CircleAlbum } from "@/components/circles/circle-album";
@@ -108,75 +101,78 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
        */}
       <CircleDetailFadeIn>
         {/* 1. 커버 캐러셀 — 복수 커버 지원 (1장: 단일 이미지 / 2장~: 스냅 캐러셀) */}
-        <CoverCarousel images={circle.images} circleName={circle.name} />
+        {/* 커버 하단 전체 폭 경계선 — 커버와 본문 영역을 시각적으로 구분 */}
+        <div className="border-b">
+          <CoverCarousel images={circle.images} circleName={circle.name} />
+        </div>
 
         <div className="container mx-auto max-w-6xl space-y-6 px-4">
-        {/* 審査中 배너 — pending 상태(소유자/관리자 미리보기) 일 때만 표시 */}
-        {!isApproved && (
-          <div
-            role="status"
-            className="flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200"
-          >
-            {/* 아이콘 — 장식용이므로 스크린리더 무시 */}
-            <Clock aria-hidden className="size-4 shrink-0" />
-            <p className="text-sm font-semibold">審査中です</p>
-          </div>
-        )}
+          {/* 審査中 배너 — pending 상태(소유자/관리자 미리보기) 일 때만 표시 */}
+          {!isApproved && (
+            <div
+              role="status"
+              className="flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200"
+            >
+              {/* 아이콘 — 장식용이므로 스크린리더 무시 */}
+              <Clock aria-hidden className="size-4 shrink-0" />
+              <p className="text-sm font-semibold">審査中です</p>
+            </div>
+          )}
 
-        {/* 2. 헤더 — 뱃지 행 + 서클명 + 태그 칩 (데스크탑 inline 액션 제거됨) */}
-        <Header circle={circle} />
+          {/* 2. 헤더 — 뱃지 행 + 서클명 + 태그 칩 (데스크탑 inline 액션 제거됨) */}
+          <Header circle={circle} />
 
-        {/* 2-1. 소유자 전용 카드 — 프로필 完成度 게이지 + 「編集する」. 일반 방문자에겐 미노출.
+          {/* 2-1. 소유자 전용 카드 — 프로필 完成度 게이지 + 「編集する」. 일반 방문자에겐 미노출.
             (심사중·승인 무관하게 본인이면 표시 — 미리 프로필을 채우고 편집 가능) */}
-        {isOwner && <OwnerProfileCard circle={circle} />}
+          {isOwner && <OwnerProfileCard circle={circle} />}
 
-        {/*
-         * 4. 탭 구조 — Client wrapper (state 관리) + Server Component children (homeContent).
-         * 「ホーム」 = SummaryGrid + Description + 活動レポート 미리보기 캐러셀
-         * 「掲示板」 = 活動レポート 전체 세로 리스트
-         * 「もっと見る」 클릭 시 내부 setTab("board") 으로 자동 전환.
-         * isOwner: 소유자 전용 「＋ 投稿する」 버튼 표시 여부 전달.
-         */}
-        {/*
-         * 앨범 이미지 자동 집계 — 추가 쿼리 없음.
-         * 커버 이미지(복수, isCover=true) 를 sort_order 순으로 맨 앞, 이후 리포트 사진을 최신순으로 나열.
-         * circle.images 는 circle_images(복수 커버) — 레거시 동아리는 쿼리 fallback 으로 cover_image_url 1장이 채워짐.
-         */}
-        {(() => {
-          const albumImages = [
-            ...circle.images.map((img) => ({
-              url: img.image_url,
-              isCover: true as const,
-            })),
-            ...reports.flatMap((r) =>
-              r.images.map((img) => ({
+          {/*
+           * 4. 탭 구조 — Client wrapper (state 관리) + Server Component children (homeContent).
+           * 「ホーム」 = SummaryGrid + Description + 活動レポート 미리보기 캐러셀
+           * 「掲示板」 = 活動レポート 전체 세로 리스트
+           * 「もっと見る」 클릭 시 내부 setTab("board") 으로 자동 전환.
+           * isOwner: 소유자 전용 「＋ 投稿する」 버튼 표시 여부 전달.
+           */}
+          {/*
+           * 앨범 이미지 자동 집계 — 추가 쿼리 없음.
+           * 커버 이미지(복수, isCover=true) 를 sort_order 순으로 맨 앞, 이후 리포트 사진을 최신순으로 나열.
+           * circle.images 는 circle_images(복수 커버) — 레거시 동아리는 쿼리 fallback 으로 cover_image_url 1장이 채워짐.
+           */}
+          {(() => {
+            const albumImages = [
+              ...circle.images.map((img) => ({
                 url: img.image_url,
-                reportId: r.id,
-                reportTitle: r.title,
-              }))
-            ),
-          ];
+                isCover: true as const,
+              })),
+              ...reports.flatMap((r) =>
+                r.images.map((img) => ({
+                  url: img.image_url,
+                  reportId: r.id,
+                  reportTitle: r.title,
+                }))
+              ),
+            ];
 
-          return (
-            <CircleDetailTabs
-              circleId={circle.id}
-              reports={reports}
-              isOwner={isOwner}
-              homeContent={
-                <>
-                  <SummaryGrid circle={circle} />
-                  <ExpandableDescription text={circle.description} />
-                </>
-              }
-              // 관련 동아리 — 「ホーム」 탭 맨 아래(활동 리포트 미리보기 뒤)에만 표시. 0건이면 미표시.
-              relatedContent={
-                relatedCircles.length > 0 ? <RelatedCircles circles={relatedCircles} /> : null
-              }
-              // アルバム 탭 — 커버 + 리포트 사진 자동 집계
-              albumContent={<CircleAlbum images={albumImages} circleId={circle.id} />}
-            />
-          );
-        })()}
+            return (
+              <CircleDetailTabs
+                circleId={circle.id}
+                reports={reports}
+                isOwner={isOwner}
+                homeContent={
+                  <>
+                    <SummaryGrid circle={circle} />
+                    <ExpandableDescription text={circle.description} />
+                  </>
+                }
+                // 관련 동아리 — 「ホーム」 탭 맨 아래(활동 리포트 미리보기 뒤)에만 표시. 0건이면 미표시.
+                relatedContent={
+                  relatedCircles.length > 0 ? <RelatedCircles circles={relatedCircles} /> : null
+                }
+                // アルバム 탭 — 커버 + 리포트 사진 자동 집계
+                albumContent={<CircleAlbum images={albumImages} circleId={circle.id} />}
+              />
+            );
+          })()}
         </div>
       </CircleDetailFadeIn>
 
