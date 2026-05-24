@@ -8,13 +8,13 @@
  * - 종 클릭 → 우측 슬라이드 드로어(Sheet) 열림/닫힘. 드로어 밖(오버레이=종 위치 포함) 클릭 시 닫힘.
  * - 드로어가 열릴 때 getFeedAction()으로 통합 피드를 가져와 NotificationFeedView 로 렌더.
  * - 안읽음 뱃지: getBadgeInfoAction() + localStorage("kc:notif-seen") 비교.
- *   경로 변경 / 드로어 닫힘 / "kc:notif-read" 이벤트(피드 열람·すべて既読) 시 재계산.
+ *   갱신 타이밍: 최초 마운트 1회 / 드로어 닫힘 / "kc:notif-read" 이벤트 / 60초 주기 폴링.
+ *   (페이지 이동마다 DB 호출하던 pathname 의존 useEffect 는 제거됨)
  * - 하이드레이션 안전: 초기 점 false → 마운트 후 갱신.
  */
 
 import { useCallback, useEffect, useState } from "react";
 import { Bell } from "lucide-react";
-import { usePathname } from "next/navigation";
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { getBadgeInfoAction, getFeedAction } from "@/app/notifications/actions";
@@ -28,8 +28,10 @@ const iconButton =
 
 const SEEN_KEY = "kc:notif-seen";
 
+/** 뱃지 폴링 간격 (ms) — 60초 */
+const BADGE_POLL_INTERVAL = 60_000;
+
 export function NotificationBell() {
-  const pathname = usePathname();
   const [hasUnread, setHasUnread] = useState(false);
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<FeedItem[] | null>(null);
@@ -54,10 +56,14 @@ export function NotificationBell() {
     }
   }, []);
 
-  // 경로 변경 시 재계산
+  // 마운트 시 1회 호출 + 60초 주기 폴링 (pathname 의존 제거 → 페이지 이동마다 DB 호출 방지)
   useEffect(() => {
     refreshBadge();
-  }, [pathname, refreshBadge]);
+
+    const timerId = setInterval(refreshBadge, BADGE_POLL_INTERVAL);
+    return () => clearInterval(timerId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 피드 열람·すべて既読 시 NotificationFeedView 가 쏘는 이벤트 → 뱃지 클리어
   useEffect(() => {
