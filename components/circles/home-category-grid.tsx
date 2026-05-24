@@ -46,7 +46,12 @@ export function HomeCategoryGrid() {
   }
 
   return (
-    <section className="space-y-3" aria-label="カテゴリから探す">
+    <section
+      className="space-y-3"
+      aria-label="カテゴリから探す"
+      // 코치마크 엔진이 이 속성으로 요소를 찾아 말풍선을 표시함
+      data-coachmark="category"
+    >
       <h2 className="text-base font-semibold">カテゴリ</h2>
       <ul className="grid grid-cols-4 gap-2 sm:gap-3">
         {CATEGORIES.map((category) => (

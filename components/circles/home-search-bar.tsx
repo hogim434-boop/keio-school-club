@@ -13,6 +13,8 @@ export function HomeSearchBar() {
     <Link
       href="/search"
       aria-label="サークルを検索"
+      // 코치마크 엔진이 이 속성으로 요소를 찾아 말풍선을 표시함
+      data-coachmark="search"
       className="bg-muted text-muted-foreground hover:bg-muted/80 focus-visible:ring-ring flex h-12 w-full items-center gap-2.5 rounded-xl px-4 transition-colors focus-visible:ring-2 focus-visible:outline-none"
     >
       <Search className="size-5 shrink-0" aria-hidden="true" />

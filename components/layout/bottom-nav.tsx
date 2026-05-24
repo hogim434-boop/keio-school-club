@@ -70,6 +70,9 @@ export function BottomNav() {
                   href={item.href}
                   aria-label={`${item.aria}に移動`}
                   aria-current={isActive ? "page" : undefined}
+                  // 코치마크 엔진이 「お気に入り」 탭을 찾아 말풍선을 표시함
+                  // href="/favorites" 인 탭에만 속성 부여, 나머지는 undefined(DOM에 미출력)
+                  data-coachmark={item.href === "/favorites" ? "favorites" : undefined}
                   className={cn(
                     // h-14(56px) — 아이콘 + 라벨에 여유 있는 세로 공간(답답함 해소).
                     "focus-visible:ring-ring inline-flex h-14 w-full flex-col items-center justify-center gap-0.5 rounded-md text-[11px] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
