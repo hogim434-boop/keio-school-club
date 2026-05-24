@@ -150,8 +150,11 @@ export function ManagedCircleCard({ circle, onRequestDelete, className }: Manage
           aria-hidden="true"
         />
         <Card className="overflow-hidden p-0">
-          {/* ── 커버 이미지 16:9 ── */}
-          <div className="bg-muted relative aspect-video w-full">
+          {/* ── 커버 이미지 16:9 ──
+              pointer-events-none: 커버 div 가 relative(positioned)라 stretched-link(z-0) 위에 떠
+              클릭을 가로채는데 자체 동작이 없어 무반응이 된다. 클릭을 아래 stretched-link 로
+              통과시켜 카드 전체 클릭(상세 이동)이 커버 영역에서도 동작하게 한다. */}
+          <div className="bg-muted pointer-events-none relative aspect-video w-full">
             {circle.cover_image_url ? (
               <Image
                 src={circle.cover_image_url}
