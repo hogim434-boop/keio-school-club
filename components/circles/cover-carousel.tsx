@@ -69,16 +69,6 @@ export function CoverCarousel({ images, circleName }: CoverCarouselProps) {
     setCurrentIndex(clamped);
   }, [images.length]);
 
-  /**
-   * dots 클릭 — 해당 셀로 smooth 스크롤.
-   * prefers-reduced-motion 은 브라우저가 `smooth` 여부를 자동 처리한다.
-   */
-  const scrollToIndex = useCallback((idx: number) => {
-    const container = scrollRef.current;
-    if (!container) return;
-    container.scrollTo({ left: container.clientWidth * idx, behavior: "smooth" });
-  }, []);
-
   // ── 이미지 없음: 아이콘 플레이스홀더 ──────────────────────────────────────
   if (images.length === 0) {
     return (
@@ -163,31 +153,14 @@ export function CoverCarousel({ images, circleName }: CoverCarouselProps) {
       <DetailPageHeader circleName={circleName} />
 
       {/*
-       * 하단 dots 인디케이터 — promo-tile-carousel.tsx 패턴.
-       * absolute + 하단 중앙 — 이미지 위에 overlay.
-       * 활성: w-4 / 비활성: w-1.5 (전환 transition-all duration-300)
+       * 우측 하단 매수 카운터 — 「현재/전체」(예: 1 / 3).
+       * 어두운 반투명 pill + 흰 글씨, tabular-nums 로 폭 흔들림 방지.
        */}
       <div
-        role="tablist"
-        aria-label="画像ナビゲーション"
-        className="pointer-events-none absolute bottom-3 left-0 right-0 flex items-center justify-center gap-1.5"
+        aria-live="polite"
+        className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-black/60 px-2 py-0.5 text-xs font-medium text-white tabular-nums"
       >
-        {images.map((img, i) => (
-          <button
-            key={img.id}
-            type="button"
-            role="tab"
-            aria-selected={i === currentIndex}
-            aria-current={i === currentIndex ? "true" : undefined}
-            aria-label={`画像 ${i + 1}`}
-            onClick={() => scrollToIndex(i)}
-            className={cn(
-              "pointer-events-auto h-1.5 rounded-full transition-all duration-300",
-              "focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none",
-              i === currentIndex ? "w-4 bg-white" : "w-1.5 bg-white/50"
-            )}
-          />
-        ))}
+        {currentIndex + 1} / {images.length}
       </div>
     </div>
   );
