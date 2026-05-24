@@ -12,13 +12,17 @@
 /**
  * 「태그 마스터」 시드 — 특징 태그(검색 필터 「タグ」 섹션).
  *
- * 정책 (2026-05 적극 정리):
+ * 정책:
  * - 성별·술 관련 태그 제외.
- * - 「活動頻度」 섹션과 의미 중복인 ガチ/ゆるい(분위기) 제거 → 활동빈도 필터로 대체.
+ * - 雰囲気 ガチ/ゆるめ 노출 (사용자 요청으로 재추가, 2026-05).
  * - 留学生歓迎 ↔ 海外活動 모호함 해소를 위해 라벨을 「入部 대상」 / 「활동 장소」로 명확화.
+ * - 「混合」「選考なし」 제거, 「学年制限あり」 → 「新入生歓迎」「全学年歓迎」 로 구체화.
  * slug 는 DB 키, label_ja 는 UI 라벨.
  */
 export const TAG_SEEDS: { slug: string; label_ja: string }[] = [
+  // 雰囲気
+  { slug: "yurui", label_ja: "ゆるめ" },
+  { slug: "gachi", label_ja: "ガチ" },
   // 특징
   { slug: "beginner_ok", label_ja: "初心者歓迎" },
   { slug: "kenser_ok", label_ja: "兼サー可" },
@@ -29,14 +33,13 @@ export const TAG_SEEDS: { slug: string; label_ja: string }[] = [
   { slug: "on_campus", label_ja: "校内" },
   { slug: "off_campus", label_ja: "学外" },
   { slug: "online_place", label_ja: "オンライン" },
-  { slug: "hybrid", label_ja: "混合" },
   // 入会方法
   { slug: "first_come", label_ja: "先着順" },
   { slug: "interview", label_ja: "面接" },
   { slug: "lottery", label_ja: "抽選" },
-  { slug: "no_screening", label_ja: "選考なし" },
   // 募集対象
-  { slug: "grade_limited", label_ja: "学年制限あり" },
+  { slug: "freshman_welcome", label_ja: "新入生歓迎" },
+  { slug: "all_grades", label_ja: "全学年歓迎" },
 ];
 
 /** slug → label_ja 빠른 조회용 record */
