@@ -13,10 +13,11 @@ import {
 
 import { CircleActions } from "@/components/circles/circle-actions";
 import { CircleAlbum } from "@/components/circles/circle-album";
+import { CircleDetailFadeIn } from "@/components/circles/circle-detail-fade-in";
+import { CircleDetailSkeleton } from "@/components/circles/circle-detail-skeleton";
 import { CircleDetailTabs } from "@/components/circles/circle-detail-tabs";
 import { DetailPageHeader } from "@/components/circles/detail-page-header";
 import { OwnerProfileCard } from "@/components/circles/owner-profile-card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { TAG_LABELS } from "@/lib/circles/filter-labels";
 import { ACTIVITY_FREQUENCY_LABELS } from "@/lib/constants/activity-frequency";
 import { ACTIVITY_TIME_BAND_LABELS } from "@/lib/constants/activity-time-band";
@@ -42,7 +43,7 @@ interface CircleDetailPageProps {
 export default function CircleDetailPage({ params }: CircleDetailPageProps) {
   return (
     <main className="pb-24 md:pb-28">
-      <Suspense fallback={<DetailFallback />}>
+      <Suspense fallback={<CircleDetailSkeleton />}>
         <CircleDetailContent params={params} />
       </Suspense>
     </main>
@@ -103,10 +104,15 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
 
   return (
     <article className="space-y-6">
-      {/* 1. 커버 이미지 — 모바일 16:9 / 데스크탑 21:9 */}
-      <CoverImage circle={circle} />
+      {/*
+       * 진입 fade-up — 커버 + 본문 container 를 감싸 스켈레톤 → 실제 전환을 부드럽게.
+       * CircleActions(fixed)는 래퍼 밖에 두어 transform 영향을 받지 않게 한다(아래 주석 참조).
+       */}
+      <CircleDetailFadeIn>
+        {/* 1. 커버 이미지 — 모바일 16:9 / 데스크탑 21:9 */}
+        <CoverImage circle={circle} />
 
-      <div className="container mx-auto max-w-6xl space-y-6 px-4">
+        <div className="container mx-auto max-w-6xl space-y-6 px-4">
         {/* 審査中 배너 — pending 상태(소유자/관리자 미리보기) 일 때만 표시 */}
         {!isApproved && (
           <div
@@ -172,11 +178,13 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
             />
           );
         })()}
-      </div>
+        </div>
+      </CircleDetailFadeIn>
 
       {/*
        * 5. lagging spring sticky 액션 — viewport 하단 고정 + 스크롤 velocity 반응.
-       * fixed positioning 이라 부모 영향 없음 → 시맨틱상 container 밖, article 의 마지막 자식.
+       * fixed positioning 이라 CircleDetailFadeIn(진입 transform) 밖에 둔다 →
+       * 진입 애니 중에도 viewport 기준 고정 유지. article 의 마지막 자식.
        */}
       <CircleActions circle={circle} />
     </article>
@@ -357,57 +365,5 @@ function RelatedCircles({ circles }: { circles: CircleSummary[] }) {
         ))}
       </ul>
     </section>
-  );
-}
-
-// Suspense fallback — 커버 + 헤더 + 요약(5종) + 개요 + 갤러리 영역 skeleton
-function DetailFallback() {
-  return (
-    <article className="space-y-6">
-      <Skeleton className="aspect-[16/9] w-full md:aspect-[21/9]" />
-      <div className="container mx-auto max-w-6xl space-y-6 px-4">
-        {/* 헤더 skeleton */}
-        <div className="space-y-3">
-          <div className="flex gap-2">
-            <Skeleton className="h-5 w-16" />
-            <Skeleton className="h-5 w-16" />
-          </div>
-          <Skeleton className="h-8 w-2/3" />
-          <Skeleton className="h-5 w-1/3" />
-        </div>
-        {/* 탭 네비게이션 skeleton */}
-        <div className="flex gap-4 border-b pb-0">
-          <Skeleton className="h-8 w-16" />
-          <Skeleton className="h-8 w-16" />
-        </div>
-        {/* 요약 정보 5종 skeleton — divide-y 행 리스트와 일치 */}
-        <div className="divide-border divide-y pt-6">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-4 py-3 first:pt-0 last:pb-0">
-              <Skeleton className="size-5 w-6 shrink-0 rounded" />
-              <div className="flex flex-1 flex-col gap-1.5">
-                <Skeleton className="h-3 w-12" />
-                <Skeleton className="h-4 w-24" />
-              </div>
-            </div>
-          ))}
-        </div>
-        {/* 개요 skeleton */}
-        <Skeleton className="h-20 w-full" />
-        {/* 活動レポート 미리보기 캐러셀 skeleton — 정사각 카드 4개 */}
-        <div className="space-y-3">
-          <Skeleton className="h-6 w-32" />
-          <div className="flex gap-3 overflow-hidden">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="w-36 shrink-0 space-y-2 md:w-44">
-                <Skeleton className="aspect-square w-full rounded-lg" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-3 w-full" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </article>
   );
 }
