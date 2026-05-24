@@ -81,8 +81,9 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <RegisterFloatingCTA />
         </Suspense>
-        {/* 토스트 알림 — 라이트 톤 고정 */}
-        <Toaster richColors closeButton />
+        {/* 토스트 알림 — 하단 다크 알약 스타일(components/ui/sonner.tsx 에서 설정).
+            richColors/closeButton 제거: 다크 통일 + 자동 fade-out. */}
+        <Toaster />
       </body>
     </html>
   );

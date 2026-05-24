@@ -102,3 +102,24 @@
     -webkit-user-select: none;
   }
 }
+
+/* ── Sonner 토스트(하단 다크 알약) — center 위치에서 내용폭 + 화면 중앙 ──
+   sonner 의 center 정렬(ol 에 left:50% + translateX(-50%))은 환경에 따라 미세하게
+   어긋나므로 그 계산에 의존하지 않는다.
+   → 토스터(ol)를 화면 전폭(width:100%, left:0, transform:none)으로 펼쳐
+      sonner 의 위치 계산을 무력화하고, 그 안에서 토스트(li)를 margin-inline:auto 로
+      순수 CSS 중앙에 둔다. (브라우저가 계산하므로 어떤 화면 폭에서도 정확히 중앙)
+   li 를 relative 로 두는 이유: sonner 기본 absolute 에서는 margin-auto 중앙이 먹지 않음.
+   (본 서비스는 토스트를 1건씩 표시하므로 absolute 스택 해제의 부작용이 없다) */
+[data-sonner-toaster][data-x-position="center"] {
+  width: 100% !important;
+  left: 0 !important;
+  right: 0 !important;
+  transform: none !important;
+}
+[data-sonner-toaster][data-x-position="center"] > li[data-sonner-toast] {
+  position: relative !important;
+  width: fit-content !important;
+  max-width: 90vw !important;
+  margin-inline: auto !important;
+}
