@@ -348,6 +348,42 @@ export const getCirclesByCategory = unstable_cache(
 );
 
 /**
+ * 승인된 서클 상세 1건 (캐시 우선) — circles/[id] 페이지 첫 번째 시도에서 사용.
+ *
+ * getCircleById(쿠키 기반, RLS 판정) 와 같은 select/JOIN + toCircleDetail 매핑을 쓰지만
+ * 세 가지 점이 다르다:
+ *   1. createAnonClient() 사용 — unstable_cache 안에서 cookies() 호출 금지 제약을 우회.
+ *   2. .eq("status","approved") 명시 — anon 은 approved 만 RLS 통과하므로 의미 일치.
+ *   3. unstable_cache 로 감싸 Vercel Data Cache 에 60초 저장 → 네트워크 왕복 절약.
+ *      tags:["circles"] — 동아리 mutation(승인·삭제 등) 시 revalidateTag("circles") 로 즉시 무효화.
+ *
+ * 한계: anon 은 pending/rejected 동아리를 볼 수 없다.
+ * → 미승인 서클은 null 을 반환하므로 호출측에서 getCircleById(쿠키/RLS)로 폴백해야 한다.
+ * (오너 미리보기, 어드민 확인 케이스)
+ */
+export const getApprovedCircleById = unstable_cache(
+  async (id: string): Promise<CircleDetail | null> => {
+    const supabase = createAnonClient();
+    const { data, error } = await supabase
+      .from("circles")
+      .select("*, circle_tags(tags(slug)), circle_images(*)")
+      // anon RLS 와 명시 필터를 일치시켜 의도를 코드에 드러냄
+      .eq("status", "approved")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("[getApprovedCircleById]", error.message);
+      return null;
+    }
+    if (!data) return null;
+    return toCircleDetail(data as Record<string, unknown>);
+  },
+  ["circles", "detail"],
+  { revalidate: 60, tags: ["circles"] }
+);
+
+/**
  * 서클 상세 1건 — circles/[id] 페이지에서 사용.
  * circle_images, circle_tags(tags) 전부 JOIN.
  *

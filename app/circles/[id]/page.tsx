@@ -17,7 +17,11 @@ import { MEMBER_BAND_LABELS } from "@/lib/constants/member-band";
 import { getOfficialTypeDisplayLabel } from "@/lib/constants/official-type";
 import { RECRUITMENT_STATUS_LABELS } from "@/lib/constants/recruitment-status";
 import { getReportsByCircle } from "@/lib/supabase/queries/activity-reports";
-import { getCircleById, getCirclesByCategory } from "@/lib/supabase/queries/circles";
+import {
+  getApprovedCircleById,
+  getCircleById,
+  getCirclesByCategory,
+} from "@/lib/supabase/queries/circles";
 import { CircleCard } from "@/components/circles/circle-card";
 import { ExpandableDescription } from "@/components/circles/expandable-description";
 import { createClient } from "@/lib/supabase/server";
@@ -41,19 +45,39 @@ export default function CircleDetailPage({ params }: CircleDetailPageProps) {
   );
 }
 
+/**
+ * 캐시 우선 서클 상세 취득 헬퍼.
+ *
+ * 1순위: getApprovedCircleById(anon + unstable_cache 60초) — approved 공개 서클.
+ *         캐시 히트 시 네트워크 왕복 없이 Vercel Data Cache 에서 즉시 반환.
+ * 2순위: getCircleById(쿠키/RLS) — 캐시가 null 이면 폴백.
+ *         오너·어드민의 pending/rejected 미리보기 케이스를 커버.
+ * 둘 다 null → 호출측에서 notFound().
+ */
+async function fetchCircleWithFallback(id: string): Promise<CircleDetail | null> {
+  // 먼저 캐시된 approved 상세 시도
+  const cached = await getApprovedCircleById(id);
+  if (cached) return cached;
+  // null 이면 쿠키 클라이언트(RLS)로 폴백 — pending/rejected 오너·어드민 케이스
+  return getCircleById(id);
+}
+
 async function CircleDetailContent({ params }: CircleDetailPageProps) {
   const { id } = await params;
   /**
    * circle 조회 + 활동 리포트 조회를 병렬 실행 (성능 개선 Phase 1).
    *
-   * - getReportsByCircle 인자를 circle.id 대신 id(route param)로 전달해도 동일.
-   *   report 테이블의 circle_id 컬럼이 circles.id와 같은 UUID이므로
-   *   URL param id === circle.id 가 항상 성립.
+   * circle 취득은 "캐시 우선 + 폴백" 패턴(fetchCircleWithFallback):
+   *   - approved 서클: getApprovedCircleById(캐시 60초, anon) → 빠름.
+   *   - 미승인/unknown: getCircleById(쿠키/RLS) 폴백 → 오너 미리보기 유지.
+   * reports 취득은 getReportsByCircle(캐시 30초, anon).
+   *
    * - circle가 null(존재하지 않는 서클)인 경우엔 reports 조회는 빈 배열로 무해하게 끝남.
-   *   notFound() 는 Promise.all 이후에 호출하므로 불필요한 쿼리가 한 번 더 실행되지만,
-   *   없는 서클 상세 조회는 극히 드문 케이스이므로 허용.
    */
-  const [circle, reports] = await Promise.all([getCircleById(id), getReportsByCircle(id)]);
+  const [circle, reports] = await Promise.all([
+    fetchCircleWithFallback(id),
+    getReportsByCircle(id),
+  ]);
   if (!circle) notFound();
 
   // 승인 여부 — pending 상태이면 関連サークル 조회 생략 + 審査中 배너 표시
@@ -71,15 +95,14 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
   const supabase = await createClient();
 
   /**
-   * 소유자 판별 — edit/page.tsx 패턴과 동일.
-   * getClaims() 는 서버 측 JWT 검증으로 auth.getUser() 보다 가볍다.
-   * 미로그인 또는 소유자 불일치 시 isOwner = false.
-   * 미승인(pending) 서클 소유자도 작성 가능하도록 status 필터 없음.
+   * 소유자 판별 — getClaims() 로 로컬 JWT 검증 (네트워크 왕복 없음).
+   * getUser() 는 Supabase /user 엔드포인트를 호출하므로 매 렌더마다 외부 요청이 발생하나,
+   * getClaims() 는 서명 검증만 수행해 요청 비용이 없다.
+   * claims.sub === user UUID. 미로그인 시 data.claims 가 null → uid undefined → isOwner false.
    */
-  const {
-    data: { user: currentUser },
-  } = await supabase.auth.getUser();
-  const isOwner = !!currentUser && circle.owner_id === currentUser.id;
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const uid = claimsData?.claims?.sub;
+  const isOwner = !!uid && circle.owner_id === uid;
 
   /**
    * fire-and-forget 조회수 증가 RPC — await 하지 않아 렌더 블로킹 없음.

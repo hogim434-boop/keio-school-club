@@ -9,7 +9,10 @@
  * - activity_report_images는 JOIN으로 함께 fetch
  */
 
+import { unstable_cache } from "next/cache";
+
 import { createClient } from "@/lib/supabase/server";
+import { createAnonClient } from "@/lib/supabase/anon";
 import type { ActivityReport } from "@/lib/types/domain";
 
 // ============================================================
@@ -47,32 +50,41 @@ function toActivityReport(row: Record<string, unknown>): ActivityReport {
  * 서클별 활동 리포트 목록 — circles/[id] 게시판 탭 + 활동 리포트 미리보기에서 사용.
  * created_at 내림차순 정렬 (최신 순).
  *
+ * 캐싱 정책:
+ * - activity_reports는 공개(activity_reports_select_public RLS)이므로 createAnonClient() 사용 가능.
+ * - unstable_cache 로 30초 캐싱. revalidate:30 — TTL 의존.
+ * - tags:["circles"] — 동아리 관련 mutation 시 revalidateTag("circles")로 함께 무효화.
+ *
+ * 트레이드오프:
+ * 오너의 신규 레포트는 최대 30초 지연 표시(클라이언트 작성이라 revalidateTag 불가, TTL 의존).
+ *
  * @param circleId 서클 UUID
  * @param limit 취득 건수 (기본 전체)
  */
-export async function getReportsByCircle(
-  circleId: string,
-  limit?: number
-): Promise<ActivityReport[]> {
-  const supabase = await createClient();
-  let query = supabase
-    .from("activity_reports")
-    .select("*, activity_report_images(*)")
-    .eq("circle_id", circleId)
-    .order("created_at", { ascending: false });
+export const getReportsByCircle = unstable_cache(
+  async (circleId: string, limit?: number): Promise<ActivityReport[]> => {
+    const supabase = createAnonClient();
+    let query = supabase
+      .from("activity_reports")
+      .select("*, activity_report_images(*)")
+      .eq("circle_id", circleId)
+      .order("created_at", { ascending: false });
 
-  if (limit !== undefined) {
-    query = query.limit(limit);
-  }
+    if (limit !== undefined) {
+      query = query.limit(limit);
+    }
 
-  const { data, error } = await query;
+    const { data, error } = await query;
 
-  if (error) {
-    console.error("[getReportsByCircle]", error.message);
-    return [];
-  }
-  return (data ?? []).map((row) => toActivityReport(row as Record<string, unknown>));
-}
+    if (error) {
+      console.error("[getReportsByCircle]", error.message);
+      return [];
+    }
+    return (data ?? []).map((row) => toActivityReport(row as Record<string, unknown>));
+  },
+  ["circles", "reports-by-circle"],
+  { revalidate: 30, tags: ["circles"] }
+);
 
 /**
  * 활동 리포트 상세 1건 — circles/[id]/reports/[reportId] 페이지에서 사용.
