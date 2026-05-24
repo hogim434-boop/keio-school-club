@@ -31,16 +31,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Construction, Ellipsis, Trash2, Users } from "lucide-react";
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -245,40 +236,26 @@ export function ManagedCircleCard({ circle, onRequestDelete, className }: Manage
         </Card>
       </div>
 
-      {/* ── 삭제 확인 AlertDialog (카드 외부에 렌더해 포커스 트랩 충돌 방지) ── */}
-      <AlertDialog
+      {/* ── 삭제 확인 다이얼로그 (카드 외부에 렌더해 포커스 트랩 충돌 방지) ── */}
+      <DeleteConfirmDialog
         open={dialogOpen}
         onOpenChange={(open) => {
           setDialogOpen(open);
           // 다이얼로그 닫힘 시 카드 click-through 방지
           startNavGrace();
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {/* 서클명을 따옴표로 감싸 어떤 서클인지 명확히 표시 */}「{circle.name}
-              」を削除しますか?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              この操作は取り消せません。活動レポートなどの関連データもすべて削除されます。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>キャンセル</AlertDialogCancel>
-            {/* 삭제 실행 — destructive 스타일로 위험 동작 강조 */}
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                setDialogOpen(false);
-                onRequestDelete();
-              }}
-            >
-              削除する
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title={
+          <>
+            {/* 서클명을 따옴표로 감싸 어떤 서클인지 명확히 표시 */}
+            「{circle.name}」を削除しますか?
+          </>
+        }
+        description="この操作は取り消せません。活動レポートなどの関連データもすべて削除されます。"
+        onConfirm={() => {
+          setDialogOpen(false);
+          onRequestDelete();
+        }}
+      />
     </>
   );
 }

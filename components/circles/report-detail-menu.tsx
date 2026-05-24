@@ -20,16 +20,7 @@ import { Ellipsis, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { DETAIL_RETURN_TAB_FLAG } from "@/app/circles/[id]/reports/[reportId]/template";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -143,27 +134,15 @@ export function ReportDetailMenu({ circleId, report, isOwner }: ReportDetailMenu
         showTrigger={false}
       />
 
-      {/* 삭제 확인 AlertDialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>このレポートを削除しますか?</AlertDialogTitle>
-            <AlertDialogDescription>
-              この操作は取り消せません。投稿された画像も含めて完全に削除されます。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>キャンセル</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleDeleteConfirm}
-              disabled={isDeleting}
-            >
-              削除する
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* 삭제 확인 다이얼로그 */}
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="このレポートを削除しますか?"
+        description="この操作は取り消せません。投稿された画像も含めて完全に削除されます。"
+        onConfirm={handleDeleteConfirm}
+        isLoading={isDeleting}
+      />
     </>
   );
 }

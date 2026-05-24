@@ -30,16 +30,7 @@ import { Construction, Ellipsis, MessageSquareText, Pencil, Trash2 } from "lucid
 import { toast } from "sonner";
 
 import { SlideOutContext } from "@/app/circles/[id]/template";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -276,29 +267,16 @@ function ReportListRow({ circleId, report, isOwner }: ReportListRowProps) {
         />
       )}
 
-      {/* ── 삭제 확인 AlertDialog — row 외부에 렌더해 포커스 트랩 충돌 방지 ── */}
+      {/* ── 삭제 확인 다이얼로그 — row 외부에 렌더해 포커스 트랩 충돌 방지 ── */}
       {isOwner && (
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>このレポートを削除しますか?</AlertDialogTitle>
-              <AlertDialogDescription>
-                この操作は取り消せません。投稿された画像も含めて完全に削除されます。
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={isDeleting}>キャンセル</AlertDialogCancel>
-              {/* 삭제 실행 — destructive 스타일로 위험 동작 강조 */}
-              <AlertDialogAction
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                onClick={handleDeleteConfirm}
-                disabled={isDeleting}
-              >
-                削除する
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <DeleteConfirmDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          title="このレポートを削除しますか?"
+          description="この操作は取り消せません。投稿された画像も含めて完全に削除されます。"
+          onConfirm={handleDeleteConfirm}
+          isLoading={isDeleting}
+        />
       )}
     </>
   );
