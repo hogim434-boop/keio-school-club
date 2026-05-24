@@ -106,7 +106,7 @@ export function BottomNav() {
 /**
  * 현재 경로가 탭의 href 와 매칭되는지 판단.
  * - "/" 는 redirect 로 /circles 도착 → /circles 에서 「ホーム」 탭 active
- * - 그 외는 정확 매칭 또는 prefix 매칭 (예: /mypage/circles 도 /mypage 탭 active)
+ * - 그 외는 정확 매칭 또는 prefix 매칭 (예: /mypage 하위 경로도 /mypage 탭 active)
  */
 function isItemActive(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/circles";

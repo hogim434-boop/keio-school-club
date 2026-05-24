@@ -35,9 +35,6 @@ export function UserMenu({ email }: UserMenuProps) {
         <DropdownMenuItem asChild>
           <Link href="/mypage">マイページ</Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/mypage/circles">登録サークル管理</Link>
-        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <LogoutButton />

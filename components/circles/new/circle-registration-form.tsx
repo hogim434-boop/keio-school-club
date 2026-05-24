@@ -307,7 +307,7 @@ export function CircleRegistrationForm({
             >
               <Button
                 type="button"
-                onClick={() => router.push("/mypage/circles")}
+                onClick={() => router.push("/mypage")}
                 className={CTA_BTN_CLS}
               >
                 <span className="flex items-center justify-center gap-2">

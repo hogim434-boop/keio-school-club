@@ -69,8 +69,8 @@ interface ManagedCircleCardProps {
 }
 
 /**
- * 심사 상태 뱃지 — my-circle-card.tsx 의 StatusBadge 로직과 동일.
- * (별도 파일로 분리하지 않고 이 파일 안에 복제 — 두 컴포넌트가 각자 독립적으로 유지)
+ * 심사 상태 뱃지 — approved/pending/rejected 별 색 분기.
+ * (이 파일 안에 두어 카드와 함께 독립 유지)
  */
 function StatusBadge({ status }: { status: MyCircle["status"] }) {
   const label = CIRCLE_STATUS_LABELS[status];
