@@ -40,9 +40,9 @@ import { createClient } from "@/lib/supabase/client";
 import { AUTH_INPUT_CLS } from "@/lib/auth/input-class";
 
 // ── Primary CTA 버튼 스타일 토큰 ──
-// 慶應 네이비 배경, disabled 시 회색 전환 없이 불투명도만 낮춤
+// 검정(기본 Button=bg-primary) 배경으로 통일, disabled 시 회색 전환 없이 불투명도만 낮춤
 const CTA_BTN_CLS =
-  "h-12 w-full rounded-xl bg-keio-navy text-base font-semibold text-keio-navy-foreground transition-opacity hover:opacity-90 disabled:opacity-40";
+  "h-12 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40";
 
 // 온보딩 전체 단계 수
 const TOTAL_STEPS = 4;

@@ -33,9 +33,9 @@ import { sanitizeNext } from "@/lib/auth/sanitize-next";
 import { AUTH_INPUT_CLS } from "@/lib/auth/input-class";
 
 // ── Primary CTA 버튼 스타일 토큰 ──
-// 慶應 네이비 배경, disabled 시 회색 전환 없이 불투명도만 낮춤
+// 검정(기본 Button=bg-primary) 배경으로 통일, disabled 시 회색 전환 없이 불투명도만 낮춤
 const CTA_BTN_CLS =
-  "h-12 w-full rounded-xl bg-keio-navy text-base font-semibold text-keio-navy-foreground transition-opacity hover:opacity-90 disabled:opacity-40";
+  "h-12 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40";
 
 // ── 공통 easing — 프로젝트 표준 expo-out (iOS 풍, 빠르게 시작해 부드럽게 멈춤)
 const EASE_EXPO_OUT = [0.22, 1, 0.36, 1] as const;

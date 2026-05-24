@@ -335,8 +335,9 @@ function PendingContent({ circle }: { circle: MyCircle }) {
       {/* 프로필 完成度 — 심사 중에도 미리 프로필을 채워둘 수 있게 표시(2026-05) */}
       <ProfileCompletion circle={circle} />
 
-      {/* 編集する — 審査中에도 수정 가능(재제출). 편집 폼으로 이동. */}
-      <Button asChild variant="outline" className="h-10 w-full">
+      {/* 編集する — 審査中에도 수정 가능(재제출). 편집 폼으로 이동.
+          버튼 색은 approved/rejected 와 동일한 검정(기본 Button)으로 통일. */}
+      <Button asChild className="h-10 w-full">
         <Link href={`/circles/${circle.id}/edit`}>編集する</Link>
       </Button>
     </>
