@@ -208,6 +208,12 @@ const baseSchema = z.object({
       "LINE 公式アカウントの ID を入力してください（例: @keio_tennis）"
     ),
 
+  /**
+   * 신청 메모 (任意, 최대 500자) — 관리자 심사용 전달 메모.
+   * 등록 시에만 입력받아 circles.submission_note 에 저장(수정 시엔 변경하지 않음).
+   */
+  submission_note: z.string().max(500, "申請メモは500文字以内で入力してください").optional(),
+
   /** 서약 1: 정보 정확성 동의 (반드시 체크) */
   pledge1: z.literal(true, "同意が必要です"),
 

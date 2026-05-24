@@ -102,6 +102,8 @@ export async function submitRegistration(
       slug,
       // DB default 가 '' 이므로 undefined/null 대신 빈 문자열 보장
       description: values.description ?? "",
+      // 신청 메모(任意) — 관리자 심사용. 빈 값은 null.
+      submission_note: values.submission_note?.trim() || null,
       // member_count → member_band 로 교체. 未選択(undefined) 은 null 로 저장.
       member_band: values.member_band ?? null,
       owner_id: ownerId,
@@ -342,9 +344,7 @@ export async function updateCircle(
       }));
 
       if (imageRows.length > 0) {
-        const { error: imgInsertError } = await supabase
-          .from("circle_images")
-          .insert(imageRows);
+        const { error: imgInsertError } = await supabase.from("circle_images").insert(imageRows);
         if (imgInsertError) {
           console.error("[updateCircle] circle_images INSERT 실패:", imgInsertError);
         }

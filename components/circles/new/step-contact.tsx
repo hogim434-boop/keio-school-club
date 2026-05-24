@@ -277,6 +277,41 @@ export function StepContact({
               </p>
             )}
           </div>
+
+          {/* 신청 메모 — 등록 시에만(심사 담당자에게 전달, 일반 비공개) */}
+          {!isEdit && (
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="submission_note" className={FIELD_LABEL_CLS}>
+                申請メモ
+                <span className="text-muted-foreground ml-1.5 text-xs font-normal">（任意）</span>
+              </label>
+              <textarea
+                id="submission_note"
+                rows={3}
+                maxLength={500}
+                placeholder="公認状況の補足など、審査担当者へ伝えたいことがあれば記入してください"
+                aria-invalid={!!errors.submission_note}
+                aria-describedby={
+                  errors.submission_note ? "error-submission-note" : "hint-submission-note"
+                }
+                className={cn(
+                  "w-full rounded-xl border-0 bg-neutral-100 p-3 text-base shadow-none transition-colors",
+                  "placeholder:text-muted-foreground min-h-[88px] resize-none",
+                  "focus-visible:ring-keio-navy/40 focus-visible:bg-white focus-visible:ring-2 focus-visible:outline-none",
+                  errors.submission_note && "ring-2 ring-red-400 focus-visible:ring-red-400"
+                )}
+                {...register("submission_note")}
+              />
+              <p id="hint-submission-note" className="text-muted-foreground text-xs">
+                審査時に管理者のみ確認します。一般には公開されません。
+              </p>
+              {errors.submission_note && (
+                <p id="error-submission-note" role="alert" className={ERROR_MSG_CLS}>
+                  {errors.submission_note.message}
+                </p>
+              )}
+            </div>
+          )}
         </m.div>
 
         {/* ── 서약 체크박스 그룹 — edit 모드에서는 숨김(재동의 불필요) ── */}
