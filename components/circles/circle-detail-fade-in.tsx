@@ -25,7 +25,7 @@ export function CircleDetailFadeIn({ children }: { children: React.ReactNode }) 
         className="space-y-6"
         initial={reduceMotion ? { opacity: 1 } : { opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={reduceMotion ? { duration: 0 } : { duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        transition={reduceMotion ? { duration: 0 } : { duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
       >
         {children}
       </m.div>
