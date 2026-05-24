@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Bell, Search } from "lucide-react";
 
 import { KCircleLogo } from "@/components/layout/kcircle-logo";
+import { NotificationBell } from "@/components/layout/notification-bell";
+import { HeaderSearchLink } from "@/components/layout/header-search-link";
 
 /**
  * KCircle 글로벌 헤더 (RSC) — 당근앱/메루카리 모바일 우선 슬림 패턴.
@@ -17,10 +18,6 @@ import { KCircleLogo } from "@/components/layout/kcircle-logo";
  *   숨김 경로에서 직접 진입 → 홈 soft nav 시 null 로 굳는 버그를 방지.
  */
 export function Header() {
-  // 우측 아이콘 공통 클래스 — 40×40 hit target + focus ring + hover 반응
-  const iconButton =
-    "hover:bg-muted focus-visible:ring-ring inline-flex size-10 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:outline-none";
-
   return (
     // 배경 불투명(opacity 1) — 기존 반투명 + backdrop-blur 제거. 경계선 없음.
     <header className="bg-background sticky top-0 z-40">
@@ -35,12 +32,10 @@ export function Header() {
         </Link>
 
         <div className="ml-auto flex items-center gap-1">
-          <Link href="/notifications" aria-label="お知らせ" className={iconButton}>
-            <Bell className="size-5" aria-hidden="true" />
-          </Link>
-          <Link href="/search" aria-label="検索" className={iconButton}>
-            <Search className="size-5" aria-hidden="true" />
-          </Link>
+          {/* Bell 아이콘은 뱃지 로직이 필요해 Client Component로 분리 */}
+          <NotificationBell />
+          {/* 검색 아이콘은 현재 필터 유지가 필요해 Client Component로 분리 */}
+          <HeaderSearchLink />
         </div>
       </div>
     </header>
