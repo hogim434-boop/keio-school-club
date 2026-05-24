@@ -33,14 +33,18 @@ export interface ProfileCompletion {
   missing: CompletionItem[];
 }
 
-/** computeProfileCompletion 가 참조하는 최소 필드 (MyCircle 호환) */
-interface CompletionInput {
+/**
+ * computeProfileCompletion 가 참조하는 최소 필드.
+ * MyCircle(마이페이지) 과 CircleDetail(상세 페이지) 모두 호환되도록
+ * 배열 필드는 optional 로 둔다(CircleDetail.activity_time_band 가 optional).
+ */
+export interface CompletionInput {
   cover_image_url: string | null;
   description: string;
-  activity_time_band: readonly unknown[];
+  activity_time_band?: readonly unknown[];
   activity_days: string;
   member_band: unknown | null;
-  tags: readonly unknown[];
+  tags?: readonly unknown[];
 }
 
 /**
@@ -55,10 +59,14 @@ export function computeProfileCompletion(circle: CompletionInput): ProfileComple
       label_ja: "サークル紹介",
       done: circle.description.trim().length > 0,
     },
-    { key: "time_band", label_ja: "活動時間帯", done: circle.activity_time_band.length > 0 },
+    {
+      key: "time_band",
+      label_ja: "活動時間帯",
+      done: (circle.activity_time_band ?? []).length > 0,
+    },
     { key: "days", label_ja: "活動曜日", done: circle.activity_days.trim().length > 0 },
     { key: "member_band", label_ja: "会員数", done: circle.member_band != null },
-    { key: "tags", label_ja: "タグ", done: circle.tags.length > 0 },
+    { key: "tags", label_ja: "タグ", done: (circle.tags ?? []).length > 0 },
   ];
 
   const doneCount = items.filter((i) => i.done).length;

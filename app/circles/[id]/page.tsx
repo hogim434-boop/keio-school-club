@@ -15,6 +15,7 @@ import { CircleActions } from "@/components/circles/circle-actions";
 import { CircleAlbum } from "@/components/circles/circle-album";
 import { CircleDetailTabs } from "@/components/circles/circle-detail-tabs";
 import { DetailPageHeader } from "@/components/circles/detail-page-header";
+import { OwnerProfileCard } from "@/components/circles/owner-profile-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TAG_LABELS } from "@/lib/circles/filter-labels";
 import { ACTIVITY_FREQUENCY_LABELS } from "@/lib/constants/activity-frequency";
@@ -120,6 +121,10 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
 
         {/* 2. 헤더 — 뱃지 행 + 서클명 + 태그 칩 (데스크탑 inline 액션 제거됨) */}
         <Header circle={circle} />
+
+        {/* 2-1. 소유자 전용 카드 — 프로필 完成度 게이지 + 「編集する」. 일반 방문자에겐 미노출.
+            (심사중·승인 무관하게 본인이면 표시 — 미리 프로필을 채우고 편집 가능) */}
+        {isOwner && <OwnerProfileCard circle={circle} />}
 
         {/*
          * 4. 탭 구조 — Client wrapper (state 관리) + Server Component children (homeContent).
