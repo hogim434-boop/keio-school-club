@@ -199,6 +199,24 @@ export function CircleRegistrationForm({
     });
     if (!ok) return;
 
+    // ── 커버 이미지 필수 체크 (basic 단계에서만) ──────────────────────────
+    // cover 는 SSR File 문제로 Zod 스키마 검증 불가 → 컨테이너 레벨에서 수동 검증.
+    // 신규(create): 새 파일이 없으면 차단.
+    // 편집(edit) : 기존 커버(existingCoverUrl) 또는 새 파일 중 하나라도 있으면 통과.
+    if (step === "basic") {
+      const hasCover = !!methods.getValues("cover") || !!existingCoverUrl;
+      if (!hasCover) {
+        // RHF cover 필드에 수동 에러 세팅 → StepBasic 의 errors.cover 로 표시됨
+        methods.setError("cover", {
+          type: "manual",
+          message: "カバー画像を登録してください",
+        });
+        return;
+      }
+      // 파일이 있으면 수동 에러 해제
+      methods.clearErrors("cover");
+    }
+
     // 현재 단계의 다음 단계로 이동 (mode별 시퀀스 기준)
     const seq = isEdit ? ["basic", "tags", "contact"] : ["basic", "contact"];
     const i = seq.indexOf(step);
@@ -206,7 +224,7 @@ export function CircleRegistrationForm({
     if (next) {
       router.push(`${basePath}?step=${next}`);
     }
-  }, [step, isEdit, trigger, router, basePath]);
+  }, [step, isEdit, trigger, router, basePath, methods, existingCoverUrl]);
 
   // ── contact 단계 제출 성공 콜백 ──
   // create: 完了(審査中) 단계로 / edit: 마이페이지로 복귀.

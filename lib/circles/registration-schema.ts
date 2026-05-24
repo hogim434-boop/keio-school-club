@@ -27,8 +27,17 @@
  *   - 제출: StepContact 에서 최종 제출 시 (getValues("cover") as File) ?? null 로 꺼냄
  *   - Zod 검증: z.any().optional() — 브라우저 File 은 SSR 에서 존재하지 않으므로
  *     Zod 검증 대신 컴포넌트에서 직접 타입 확인
- *   - STEP_FIELDS.basic 에는 포함하지 않음 — 선택 항목이므로 trigger 대상 제외
+ *   - STEP_FIELDS.basic 에는 포함하지 않음 — trigger 대상 외(컨테이너 레벨에서 수동 검증)
  *   - defaultValues: cover: undefined
+ *
+ *  ★ 필수 검증 규약 (2026-05 변경):
+ *   - 커버 이미지는 신규 등록·편집 모두 「必須」입니다.
+ *   - Zod 로는 검증 불가이므로 circle-registration-form.tsx 의 goNext 함수에서
+ *     basic 단계 통과 직전에 수동 체크합니다:
+ *       const hasCover = !!methods.getValues("cover") || !!existingCoverUrl;
+ *       if (!hasCover) → methods.setError("cover", ...) 하고 진행 차단.
+ *   - StepBasic 은 errors.cover(RHF) 를 인라인 에러로 표시하고,
+ *     파일 선택 시 clearErrors("cover") 로 해제합니다.
  */
 
 import { z } from "zod";
@@ -205,16 +214,18 @@ const baseSchema = z.object({
   /** 서약 2: 이용규약 동의 (반드시 체크) */
   pledge2: z.literal(true, "同意が必要です"),
 
-  // ── 커버 이미지 (선택, 브라우저 File 보관용) ─
+  // ── 커버 이미지 (필수, 브라우저 File 보관용) ─
   /**
-   * 커버 이미지 파일 (선택 항목).
+   * 커버 이미지 파일 (★ 필수 항목 — 2026-05 변경).
    *
    * 보관 규약:
    *  - StepBasic 에서 setValue("cover", file) 로 RHF 상태에 저장
    *  - StepContact 제출 시 (getValues("cover") as File) ?? null 로 꺼내
    *    submitRegistration(values, coverFile) 의 두 번째 인수로 전달
    *  - SSR 에서 File 클래스가 없으므로 z.any().optional() 로 선언 (Zod 검증 없음)
-   *  - STEP_FIELDS.basic 에는 포함하지 않음 (선택 항목 — trigger 부분검증 제외)
+   *  - 필수 검증은 circle-registration-form.tsx 의 goNext 에서 수동으로 처리
+   *    (hasCover 체크 → 미선택 시 setError("cover"), 선택 시 clearErrors("cover"))
+   *  - STEP_FIELDS.basic 에는 포함하지 않음 (trigger 대상 외 — 컨테이너 레벨 검증)
    */
   cover: z.any().optional(),
 });

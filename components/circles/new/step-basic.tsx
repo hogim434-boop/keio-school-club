@@ -101,6 +101,7 @@ export function StepBasic({
     register,
     watch,
     setValue,
+    clearErrors,
     formState: { errors },
   } = useFormContext<RegistrationValues>();
 
@@ -191,8 +192,9 @@ export function StepBasic({
     const file = e.target.files?.[0] ?? null;
     if (!file) return;
 
-    // 이전 에러 초기화
+    // 로컬 에러 및 RHF 에러 모두 초기화
     setCoverError(null);
+    clearErrors("cover");
 
     // 파일 검증 (validateUpload 는 브라우저·서버 모두 사용 가능)
     const result = validateUpload(file);
@@ -623,8 +625,12 @@ export function StepBasic({
         >
           <p className={FIELD_LABEL_CLS}>
             カバー画像
+            {/* 필수 표시 — 다른 필수 필드(サークル名 등)와 동일한 붉은 * 스타일 */}
+            <span className="ml-1 text-red-500" aria-hidden="true">
+              *
+            </span>
             <span className="text-muted-foreground ml-1.5 text-xs font-normal">
-              （任意・JPEG/PNG/WebP・4MB以内）
+              （JPEG/PNG/WebP・4MB以内）
             </span>
           </p>
 
@@ -679,10 +685,17 @@ export function StepBasic({
             </button>
           )}
 
-          {/* 커버 검증 에러 메시지 */}
+          {/* 커버 검증 에러 메시지 — 파일 형식/크기 에러 또는 필수 미선택 에러 */}
+          {/* coverError: 파일 형식·크기 검증 실패 (로컬 state) */}
           {coverError && (
             <p role="alert" className={ERROR_MSG_CLS}>
               {coverError}
+            </p>
+          )}
+          {/* errors.cover: goNext 에서 파일 미선택 시 RHF setError 로 세팅되는 필수 에러 */}
+          {!coverError && errors.cover && (
+            <p id="error-cover" role="alert" className={ERROR_MSG_CLS}>
+              {String(errors.cover.message)}
             </p>
           )}
         </m.div>

@@ -136,9 +136,12 @@ export async function submitRegistration(
 
       if ("url" in uploadResult) {
         // 업로드 성공 → cover_image_url 업데이트
+        // 캐시 버스팅: 같은 경로(cover.jpg)에 덮어쓰기 하므로 URL 자체는 불변.
+        // ?v=timestamp 를 붙여 브라우저·CDN·next/image 캐시를 무효화한다.
+        const coverUrlWithBuster = `${uploadResult.url}?v=${Date.now()}`;
         const { error: updateError } = await supabase
           .from("circles")
-          .update({ cover_image_url: uploadResult.url })
+          .update({ cover_image_url: coverUrlWithBuster })
           .eq("id", circleId);
 
         if (updateError) {
@@ -288,9 +291,12 @@ export async function updateCircle(
       const uploadResult = await uploadCoverImage(supabase, circleId, coverFile);
 
       if ("url" in uploadResult) {
+        // 캐시 버스팅: 같은 경로(cover.jpg)에 덮어쓰기 하므로 URL 자체는 불변.
+        // ?v=timestamp 를 붙여 브라우저·CDN·next/image 캐시를 무효화한다.
+        const coverUrlWithBuster = `${uploadResult.url}?v=${Date.now()}`;
         const { error: coverError } = await supabase
           .from("circles")
-          .update({ cover_image_url: uploadResult.url })
+          .update({ cover_image_url: coverUrlWithBuster })
           .eq("id", circleId);
 
         if (coverError) {
