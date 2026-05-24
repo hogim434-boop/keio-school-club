@@ -74,9 +74,13 @@ function applyCircleFilters<T>(
     query = query.in("recruitment_status", params.recruitmentStatus);
   }
 
-  // 활동 시간대 — overlaps (배열 컬럼과 교집합, 하나라도 겹치면 매칭)
+  // 활동 시간대 — 요일 필터와 동일하게 "선택한 시간대 안에서만 활동"하는 동아리만 매칭(부분집합).
+  // containedBy(<@): 동아리 시간대가 선택 집합에 전부 포함(선택 밖 시간대 있으면 제외).
+  // overlaps(&&): 교집합 1개 이상 — 빈 배열(시간대 미지정) 동아리가 모든 필터에 끼는 것 방지.
   if (params.activityTimeBand && params.activityTimeBand.length > 0) {
-    query = query.overlaps("activity_time_band", params.activityTimeBand);
+    query = query
+      .containedBy("activity_time_band", params.activityTimeBand)
+      .overlaps("activity_time_band", params.activityTimeBand);
   }
 
   // 회원수 범위 — 등록 폼과 동일한 member_band(5밴드 enum) 다중 선택 매칭.
@@ -87,13 +91,19 @@ function applyCircleFilters<T>(
 
   // 활동 요일 — 「不定期」 는 요일과 배타적(UI 에서 보장).
   // - 不定期 선택: activity_days 텍스트에 "不定期" 포함 여부로 매칭 (ilike).
-  // - 요일 선택: activity_weekdays(text[] 생성 컬럼)와 선택 요일의 교집합(overlaps, OR).
-  //   (activity_days text ilike 는 "曜日"의 日 false-positive 가 있어 정규 추출 배열 컬럼 사용)
+  // - 요일 선택: 선택한 요일 "안에서만" 활동하는 동아리만 매칭 (부분집합).
+  //   activity_weekdays(text[] 생성 컬럼)가 선택 집합의 부분집합(<@ containedBy)이면서,
+  //   교집합이 1개 이상(&& overlaps)이어야 한다.
+  //   - containedBy 단독: 선택 밖 요일이 하나도 없어야 통과 (예: 月火水木 선택 시 水木金土 는 金土 때문에 제외).
+  //   - overlaps 병행: 빈 배열(不定期 등 요일 없는 동아리)은 부분집합 항상 true 가 되므로,
+  //     교집합 1개 이상 조건으로 제외(요일 미지정 동아리가 모든 요일 필터에 끼는 것 방지).
   if (params.activityDays && params.activityDays.length > 0) {
     if (params.activityDays.includes(IRREGULAR_DAY)) {
       query = query.ilike("activity_days", `%${IRREGULAR_DAY}%`);
     } else {
-      query = query.overlaps("activity_weekdays", params.activityDays);
+      query = query
+        .containedBy("activity_weekdays", params.activityDays)
+        .overlaps("activity_weekdays", params.activityDays);
     }
   }
 
@@ -665,6 +675,91 @@ export async function getMyCircles(userId: string): Promise<MyCircle[]> {
       tags: ((r.circle_tags as { tags: { slug: string } | null }[] | null) ?? [])
         .map((ct) => ct.tags?.slug)
         .filter((s): s is string => Boolean(s)),
+    };
+  });
+}
+
+// ============================================================
+// 관리자 승인 큐용 타입 및 fetch 함수 (T-019)
+// ============================================================
+
+/**
+ * 승인 대기(pending) 동아리 한 줄 — 관리자 승인 큐 카드 표시용.
+ * 대표자 본인성 표시는 owner 프로필(display_name·keio_verified)로 하며,
+ * 이메일은 profiles 에 컬럼이 없어(인증 정보는 auth.users) v1 에서 제외한다.
+ */
+export type PendingCircle = {
+  id: string;
+  name: string;
+  category: Category;
+  official_type: OfficialType;
+  /** 신청 메모 (任意) — 등록 시 대표자가 남긴 메모. 없으면 null */
+  submission_note: string | null;
+  /** 신청 일시 (created_at) — 큐 정렬·표시 기준 */
+  created_at: string;
+  cover_image_url: string | null;
+  // ── 심사용 신청 본문 (대표자가 등록 시 기입한 내용) ──
+  /** 소개글 — 빈 문자열이면 미작성 */
+  description: string;
+  /** 활동 요일 텍스트("月・水" 등) — 빈 문자열이면 미설정 */
+  activity_days: string;
+  /** 부원 수 범위 — 미설정 시 null */
+  member_band: MemberBand | null;
+  /** 연락처 — 미설정 시 null */
+  contact_instagram: string | null;
+  contact_x: string | null;
+  contact_line: string | null;
+  /** 대표자 표시 이름 — owner 프로필 JOIN. 미설정 시 null */
+  owner_display_name: string | null;
+  /** 대표자 慶應 인증 여부 — owner 프로필 JOIN */
+  owner_keio_verified: boolean;
+};
+
+/**
+ * 승인 대기 동아리 목록 — /admin/circles 승인 큐에서 사용.
+ *
+ * 신청일 오름차순(오래된 신청 우선 처리). 권한은 상위 app/admin/layout.tsx 의
+ * AdminGuard(is_admin RPC)가 보장하고, RLS(circles_select_public_or_owner_or_admin +
+ * profiles_select_own_or_admin)가 admin 에게 전체 circles·profiles SELECT 를 허용하므로
+ * owner 프로필(circles_owner_id_fkey)을 임베드해 조회할 수 있다.
+ *
+ * 캐싱하지 않음 — 승인 큐는 항상 최신 상태여야 함.
+ */
+export async function getPendingCircles(): Promise<PendingCircle[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("circles")
+    .select(
+      "id, name, category, official_type, submission_note, created_at, cover_image_url, description, activity_days, member_band, contact_instagram, contact_x, contact_line, profiles!circles_owner_id_fkey(display_name, keio_verified)"
+    )
+    .eq("status", "pending")
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("[getPendingCircles]", error.message);
+    return [];
+  }
+
+  return (data ?? []).map((row) => {
+    const r = row as Record<string, unknown>;
+    // owner_id 는 to-one FK 라 profiles 임베드는 단일 객체(또는 null)
+    const owner = r.profiles as { display_name: string | null; keio_verified: boolean } | null;
+    return {
+      id: r.id as string,
+      name: r.name as string,
+      category: r.category as Category,
+      official_type: r.official_type as OfficialType,
+      submission_note: (r.submission_note as string | null) ?? null,
+      created_at: r.created_at as string,
+      cover_image_url: (r.cover_image_url as string | null) ?? null,
+      description: (r.description as string | null) ?? "",
+      activity_days: (r.activity_days as string | null) ?? "",
+      member_band: (r.member_band as MemberBand | null) ?? null,
+      contact_instagram: (r.contact_instagram as string | null) ?? null,
+      contact_x: (r.contact_x as string | null) ?? null,
+      contact_line: (r.contact_line as string | null) ?? null,
+      owner_display_name: owner?.display_name ?? null,
+      owner_keio_verified: Boolean(owner?.keio_verified),
     };
   });
 }
