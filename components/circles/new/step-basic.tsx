@@ -15,6 +15,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useFormContext } from "react-hook-form";
 import { LazyMotion, domAnimation, m, useReducedMotion } from "motion/react";
 import { ImageIcon } from "lucide-react";
@@ -136,6 +137,29 @@ export function StepBasic({
   // ── 접근성: 감소된 모션 사용자 대응 ─────────────────────────────────────
   const reducedMotion = useReducedMotion();
   const initial = reducedMotion ? "visible" : "hidden";
+
+  // ── 完成度 칩에서 ?focus=key 로 진입 시 해당 항목으로 스크롤 + 잠깐 강조 ──
+  // (마이페이지/상세의 ProfileCompletion 칩이 /circles/{id}/edit?step=basic&focus=member_band 형태로 보냄)
+  const searchParams = useSearchParams();
+  const focusKey = searchParams.get("focus");
+  const [highlightKey, setHighlightKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!focusKey) return;
+    const el = document.getElementById(`field-${focusKey}`);
+    if (!el) return;
+    // 진입 fade-up 애니메이션(최대 delay≈0.33s + duration 0.42s)이 끝난 뒤 스크롤
+    const scrollTimer = setTimeout(() => {
+      el.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "center" });
+      setHighlightKey(focusKey);
+    }, 450);
+    // 약 0.9초 강조 후 해제 (왼쪽 컬러 바가 부드럽게 페이드인/아웃)
+    const clearTimer = setTimeout(() => setHighlightKey(null), 1350);
+    return () => {
+      clearTimeout(scrollTimer);
+      clearTimeout(clearTimer);
+    };
+  }, [focusKey, reducedMotion]);
 
   /** stagger delay 헬퍼 — step-contact 와 동일 패턴 */
   const makeFadeTransition = (delay: number) =>
@@ -386,7 +410,13 @@ export function StepBasic({
               transition={makeFadeTransition(0.23)}
             >
               {/* 활동 시간대 칩 (任意·다중) */}
-              <div className="flex flex-col gap-1.5">
+              <div
+                id="field-time_band"
+                className={cn(
+                  "before:bg-keio-navy relative flex scroll-mt-20 flex-col gap-1.5 before:absolute before:inset-y-0 before:-left-2 before:w-[3px] before:rounded-full before:opacity-0 before:transition-opacity before:duration-500 before:content-['']",
+                  highlightKey === "time_band" && "before:opacity-100"
+                )}
+              >
                 <p className={FIELD_LABEL_CLS}>
                   活動時間帯
                   <span className="text-muted-foreground ml-1.5 text-xs font-normal">
@@ -427,7 +457,13 @@ export function StepBasic({
               </div>
 
               {/* 활동 요일 칩 (任意·다중) */}
-              <div className="flex flex-col gap-1.5">
+              <div
+                id="field-days"
+                className={cn(
+                  "before:bg-keio-navy relative flex scroll-mt-20 flex-col gap-1.5 before:absolute before:inset-y-0 before:-left-2 before:w-[3px] before:rounded-full before:opacity-0 before:transition-opacity before:duration-500 before:content-['']",
+                  highlightKey === "days" && "before:opacity-100"
+                )}
+              >
                 <p className={FIELD_LABEL_CLS}>
                   活動曜日
                   <span className="text-muted-foreground ml-1.5 text-xs font-normal">
@@ -478,7 +514,13 @@ export function StepBasic({
             - 이미 선택된 칩 재클릭 → 해제 (nullable 필드라 OK)
             - 미선택 칩 클릭 → 해당 값으로 설정
           */}
-              <div className="flex flex-col gap-1.5">
+              <div
+                id="field-member_band"
+                className={cn(
+                  "before:bg-keio-navy relative flex scroll-mt-20 flex-col gap-1.5 before:absolute before:inset-y-0 before:-left-2 before:w-[3px] before:rounded-full before:opacity-0 before:transition-opacity before:duration-500 before:content-['']",
+                  highlightKey === "member_band" && "before:opacity-100"
+                )}
+              >
                 <p className={FIELD_LABEL_CLS}>
                   会員数
                   <span className="text-muted-foreground ml-1.5 text-xs font-normal">（任意）</span>
@@ -531,7 +573,13 @@ export function StepBasic({
               </div>
 
               {/* 서클 소개 textarea (optional) */}
-              <div className="flex flex-col gap-1.5">
+              <div
+                id="field-description"
+                className={cn(
+                  "before:bg-keio-navy relative flex scroll-mt-20 flex-col gap-1.5 before:absolute before:inset-y-0 before:-left-2 before:w-[3px] before:rounded-full before:opacity-0 before:transition-opacity before:duration-500 before:content-['']",
+                  highlightKey === "description" && "before:opacity-100"
+                )}
+              >
                 <label htmlFor="description" className={FIELD_LABEL_CLS}>
                   サークル紹介
                   <span className="text-muted-foreground ml-1.5 text-xs font-normal">
@@ -563,7 +611,11 @@ export function StepBasic({
 
         {/* ── 커버 이미지 (선택) ──────────────────────────────────────────── */}
         <m.div
-          className="flex flex-col gap-2"
+          id="field-cover"
+          className={cn(
+            "before:bg-keio-navy relative flex scroll-mt-20 flex-col gap-2 before:absolute before:inset-y-0 before:-left-2 before:w-[3px] before:rounded-full before:opacity-0 before:transition-opacity before:duration-500 before:content-['']",
+            highlightKey === "cover" && "before:opacity-100"
+          )}
           variants={FADE_UP_VARIANTS}
           initial={initial}
           animate="visible"

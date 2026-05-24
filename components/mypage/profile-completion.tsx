@@ -14,15 +14,19 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 
-import { computeProfileCompletion } from "@/lib/circles/profile-completion";
-import type { MyCircle } from "@/lib/supabase/queries/circles";
+import { computeProfileCompletion, type CompletionInput } from "@/lib/circles/profile-completion";
 
-export function ProfileCompletion({ circle }: { circle: MyCircle }) {
+/** 完成度 계산 + 편집 링크에 필요한 최소 필드 (MyCircle·CircleDetail 모두 호환) */
+type CompletionCircle = { id: string } & CompletionInput;
+
+export function ProfileCompletion({ circle }: { circle: CompletionCircle }) {
   const { percent, missing } = computeProfileCompletion(circle);
 
-  // 편집폼 딥링크 — 태그는 태그 단계, 나머지는 기본 단계
+  // 편집폼 딥링크 — 태그는 태그 단계로, 나머지(basic 단계 항목)는 해당 섹션으로 자동 스크롤되도록 focus 부여
   const editHref = (key: string) =>
-    `/circles/${circle.id}/edit${key === "tags" ? "?step=tags" : ""}`;
+    key === "tags"
+      ? `/circles/${circle.id}/edit?step=tags`
+      : `/circles/${circle.id}/edit?step=basic&focus=${key}`;
 
   // 100% — 보강 완료. 간단한 완성 표시.
   if (percent === 100) {
