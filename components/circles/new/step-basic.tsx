@@ -297,9 +297,6 @@ export function StepBasic({
           <h1 className="text-[1.75rem] leading-snug font-bold tracking-tight">
             基本情報を入力してください
           </h1>
-          <p className="text-muted-foreground text-sm">
-            サークルのプロフィールになる情報を登録します
-          </p>
         </m.div>
 
         {/* ── 단체명 필드 ─────────────────────────────────────────────────── */}
@@ -652,26 +649,15 @@ export function StepBasic({
                   id="description"
                   rows={8}
                   maxLength={2000}
-                  placeholder={
-                    "🎾「こんな人におすすめ！」など、つかみの一言\n" +
-                    "📍 活動日程・場所\n" +
-                    "👉 活動内容や特徴\n" +
-                    "✅ こんな人を歓迎します\n" +
-                    "‼️ 注意事項（勧誘・出会い目的お断り など）"
-                  }
+                  placeholder="活動内容や雰囲気を自由に記入してください"
                   aria-invalid={!!errors.description}
-                  aria-describedby={
-                    errors.description ? "error-description hint-description" : "hint-description"
-                  }
+                  aria-describedby={errors.description ? "error-description" : undefined}
                   className={cn(
                     TEXTAREA_CLS,
                     errors.description && "ring-2 ring-red-400 focus-visible:ring-red-400"
                   )}
                   {...register("description")}
                 />
-                <p id="hint-description" className="text-muted-foreground text-xs">
-                  改行・絵文字・箇条書きはそのまま表示されます。見出しごとに区切ると読みやすくなります。
-                </p>
                 {errors.description && (
                   <p id="error-description" role="alert" className={ERROR_MSG_CLS}>
                     {errors.description.message}

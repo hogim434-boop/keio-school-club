@@ -213,13 +213,6 @@ export function StepTags() {
           </p>
         )}
 
-        {/* 선택 없음 안내 — 0개도 유효하므로 에러 아닌 힌트로 표시 */}
-        {selectedTags.length === 0 && (
-          <p className="text-muted-foreground text-xs">
-            タグはスキップできます。選択しなくても次へ進めます。
-          </p>
-        )}
-
         {/* 하단 여백: AuthScreen footer 가 콘텐츠를 가리지 않도록 */}
         <div className="pb-4" aria-hidden="true" />
       </div>
