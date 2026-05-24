@@ -346,10 +346,10 @@ export function CircleDetailTabs({
               <TabsContent value="board" forceMount className="pt-6">
                 {/*
                  * 소유자 전용 투고 박스 — ActivityReportsList 상단에 풀폭 점선 박스.
-                 * ReportComposeSheet 가 자체적으로 SheetTrigger 를 포함하므로
-                 * 외부 open state 없이 독립적으로 동작.
+                 * 리포트가 1건 이상일 때만 표시한다. 0건(빈 상태)에서는
+                 * ActivityReportsList 의 빈 상태 안 투고 CTA 가 유도를 담당하므로 중복을 피한다.
                  */}
-                {isOwner && (
+                {isOwner && reports.length > 0 && (
                   <div className="mb-4">
                     <ReportComposeSheet circleId={circleId} />
                   </div>

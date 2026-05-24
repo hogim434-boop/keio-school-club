@@ -68,8 +68,25 @@ export function ActivityReportsList({
   reports,
   isOwner = false,
 }: ActivityReportsListProps) {
-  // 0건이면 빈 상태 안내
+  // 0건 빈 상태 — 소유자는 행동 유도(투고 CTA), 비소유자는 차분한 안내로 분기.
   if (reports.length === 0) {
+    // 소유자: 첫 투고 유도 — 아이콘 + 동기 카피 + 「投稿する」 CTA(ReportComposeSheet box).
+    // (게시판 탭 상단의 투고 박스는 빈 상태일 때 숨기므로 여기 CTA 가 유일 — circle-detail-tabs 참조)
+    if (isOwner) {
+      return (
+        <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 px-4 py-12 text-center">
+          <MessageSquareText className="text-keio-navy/40 size-16" aria-hidden="true" />
+          <h3 className="text-base font-semibold">最初の活動レポートを投稿しよう</h3>
+          <p className="text-muted-foreground max-w-md text-sm">
+            写真付きで活動を紹介すると、新入生にサークルの魅力が伝わります。
+          </p>
+          <div className="mt-2 w-full max-w-sm">
+            <ReportComposeSheet circleId={circleId} />
+          </div>
+        </div>
+      );
+    }
+    // 비소유자: 차분한 안내
     return (
       <div className="border-border bg-muted/30 flex min-h-[40vh] flex-col items-center justify-center gap-3 rounded-lg border border-dashed px-4 py-12 text-center">
         <MessageSquareText className="text-muted-foreground/60 size-16" aria-hidden="true" />
