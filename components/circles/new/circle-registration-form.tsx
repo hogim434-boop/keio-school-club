@@ -44,6 +44,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { AuthScreen } from "@/components/auth/auth-screen";
 import { StepProgress } from "@/components/auth/step-progress";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   registrationSchema,
   type RegistrationValues,
@@ -62,8 +63,18 @@ import { StepContact, CIRCLE_REGISTRATION_FORM_ID } from "@/components/circles/n
 
 // ── 스타일 토큰 ──────────────────────────────────────────────────────────────
 // sign-up-form.tsx 와 동일한 CTA 버튼 스타일
-const CTA_BTN_CLS =
-  "h-12 w-full rounded-xl bg-keio-navy text-base font-semibold text-keio-navy-foreground transition-opacity hover:opacity-90 disabled:opacity-40";
+const CTA_BTN_BASE = "h-12 w-full rounded-xl text-base font-semibold transition-colors";
+
+// 필수 항목 충족 여부에 따라 CTA 버튼 색 분기:
+//  - filled(충족): keio-navy 채움(활성)
+//  - 미충족: muted 회색(미채움) — "아직 진행할 수 없음"을 색으로 표현
+const ctaClass = (filled: boolean) =>
+  cn(
+    CTA_BTN_BASE,
+    filled
+      ? "bg-keio-navy text-keio-navy-foreground hover:opacity-90"
+      : "bg-muted text-muted-foreground"
+  );
 
 // ── 애니메이션 상수 ──────────────────────────────────────────────────────────
 // 프로젝트 표준 expo-out easing
@@ -308,7 +319,7 @@ export function CircleRegistrationForm({
               <Button
                 type="button"
                 onClick={() => router.push("/mypage")}
-                className={CTA_BTN_CLS}
+                className={ctaClass(true)}
               >
                 <span className="flex items-center justify-center gap-2">
                   マイページへ
@@ -327,6 +338,28 @@ export function CircleRegistrationForm({
 
   // ── contact 단계 여부 판별 ──
   const isContactStep = step === "contact";
+
+  // ── 현재 단계 필수 항목 충족 여부 — CTA 버튼 색/활성 제어 ────────────────
+  // watch 로 실시간 구독해, 필수 입력이 채워지기 전까지 버튼을 회색(미채움)+비활성으로 둔다.
+  // (형식 검증은 클릭 시 zod 가 담당 — 여기서는 "값 존재" 수준만 판단)
+  const watched = methods.watch();
+  const hasCover = !!watched.cover || !!existingCoverUrl;
+  // basic 핵심 필수: 이름·카테고리·단체구분·활동빈도 + 커버
+  const basicFilled =
+    !!watched.name?.trim() &&
+    !!watched.category &&
+    !!watched.official_type &&
+    !!watched.activity_frequency &&
+    hasCover;
+  // contact 필수: SNS 1개 이상 + 서약 2종
+  const hasSns = !!(
+    watched.contact_instagram?.trim() ||
+    watched.contact_x?.trim() ||
+    watched.contact_line?.trim()
+  );
+  const contactFilled = hasSns && watched.pledge1 === true && watched.pledge2 === true;
+  // 단계별: basic=핵심필수+커버 / tags=任意(항상 통과) / contact=SNS+서약
+  const isStepFilled = step === "basic" ? basicFilled : step === "tags" ? true : contactFilled;
 
   // ── 제출 진행 상태 ──
   // RHF formState.isSubmitting: onSubmit(async) 실행 중 true.
@@ -350,8 +383,13 @@ export function CircleRegistrationForm({
   // ── contact 단계: "登録申請する" submit 버튼 (form id 연결) ──
   const footerCta = !isContactStep ? (
     // basic / tags 단계 공통 "次へ" 버튼
-    <m.div whileTap={tapScale} transition={{ duration: 0.1 }}>
-      <Button type="button" onClick={goNext} className={CTA_BTN_CLS}>
+    <m.div whileTap={isStepFilled ? tapScale : undefined} transition={{ duration: 0.1 }}>
+      <Button
+        type="button"
+        onClick={goNext}
+        className={ctaClass(isStepFilled)}
+        disabled={!isStepFilled}
+      >
         <span className="flex items-center justify-center gap-2">
           次へ
           <ArrowRight className="size-4" aria-hidden="true" />
@@ -363,12 +401,15 @@ export function CircleRegistrationForm({
     // StepContact 의 <form id={CIRCLE_REGISTRATION_FORM_ID}> 와 짝을 이룬다.
     // 제출 중에는 버튼 라벨을 "送信中…" 으로 바꾸고 disabled 처리해 중복 제출을 막는다.
     // (기존엔 본문에 별도 "送信中…" 텍스트를 띄웠으나, 버튼 라벨 변경 방식으로 통일)
-    <m.div whileTap={isSubmitting ? undefined : tapScale} transition={{ duration: 0.1 }}>
+    <m.div
+      whileTap={isSubmitting || !contactFilled ? undefined : tapScale}
+      transition={{ duration: 0.1 }}
+    >
       <Button
         type="submit"
         form={CIRCLE_REGISTRATION_FORM_ID}
-        className={CTA_BTN_CLS}
-        disabled={isSubmitting}
+        className={ctaClass(contactFilled && !isSubmitting)}
+        disabled={isSubmitting || !contactFilled}
         aria-live="polite"
       >
         <span className="flex items-center justify-center gap-2">
