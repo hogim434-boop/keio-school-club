@@ -18,7 +18,7 @@
  */
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { LazyMotion, domAnimation, m, useReducedMotion } from "motion/react";
 import { ArrowRight } from "lucide-react";
@@ -48,8 +48,6 @@ const FADE_UP_VARIANTS = {
 } as const;
 
 export function LoginForm() {
-  const router = useRouter();
-
   // 로그인 전 가려던 경로 — 로그인 완료 후 복원하기 위해 사용
   const searchParams = useSearchParams();
   const next = searchParams.get("next");
@@ -89,9 +87,13 @@ export function LoginForm() {
       return;
     }
 
-    // 로그인 성공 → next 파라미터가 안전하면 해당 경로로, 없으면 서클 목록으로 이동
+    // 로그인 성공 → 하드 내비게이션(풀 리로드)으로 이동.
+    // router.push(소프트 내비)는 새 세션 쿠키가 서버에 전달되기 전 보호 경로로 가면
+    // 미들웨어(proxy)가 다시 로그인으로 돌려보내거나(바운스), 목적지 RSC 가 멈춰
+    // 버튼이 "ログイン中…" 상태로 굳는 경우가 있다. 풀 리로드로 쿠키 전달을 보장한다.
     const safeNext = sanitizeNext(next);
-    router.push(safeNext ?? "/circles");
+    window.location.assign(safeNext ?? "/circles");
+    // isLoading 은 페이지가 새로 로드되며 자연히 해제됨(여기서 false 로 두지 않음).
   };
 
   return (
