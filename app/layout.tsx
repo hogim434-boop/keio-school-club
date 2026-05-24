@@ -15,8 +15,8 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "KCircle — 慶應公認サークル検索",
-  description: "慶應義塾大学の公認サークルを探す・比較する",
+  title: "Keio Club",
+  description: "慶應義塾大学のサークルを探す・比較する",
 };
 
 // 본문용 기본 라틴 폰트 — 영어/숫자/일반 기호 처리
