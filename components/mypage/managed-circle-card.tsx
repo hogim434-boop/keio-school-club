@@ -16,23 +16,20 @@
  * - DropdownMenu + AlertDialog 포커스 충돌 방지를 위해 controlled state 사용
  *
  * 모션:
- * - 카드 루트: whileTap scale 0.97 + SPRING_PRESS (reduced-motion 시 비활성)
- * - 진입 stagger 는 부모 MyPageView 의 enterItem variant 으로 처리
+ * - 카드 루트 press 피드백(whileTap)은 제거됨 — 모바일 스크롤 시작 시 눌림 모션이 과하게
+ *   발동하는 문제 때문. 진입 stagger 는 부모 MyPageView 의 enterItem variant 으로 처리.
  *
  * 클릭 구조 (stretched-link 패턴):
  * - 카드 전체를 덮는 absolute inset-0 <Link> 를 깔아 진짜 <a> 로 상세 이동.
  * - 편집 버튼·토글·메뉴 등 인터랙티브 요소는 relative z-10 으로 올려 각자 동작.
+ * - 完成度 게이지: 라벨·진행 막대는 stretched-link 로 상세 이동, 「次のおすすめ」 추천 카드만 z-10 으로 편집폼 이동.
  * - 메뉴/다이얼로그 click-through 방지: navGrace 300ms + menuOpen/dialogOpen 가드.
- *
- * 접근성: useReducedMotion() 으로 whileTap 우회.
  */
 
 import { useCallback, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Construction, Ellipsis, Trash2, Users } from "lucide-react";
-import { useReducedMotion } from "motion/react";
-import * as m from "motion/react-m";
 
 import {
   AlertDialog,
@@ -57,7 +54,6 @@ import { CATEGORY_LABELS } from "@/lib/constants/category";
 import { CIRCLE_STATUS_LABELS } from "@/lib/constants/circle-status";
 import { MEMBER_BAND_LABELS } from "@/lib/constants/member-band";
 import { getOfficialTypeDisplayLabel } from "@/lib/constants/official-type";
-import { SPRING_PRESS } from "@/lib/motion/tokens";
 import { type MyCircle } from "@/lib/supabase/queries/circles";
 import { cn } from "@/lib/utils";
 
@@ -98,9 +94,6 @@ function StatusBadge({ status }: { status: MyCircle["status"] }) {
 }
 
 export function ManagedCircleCard({ circle, onRequestDelete, className }: ManagedCircleCardProps) {
-  /* OS "동작 줄이기" 감지 — true 이면 whileTap 비활성 */
-  const shouldReduceMotion = useReducedMotion();
-
   /*
    * DropdownMenu + AlertDialog 포커스 충돌 방지를 위해 controlled state 사용.
    * - menuOpen: 드롭다운 열림 여부 / dialogOpen: 삭제 확인 다이얼로그 열림 여부
@@ -144,18 +137,15 @@ export function ManagedCircleCard({ circle, onRequestDelete, className }: Manage
     <>
       {/*
        * stretched-link 패턴:
-       * - m.div 는 비링크 컨테이너. whileTap press 피드백만 담당.
+       * - 비링크 컨테이너 div. (press 피드백 whileTap 은 제거 — 모바일에서 스크롤 시작 시에도
+       *   눌림 모션이 과하게 발동하는 문제가 있어 카드 전체 press 효과를 뺐다. 버튼·토글은 자체 피드백 유지.)
        * - 내부에 absolute inset-0 <Link> 를 깔아 카드 전체를 클릭 가능하게 만든다.
        *   → 진짜 <a> 이므로 모바일 터치 신뢰성 + prefetch + 접근성 모두 개선.
        * - 편집 버튼·토글·메뉴 등은 relative z-10 으로 링크 위로 올려 각자 동작.
        * - navGraceActive 중에는 stretched-link 를 pointer-events:none 으로 차단해
        *   메뉴/다이얼로그 닫힘 후 첫 클릭이 상세로 관통하는 버그를 막는다.
        */}
-      <m.div
-        whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
-        transition={SPRING_PRESS}
-        className={cn("relative w-full", className)}
-      >
+      <div className={cn("relative w-full", className)}>
         {/* stretched-link: 카드 전체를 덮는 절대 위치 링크 */}
         <Link
           href={`/circles/${circle.id}`}
@@ -253,7 +243,7 @@ export function ManagedCircleCard({ circle, onRequestDelete, className }: Manage
             </div>
           </CardContent>
         </Card>
-      </m.div>
+      </div>
 
       {/* ── 삭제 확인 AlertDialog (카드 외부에 렌더해 포커스 트랩 충돌 방지) ── */}
       <AlertDialog
