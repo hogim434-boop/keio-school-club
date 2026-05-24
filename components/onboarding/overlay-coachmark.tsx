@@ -116,14 +116,24 @@ export function OverlayCoachmarkEngine({ steps, storageKey }: CoachmarkProps) {
     const t2 = setTimeout(measure, 300);
 
     window.addEventListener("resize", measure, { passive: true });
-    window.addEventListener("scroll", measure, { passive: true });
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
       window.removeEventListener("resize", measure);
-      window.removeEventListener("scroll", measure);
     };
   }, [visible, measure]);
+
+  // ── 표시 중 배경 스크롤 잠금 ─────────────────
+  // fixed 오버레이는 스크롤을 JS로 추적하면 한 프레임 늦게 따라와 구멍이 어긋난다.
+  // 가이드 표시 동안 배경 스크롤을 막아 구멍이 항상 대상과 정확히 정렬되게 한다.
+  useEffect(() => {
+    if (!visible) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [visible]);
 
   // ── 닫기 (완료) ─────────────────────────────
   function handleDismiss() {
@@ -142,7 +152,7 @@ export function OverlayCoachmarkEngine({ steps, storageKey }: CoachmarkProps) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: reducedMotion ? 0.01 : 0.25 }}
-          className="fixed inset-0 z-50"
+          className="fixed inset-0 z-50 touch-none overscroll-contain"
           onClick={handleDismiss}
           role="dialog"
           aria-modal="true"
@@ -214,7 +224,6 @@ export function OverlayCoachmarkEngine({ steps, storageKey }: CoachmarkProps) {
               delay={reducedMotion ? 0 : 0.1 + i * 0.08}
             />
           ))}
-
         </m.div>
       </AnimatePresence>
     </LazyMotion>
@@ -279,7 +288,9 @@ function HighlightItem({
         initial={enterAnim.initial}
         animate={enterAnim.animate}
         transition={
-          reducedMotion ? { duration: 0.01 } : { type: "spring", stiffness: 380, damping: 24, delay }
+          reducedMotion
+            ? { duration: 0.01 }
+            : { type: "spring", stiffness: 380, damping: 24, delay }
         }
         style={{
           position: "fixed",
@@ -289,7 +300,7 @@ function HighlightItem({
           height: boxHeight,
           pointerEvents: "none",
         }}
-        className="rounded-xl ring-2 ring-white shadow-[0_0_0_4px_rgba(255,255,255,0.25)]"
+        className="rounded-xl shadow-[0_0_0_4px_rgba(255,255,255,0.25)] ring-2 ring-white"
       />
 
       {/* 화살표 + 설명 라벨 */}
@@ -307,8 +318,8 @@ function HighlightItem({
         <Arrow placement={placement} arrowLeft={arrowLeft} />
 
         {/* 라벨 칩 */}
-        <div className="bg-white rounded-xl px-3.5 py-2.5 shadow-lg">
-          <p className="text-keio-navy text-sm font-bold leading-snug">{step.title}</p>
+        <div className="rounded-xl bg-white px-3.5 py-2.5 shadow-lg">
+          <p className="text-keio-navy text-sm leading-snug font-bold">{step.title}</p>
           <p className={cn("text-foreground/70 mt-0.5 text-xs leading-relaxed")}>
             {step.description}
           </p>
