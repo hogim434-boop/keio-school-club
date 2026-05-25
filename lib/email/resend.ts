@@ -20,6 +20,11 @@ export async function sendEmail(params: {
     return { ok: false };
   }
 
+  // Resend 응답이 늦어도 무한정 매달리지 않도록 10초 타임아웃을 건다.
+  // (타임아웃이 없으면 발송 호출이 hang 되어 호출부의 흐름까지 멈출 수 있음)
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -33,6 +38,7 @@ export async function sendEmail(params: {
         subject: params.subject,
         html: params.html,
       }),
+      signal: controller.signal,
     });
 
     if (!res.ok) {
@@ -43,8 +49,10 @@ export async function sendEmail(params: {
 
     return { ok: true };
   } catch (e) {
-    // 네트워크 예외 등: 로그만 남기고 ok:false 반환
+    // 네트워크 예외·타임아웃(abort) 등: 로그만 남기고 ok:false 반환
     console.error("[email] 예외", e);
     return { ok: false };
+  } finally {
+    clearTimeout(timeout);
   }
 }
