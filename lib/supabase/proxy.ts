@@ -89,6 +89,28 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // 온보딩 미완료 사용자 강제 복귀.
+  // Google 로그인은 성공 즉시 세션을 만들지만, DB 트리거가 만든 profiles.display_name 은 비어 있다.
+  // 닉네임(display_name)을 채우기 전까지는 어느 페이지로 가든 온보딩(/auth/sign-up)으로 되돌린다.
+  // → "로그인은 됐지만 닉네임 없는 반쪽 계정"이 서비스를 이용하는 상황을 차단.
+  // /auth/* 자체는 제외해야 무한 리다이렉트가 생기지 않는다(온보딩·로그아웃 경로 보존).
+  if (user && !request.nextUrl.pathname.startsWith("/auth")) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("display_name")
+      .eq("id", user.sub)
+      .maybeSingle();
+
+    // 프로필 행이 있고 display_name 이 비어 있으면 온보딩 미완료 → 비밀번호 설정 단계부터 재개
+    if (profile && !profile.display_name) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/auth/sign-up";
+      url.search = ""; // 기존 쿼리(next 등) 제거 후 step 만 부여
+      url.searchParams.set("step", "password");
+      return NextResponse.redirect(url);
+    }
+  }
+
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
   // If you're creating a new response object with NextResponse.next() make sure to:
   // 1. Pass the request in it, like so:
