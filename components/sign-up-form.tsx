@@ -26,7 +26,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LazyMotion, domAnimation, m, useReducedMotion } from "motion/react";
 import { ArrowRight } from "lucide-react";
 
@@ -98,6 +98,15 @@ export function SignUpForm() {
 
   // 저장 중 상태 — 2단계·3단계 공통 (동시에 렌더되지 않으므로 공유 안전)
   const [isSaving, setIsSaving] = useState(false);
+
+  // ⚠️ 단계 전환 시 isSaving 초기화 (멈춤 버그 방지)
+  // /auth/sign-up?step=... 는 주소(쿼리)만 바뀌는 이동이라 이 컴포넌트가 재마운트되지 않는다.
+  // 따라서 2단계에서 켠 isSaving=true 가 router.push 로 3단계에 그대로 새어들어와
+  // 닉네임 버튼이 도착하자마자 "保存中"·비활성으로 굳는 문제가 있었다.
+  // step 이 바뀔 때마다 저장 상태를 깨끗이 리셋해 각 단계가 항상 클린하게 시작하도록 한다.
+  useEffect(() => {
+    setIsSaving(false);
+  }, [step]);
 
   // ── 2단계: 비밀번호 저장 처리 ──
   const handleSetPassword = async () => {
