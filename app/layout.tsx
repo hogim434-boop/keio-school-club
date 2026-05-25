@@ -16,7 +16,7 @@ const defaultUrl = process.env.VERCEL_URL
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
   title: "Keio Club",
-  description: "慶應義塾大学のサークルを探す・比較する",
+  description: "慶應義塾大学のサークルを探す",
 };
 
 // 본문용 기본 라틴 폰트 — 영어/숫자/일반 기호 처리
