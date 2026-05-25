@@ -133,18 +133,24 @@ export function PendingCircleCard({ circle, onResolved }: PendingCircleCardProps
         </div>
 
         {/* ── 대표자 정보 ── */}
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-muted-foreground">代表者:</span>
-          <span className="font-medium">{circle.owner_display_name ?? "（未設定）"}</span>
-          {circle.owner_keio_verified ? (
-            <Badge variant="outline" className="gap-1 text-[11px] font-normal">
-              <ShieldCheck className="size-3 text-emerald-600" aria-hidden="true" />
-              慶應認証済み
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="text-muted-foreground text-[11px] font-normal">
-              未認証
-            </Badge>
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-muted-foreground">代表者:</span>
+            <span className="font-medium">{circle.owner_display_name ?? "（未設定）"}</span>
+            {circle.owner_keio_verified ? (
+              <Badge variant="outline" className="gap-1 text-[11px] font-normal">
+                <ShieldCheck className="size-3 text-emerald-600" aria-hidden="true" />
+                慶應認証済み
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-muted-foreground text-[11px] font-normal">
+                未認証
+              </Badge>
+            )}
+          </div>
+          {/* 대표자 이메일 — profiles.email 이 있을 때만 표시 */}
+          {circle.owner_email && (
+            <p className="text-muted-foreground text-xs">メール: {circle.owner_email}</p>
           )}
         </div>
 
