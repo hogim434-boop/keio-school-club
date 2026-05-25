@@ -68,6 +68,8 @@ import {
   ACTIVITY_REPORT_TYPE_LABELS,
 } from "@/lib/constants/activity-report-type";
 import { validateUpload } from "@/lib/storage/strip-exif";
+import { CROP_OUTPUT } from "@/lib/image/crop-image";
+import { ImageCropDialog } from "@/components/image/image-crop-dialog";
 import { reportSchema, type ReportValues } from "@/lib/circles/report-schema";
 import {
   submitActivityReport,
@@ -193,6 +195,13 @@ export function ReportComposeSheet({
   const [previewItems, setPreviewItems] = useState<PreviewItem[]>([]);
   const [imageError, setImageError] = useState<string | null>(null);
 
+  // ── 크롭 큐 state ──────────────────────────────────────────
+  // input 은 multiple 인데 크롭은 한 장씩이므로, 선택한 파일들을 큐로 보관해
+  // 다이얼로그를 한 장씩 순서대로 띄운다. (게시물 이미지는 1:1 정사각 크롭)
+  const [cropQueue, setCropQueue] = useState<File[]>([]);
+  const [cropTarget, setCropTarget] = useState<{ file: File; src: string } | null>(null);
+  const [cropTotal, setCropTotal] = useState(0);
+
   // ── 활동 날짜 state ─────────────────────────────────────
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [dateOpen, setDateOpen] = useState(false);
@@ -293,21 +302,24 @@ export function ReportComposeSheet({
    */
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
     if (files.length === 0) return;
 
     setImageError(null);
 
-    // 최대 장수 초과 검사
-    if (previewItems.length + files.length > MAX_IMAGES) {
+    // 추가 가능한 슬롯 = 최대 - (현재 미리보기 + 대기 큐 + 현재 크롭 중 1장)
+    const pending = cropQueue.length + (cropTarget ? 1 : 0);
+    const remaining = MAX_IMAGES - previewItems.length - pending;
+    if (remaining <= 0) {
       setImageError(`画像は最大${MAX_IMAGES}枚まで追加できます`);
-      e.target.value = "";
       return;
     }
 
-    const newItems: PreviewItem[] = [];
-    let hasError = false;
+    // 검증 통과 파일만 모음 (슬롯 한도 내). 미리보기 생성은 크롭 확정 시점으로 미룸.
+    const toAdd = files.slice(0, remaining);
+    const validFiles: File[] = [];
 
-    for (const file of files) {
+    for (const file of toAdd) {
       const result = validateUpload(file);
       if (!result.ok) {
         if (file.size > 4 * 1024 * 1024) {
@@ -315,24 +327,52 @@ export function ReportComposeSheet({
         } else {
           setImageError("JPEG・PNG・WebP 形式の画像を選択してください");
         }
-        hasError = true;
-        continue;
+        // 검증 실패 시 그 이후 파일도 중단
+        break;
       }
-      newItems.push({
-        preview: URL.createObjectURL(file),
-        item: { kind: "new", file },
-      });
+      validFiles.push(file);
     }
 
-    if (!hasError) {
-      setImageError(null);
-    }
+    if (validFiles.length === 0) return;
 
-    if (newItems.length > 0) {
-      setPreviewItems((prev) => [...prev, ...newItems]);
-    }
+    // 첫 장부터 크롭 다이얼로그 시작 (나머지는 큐 대기). 진행 표시용 총량 기록.
+    setCropTotal(validFiles.length);
+    startNextCrop(validFiles);
+  }
 
-    e.target.value = "";
+  // ── 크롭 큐 진행 헬퍼 ──────────────────────────────────────
+  /** 큐에서 다음 한 장을 꺼내 다이얼로그에 띄운다 (큐가 비면 다이얼로그 닫힘) */
+  function startNextCrop(queue: File[]) {
+    if (queue.length === 0) {
+      setCropTarget(null);
+      setCropQueue([]);
+      return;
+    }
+    const [next, ...rest] = queue;
+    setCropQueue(rest);
+    setCropTarget({ file: next, src: URL.createObjectURL(next) });
+  }
+
+  /** 크롭 완료된 File 을 미리보기(previewItems)에 new 아이템으로 추가 */
+  function appendCroppedReport(croppedFile: File) {
+    setPreviewItems((prev) => [
+      ...prev,
+      { preview: URL.createObjectURL(croppedFile), item: { kind: "new", file: croppedFile } },
+    ]);
+    setImageError(null);
+  }
+
+  /** 「確定」 — 크롭 결과 적재 후 다음 장으로 */
+  function handleCropComplete(croppedFile: File) {
+    if (cropTarget) URL.revokeObjectURL(cropTarget.src);
+    appendCroppedReport(croppedFile);
+    startNextCrop(cropQueue);
+  }
+
+  /** 「キャンセル」 — 이 장 건너뛰고 다음 장으로 */
+  function handleCropCancel() {
+    if (cropTarget) URL.revokeObjectURL(cropTarget.src);
+    startNextCrop(cropQueue);
   }
 
   /**
@@ -377,6 +417,10 @@ export function ReportComposeSheet({
     setImageError(null);
     setSelectedDate(undefined);
     setDateOpen(false);
+    // 진행 중이던 크롭 타깃/큐 정리 (objectURL 해제 포함)
+    if (cropTarget) URL.revokeObjectURL(cropTarget.src);
+    setCropTarget(null);
+    setCropQueue([]);
   }
 
   // ── 시트 open 변경 핸들러 ────────────────────────────────
@@ -879,6 +923,22 @@ export function ReportComposeSheet({
           </form>
         </LazyMotion>
       </SheetContent>
+
+      {/* 게시물 이미지 크롭 다이얼로그 — 1:1 정사각. 한 장씩 순차 처리.
+          radix Dialog 는 portal 로 body 에 붙으므로 이 Sheet 위에 정상적으로 겹쳐 표시됨 */}
+      <ImageCropDialog
+        open={cropTarget !== null}
+        aspect={1}
+        ratioLabel="1:1"
+        imageSrc={cropTarget?.src ?? null}
+        fileName={cropTarget?.file.name ?? "report"}
+        maxWidth={CROP_OUTPUT.square.width}
+        maxHeight={CROP_OUTPUT.square.height}
+        onComplete={handleCropComplete}
+        onCancel={handleCropCancel}
+        currentIndex={cropTotal - cropQueue.length - 1}
+        totalCount={cropTotal}
+      />
     </Sheet>
   );
 }
