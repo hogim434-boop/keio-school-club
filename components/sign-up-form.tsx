@@ -167,20 +167,27 @@ export function SignUpForm() {
 
     // profiles 테이블의 display_name 업데이트
     // RLS: profiles_update_own 정책으로 본인 행만 UPDATE 가능
-    const { error } = await supabase
+    // ⚠️ .select() 를 붙여 "실제로 갱신된 행"을 돌려받는다.
+    //    .select() 가 없으면 0행 업데이트도 error:null 이라 실패를 감지 못 하고
+    //    닉네임이 안 박힌 채 다음 단계로 넘어가 버린다(반쪽 계정 원인).
+    const { data: updated, error } = await supabase
       .from("profiles")
       .update({ display_name: trimmed })
-      .eq("id", user.id);
+      .eq("id", user.id)
+      .select("id")
+      .maybeSingle();
 
-    if (error) {
-      setNicknameError("保存に失敗しました");
+    // error 가 있거나, 갱신된 행이 없으면(updated === null) 실패로 처리
+    if (error || !updated) {
+      setNicknameError("保存に失敗しました。もう一度お試しください");
       setIsSaving(false);
       return;
     }
 
-    // 온보딩 완료 시점에 가입 환영 메일 발송 (best-effort)
-    // 실패해도 가입 흐름에는 영향 없음 — 완료 화면으로 이동하기 전 한 번만 호출
-    await sendWelcomeEmail();
+    // 온보딩 완료 시점에 가입 환영 메일 발송 (best-effort, 발사 후 망각).
+    // ⚠️ await 로 기다리면 메일 발송이 지연/행(hang)될 때 화면이 "保存中…" 에서 멈춘다.
+    //    메일은 부가 기능이므로 결과를 기다리지 않고, 실패는 콘솔에만 남긴 뒤 즉시 다음 단계로 이동.
+    void sendWelcomeEmail().catch((e) => console.error("[welcome email]", e));
 
     // 저장 성공 → 완료 단계로 이동
     router.push("/auth/sign-up?step=done");
