@@ -721,8 +721,8 @@ export async function getMyCircles(userId: string): Promise<MyCircle[]> {
 
 /**
  * 승인 대기(pending) 동아리 한 줄 — 관리자 승인 큐 카드 표시용.
- * 대표자 본인성 표시는 owner 프로필(display_name·keio_verified)로 하며,
- * 이메일은 profiles 에 컬럼이 없어(인증 정보는 auth.users) v1 에서 제외한다.
+ * 대표자 본인성 표시는 owner 프로필(display_name·keio_verified·email)로 한다.
+ * profiles.email 은 마이그레이션으로 추가된 컬럼(트리거+백필 완료).
  */
 export type PendingCircle = {
   id: string;
@@ -749,6 +749,8 @@ export type PendingCircle = {
   owner_display_name: string | null;
   /** 대표자 慶應 인증 여부 — owner 프로필 JOIN */
   owner_keio_verified: boolean;
+  /** 대표자 이메일 — profiles.email (마이그레이션으로 추가). 미설정 시 null */
+  owner_email: string | null;
 };
 
 /**
@@ -766,7 +768,7 @@ export async function getPendingCircles(): Promise<PendingCircle[]> {
   const { data, error } = await supabase
     .from("circles")
     .select(
-      "id, name, category, official_type, submission_note, created_at, cover_image_url, description, activity_days, member_band, contact_instagram, contact_x, contact_line, profiles!circles_owner_id_fkey(display_name, keio_verified)"
+      "id, name, category, official_type, submission_note, created_at, cover_image_url, description, activity_days, member_band, contact_instagram, contact_x, contact_line, profiles!circles_owner_id_fkey(display_name, keio_verified, email)"
     )
     .eq("status", "pending")
     .order("created_at", { ascending: true });
@@ -779,7 +781,11 @@ export async function getPendingCircles(): Promise<PendingCircle[]> {
   return (data ?? []).map((row) => {
     const r = row as Record<string, unknown>;
     // owner_id 는 to-one FK 라 profiles 임베드는 단일 객체(또는 null)
-    const owner = r.profiles as { display_name: string | null; keio_verified: boolean } | null;
+    const owner = r.profiles as {
+      display_name: string | null;
+      keio_verified: boolean;
+      email: string | null;
+    } | null;
     return {
       id: r.id as string,
       name: r.name as string,
@@ -796,6 +802,8 @@ export async function getPendingCircles(): Promise<PendingCircle[]> {
       contact_line: (r.contact_line as string | null) ?? null,
       owner_display_name: owner?.display_name ?? null,
       owner_keio_verified: Boolean(owner?.keio_verified),
+      // profiles.email 컬럼 (마이그레이션으로 추가, 없으면 null)
+      owner_email: owner?.email ?? null,
     };
   });
 }
