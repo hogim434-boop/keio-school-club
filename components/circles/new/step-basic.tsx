@@ -21,8 +21,10 @@ import { LazyMotion, domAnimation, m, useReducedMotion } from "motion/react";
 import { ImageIcon, Plus, X } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
+import { ImageCropDialog } from "@/components/image/image-crop-dialog";
 import { AUTH_INPUT_CLS } from "@/lib/auth/input-class";
 import { validateUpload } from "@/lib/storage/strip-exif";
+import { CROP_OUTPUT } from "@/lib/image/crop-image";
 import type { RegistrationValues } from "@/lib/circles/registration-schema";
 import type { CircleImage } from "@/lib/types/domain";
 import { CATEGORIES, CATEGORY_LABELS } from "@/lib/constants/category";
@@ -199,14 +201,59 @@ export function StepBasic({
   /** 숨겨진 file input 참조 — 커스텀 버튼에서 클릭 트리거 */
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // objectURL 메모리 정리 — 언마운트 시 전체 revoke
+  // ── 크롭 큐 state ──────────────────────────────────────────────────────
+  // input 은 multiple 인데 크롭은 한 장씩이므로, 선택한 파일들을 큐로 보관해
+  // 다이얼로그를 한 장씩 순서대로 띄운다.
+  /** 아직 크롭하지 않고 대기 중인 원본 파일들 */
+  const [cropQueue, setCropQueue] = useState<File[]>([]);
+  /** 현재 다이얼로그에 띄운 한 장 (non-null 이면 다이얼로그 open) */
+  const [cropTarget, setCropTarget] = useState<{ file: File; src: string } | null>(null);
+  /** 이번 라운드 전체 장수 — "n / m 枚目" 진행 표시용 */
+  const [cropTotal, setCropTotal] = useState(0);
+
+  // objectURL 메모리 정리 — 언마운트 시 전체 revoke (미리보기 + 진행 중 크롭 타깃)
   useEffect(() => {
     return () => {
       newPreviewUrls.forEach(({ url }) => URL.revokeObjectURL(url));
+      if (cropTarget) URL.revokeObjectURL(cropTarget.src);
     };
     // 마운트/언마운트 한 번만 실행 (의존성 배열 비움)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── 크롭 큐 진행 헬퍼 ──────────────────────────────────────────────────
+  /** 큐에서 다음 한 장을 꺼내 다이얼로그에 띄운다 (큐가 비면 다이얼로그 닫힘) */
+  function startNextCrop(queue: File[]) {
+    if (queue.length === 0) {
+      setCropTarget(null);
+      setCropQueue([]);
+      return;
+    }
+    const [next, ...rest] = queue;
+    setCropQueue(rest);
+    setCropTarget({ file: next, src: URL.createObjectURL(next) });
+  }
+
+  /** 크롭 완료된 File 을 미리보기 + RHF cover 에 추가 */
+  function appendCroppedCover(croppedFile: File) {
+    const url = URL.createObjectURL(croppedFile);
+    setNewPreviewUrls((prev) => [...prev, { file: croppedFile, url }]);
+    const currentFiles = (getValues("cover") as File[] | undefined) ?? [];
+    setValue("cover", [...currentFiles, croppedFile]);
+  }
+
+  /** 「確定」 — 크롭 결과 적재 후 다음 장으로 */
+  function handleCropComplete(croppedFile: File) {
+    if (cropTarget) URL.revokeObjectURL(cropTarget.src);
+    appendCroppedCover(croppedFile);
+    startNextCrop(cropQueue);
+  }
+
+  /** 「キャンセル」 — 이 장 건너뛰고 다음 장으로 */
+  function handleCropCancel() {
+    if (cropTarget) URL.revokeObjectURL(cropTarget.src);
+    startNextCrop(cropQueue);
+  }
 
   // 현재 총 이미지 수 (유지 기존 + 신규)
   const totalImageCount = keepImages.length + newPreviewUrls.length;
@@ -227,16 +274,17 @@ export function StepBasic({
     setCoverError(null);
     clearErrors("cover");
 
-    // 추가 가능한 슬롯 수 계산
-    const remaining = MAX_COVER_IMAGES - totalImageCount;
+    // 추가 가능한 슬롯 수 = 최대 - (확정 미리보기 + 대기 큐 + 현재 크롭 중 1장)
+    const pending = cropQueue.length + (cropTarget ? 1 : 0);
+    const remaining = MAX_COVER_IMAGES - totalImageCount - pending;
     if (remaining <= 0) {
       setCoverError(`カバー画像は最大${MAX_COVER_IMAGES}枚まで追加できます`);
       return;
     }
 
-    // 검증 통과 파일만 추가 (슬롯 한도 내)
+    // 검증 통과 파일만 모음 (슬롯 한도 내) — 미리보기 생성은 크롭 확정 시점으로 미룸
     const toAdd = selected.slice(0, remaining);
-    const valid: { file: File; url: string }[] = [];
+    const validFiles: File[] = [];
 
     for (const file of toAdd) {
       const result = validateUpload(file);
@@ -250,17 +298,14 @@ export function StepBasic({
         // 검증 실패 시 그 이후 파일도 중단
         break;
       }
-      valid.push({ file, url: URL.createObjectURL(file) });
+      validFiles.push(file);
     }
 
-    if (valid.length === 0) return;
+    if (validFiles.length === 0) return;
 
-    // 누적 state 갱신
-    setNewPreviewUrls((prev) => [...prev, ...valid]);
-
-    // RHF cover 필드에 File[] 저장 (shouldValidate 불필요 — trigger 대상 외)
-    const currentFiles = (getValues("cover") as File[] | undefined) ?? [];
-    setValue("cover", [...currentFiles, ...valid.map((v) => v.file)]);
+    // 첫 장부터 크롭 다이얼로그 시작 (나머지는 큐 대기). 진행 표시용 총량 기록.
+    setCropTotal(validFiles.length);
+    startNextCrop(validFiles);
   }
 
   // ── 기존 이미지 삭제 핸들러 (edit 모드) ─────────────────────────────────
@@ -833,6 +878,21 @@ export function StepBasic({
         {/* 하단 여백: AuthScreen footer 가 콘텐츠를 가리지 않도록 */}
         <div className="pb-4" aria-hidden="true" />
       </div>
+
+      {/* 커버 이미지 크롭 다이얼로그 — 16:9 비율. 한 장씩 순차 처리 */}
+      <ImageCropDialog
+        open={cropTarget !== null}
+        aspect={16 / 9}
+        ratioLabel="16:9"
+        imageSrc={cropTarget?.src ?? null}
+        fileName={cropTarget?.file.name ?? "cover"}
+        maxWidth={CROP_OUTPUT.cover.width}
+        maxHeight={CROP_OUTPUT.cover.height}
+        onComplete={handleCropComplete}
+        onCancel={handleCropCancel}
+        currentIndex={cropTotal - cropQueue.length - 1}
+        totalCount={cropTotal}
+      />
     </LazyMotion>
   );
 }
