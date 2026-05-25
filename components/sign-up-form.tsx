@@ -38,6 +38,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
 import { AUTH_INPUT_CLS } from "@/lib/auth/input-class";
+import { sendWelcomeEmail } from "@/app/auth/actions";
 
 // ── Primary CTA 버튼 스타일 토큰 ──
 // 검정(기본 Button=bg-primary) 배경으로 통일, disabled 시 회색 전환 없이 불투명도만 낮춤
@@ -176,6 +177,10 @@ export function SignUpForm() {
       setIsSaving(false);
       return;
     }
+
+    // 온보딩 완료 시점에 가입 환영 메일 발송 (best-effort)
+    // 실패해도 가입 흐름에는 영향 없음 — 완료 화면으로 이동하기 전 한 번만 호출
+    await sendWelcomeEmail();
 
     // 저장 성공 → 완료 단계로 이동
     router.push("/auth/sign-up?step=done");
