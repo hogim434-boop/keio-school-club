@@ -22,6 +22,34 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { sendEmail } from "@/lib/email/resend";
+import { circleApprovedEmail, circleRejectedEmail } from "@/lib/email/templates";
+
+/**
+ * owner 에게 결과 메일 발송 (best-effort).
+ * profiles.email(RLS: admin 조회 가능)을 조회해 Resend 로 전송.
+ * RESEND_API_KEY 미설정이면 sendEmail 이 no-op. 모든 실패는 흡수(승인/거절 결과에 영향 없음).
+ */
+async function notifyOwnerByEmail(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  ownerId: string | null,
+  mail: { subject: string; html: string }
+): Promise<void> {
+  if (!ownerId) return;
+  try {
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("email")
+      .eq("id", ownerId)
+      .maybeSingle();
+    if (prof?.email) {
+      await sendEmail({ to: prof.email as string, subject: mail.subject, html: mail.html });
+    }
+  } catch (e) {
+    console.error("[notifyOwnerByEmail]", e);
+  }
+}
 
 /** 거절 사유 최대 길이 */
 const MAX_REJECTION_REASON = 500;
@@ -81,10 +109,12 @@ export async function approveCircle(circleId: string): Promise<ActionResult> {
   });
   if (announceError) console.error("[approveCircle] announcement insert", announceError.message);
 
+  // 3) 오너에게 승인 이메일 (best-effort — 키 없으면 no-op, 실패해도 승인은 성공)
+  await notifyOwnerByEmail(supabase, updated.owner_id, circleApprovedEmail(updated.name));
+
   // 승인 큐 재검증 + 공개 목록 캐시 무효화(승인된 동아리가 홈/목록에 즉시 노출)
   revalidatePath("/admin/circles");
   revalidateTag("circles", { expire: 0 });
-  // TODO(T-020): 오너에게 승인 이메일 알림 트리거 (「サークルが公開されました」)
   return { ok: true };
 }
 
@@ -140,8 +170,10 @@ export async function rejectCircle(circleId: string, reason: string): Promise<Ac
     if (notifyError) console.error("[rejectCircle] notification insert", notifyError.message);
   }
 
+  // 오너에게 거절 이메일 + 사유 (best-effort — 키 없으면 no-op, 실패해도 거절은 성공)
+  await notifyOwnerByEmail(supabase, updated.owner_id, circleRejectedEmail(updated.name, trimmed));
+
   // 승인 큐만 재검증 — 거절은 공개 목록(approved)에 영향 없으므로 circles 태그 무효화 불필요
   revalidatePath("/admin/circles");
-  // TODO(T-020): 오너에게 거절 이메일 알림 트리거 (「公認サークルとして確認できませんでした」 + rejection_reason)
   return { ok: true };
 }
