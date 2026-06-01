@@ -41,7 +41,7 @@ test("register floating CTA visibility per viewport", async ({ page }) => {
   }
 });
 
-// 서클 상세 페이지에서는 T-013 「参加する」 액션 바가 자리를 차지하므로 BottomNav 와 floating CTA 모두 자동 숨김
+// 서클 상세 페이지에서는 CircleActions 「運営に問い合わせる」 액션 바가 자리를 차지하므로 BottomNav 와 floating CTA 모두 자동 숨김
 test("bottom navigation and floating CTA hide on circle detail page", async ({ page }) => {
   const isMobile = (page.viewportSize()?.width ?? 768) < 768;
   if (!isMobile) {

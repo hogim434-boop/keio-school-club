@@ -8,7 +8,8 @@ import { expect, test } from "@playwright/test";
  * - 환경 변수(NEXT_PUBLIC_SUPABASE_URL)가 설정된 상태에서 미인증 사용자가 하트를 클릭하면
  *   isAuthenticated === false 로 판정되어 /auth/login?next=... 로 리다이렉트된다.
  *   이것이 useFavorites 의 정상 동작이므로 E2E 는 이 흐름을 검증한다.
- * - 서클 상세 페이지의 「参加する」 버튼 가시성은 인증과 무관하게 검증 가능하다.
+ * - 서클 상세 페이지의 「運営に問い合わせる」 버튼 가시성은 인증과 무관하게 검증 가능하다.
+ *   (T-010 에서 「参加する」→「運営に問い合わせる」 로 변경)
  */
 
 // 테스트 1: 하트 버튼이 렌더링되고 클릭 이벤트를 처리한다
@@ -86,26 +87,17 @@ test("하트 버튼 클릭 시 즐겨찾기 관련 동작이 발생한다", asyn
   }
 });
 
-// 테스트 3: 서클 상세 페이지에 「参加する」 버튼이 노출된다 (mobile+desktop)
-test("서클 상세 페이지에 参加する 버튼이 노출된다", async ({ page, isMobile }) => {
+// 테스트 3: 서클 상세 페이지에 「運営に問い合わせる」 버튼이 노출된다 (mobile+desktop)
+// T-010: 「参加する」→「運営に問い合わせる」 CTA 변경 반영
+test("서클 상세 페이지에 運営に問い合わせる 버튼이 노출된다", async ({ page }) => {
   // 더미 데이터 첫 번째 서클 UUID (lib/dummy/circles.ts 고정값)
   await page.goto("/circles/00000000-0000-4000-8000-000000000001");
+  await page.waitForLoadState("networkidle");
 
-  if (isMobile) {
-    // 모바일: fixed bottom 액션 바 안의 「参加する」 버튼
-    // md:hidden 클래스를 가진 fixed 영역을 찾는다
-    const mobileBar = page.locator('div.fixed.bottom-0[class*="md:hidden"]');
-    await expect(mobileBar).toBeVisible();
-    const joinBtn = mobileBar.getByRole("button", { name: "参加する" });
-    await expect(joinBtn).toBeVisible();
-  } else {
-    // 데스크탑: 헤더 inline 영역의 「参加する」 버튼
-    // hidden md:flex 클래스를 가진 inline div 안의 버튼
-    const desktopActions = page.locator('div[class*="hidden"][class*="md:flex"]');
-    await expect(desktopActions.first()).toBeVisible();
-    const joinBtn = desktopActions.getByRole("button", { name: "参加する" }).first();
-    await expect(joinBtn).toBeVisible();
-  }
+  // CircleActions portal — document.body 에 마운트되는 fixed bottom CTA
+  // 「運営に問い合わせる」 버튼이 mobile/desktop 모두 동일한 portal 로 표시됨
+  const ctaBtn = page.getByRole("button", { name: "運営に問い合わせる" });
+  await expect(ctaBtn).toBeVisible();
 });
 
 // 테스트 4: 서클 상세 페이지에 즐겨찾기 하트 버튼이 노출된다
