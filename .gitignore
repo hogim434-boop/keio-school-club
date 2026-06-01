@@ -52,3 +52,7 @@ shrimp_data/
 /test-results
 /playwright/.cache
 /.playwright-mcp
+
+# 루트 디버깅 스크린샷 (Playwright MCP 시각 검증 산출물)
+# public/·components/ 등 하위 정상 자산은 영향 없음 (앞에 / 로 루트 한정)
+/*.png
