@@ -4,11 +4,14 @@ import { hasEnvVars } from "../utils";
 
 // 미인증 사용자도 열람 가능한 경로 판정
 // /circles 와 /circles/[id] 는 공개, 단 /circles/new 는 등록 폼이므로 인증 필수
+// /circles/[id]/dm/* 는 DM 기능이므로 인증 필수 (T-002 신규)
 // /auth/* 와 /login 은 인증 플로우 자체이므로 항상 통과 (레거시 /login 호환 포함)
 // /search 는 검색 페이지 (당근앱 패턴) — 결과 페이지 /circles 가 공개이므로 검색도 공개.
 // /notifications 는 ComingSoon placeholder — Phase 2 에서 인증 필수로 전환 예정.
 // /mypage 는 인증 필수 — fallthrough false 로도 동작하지만 가독성 위해 명시.
 // /admin/* 는 인증 필수 (1차 가드). role='admin' 검증은 app/admin/layout.tsx 의 AdminGuard 가 담당 (2차 가드).
+// /calendar 는 비로그인 열람 허용 — F037 캘린더 게스트 열람 (T-002 신규)
+// /events/* 는 비로그인 열람 허용 — F002 이벤트 풀스크린 공개. 단 visibility 검증은 페이지 내부에서 수행 (T-002 신규)
 function isPublicPath(pathname: string): boolean {
   if (pathname === "/") return true;
   if (pathname.startsWith("/auth")) return true;
@@ -19,11 +22,17 @@ function isPublicPath(pathname: string): boolean {
   if (pathname === "/shuffle") return true;
   // /favorites 는 localStorage 기반 게스트 즐겨찾기 (방향 A) — 비로그인 허용.
   if (pathname === "/favorites") return true;
+  // T-002 신규 — F037 캘린더 비로그인 열람 허용
+  if (pathname === "/calendar") return true;
+  // T-002 신규 — F002 이벤트 상세 풀스크린 비로그인 열람 허용 (페이지 내부에서 visibility 검증)
+  if (pathname.startsWith("/events/")) return true;
   if (pathname === "/mypage") return false;
   if (pathname.startsWith("/admin")) return false;
   if (pathname === "/circles") return true;
   if (pathname.startsWith("/circles/")) {
     if (pathname === "/circles/new") return false;
+    // T-002 신규 — /circles/[id]/dm/* 는 DM 기능으로 인증 필수
+    if (pathname.match(/^\/circles\/[^/]+\/dm/)) return false;
     return true;
   }
   return false;

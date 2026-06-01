@@ -2,7 +2,7 @@
 
 import { useContext } from "react";
 
-import { SearchSlideOutContext } from "@/app/search/template";
+import { SearchSlideOutContext } from "@/app/(tabs)/search/template";
 import { Button } from "@/components/ui/button";
 import { buildCirclesUrl, type CirclesSearchParams } from "@/lib/circles/search-params";
 

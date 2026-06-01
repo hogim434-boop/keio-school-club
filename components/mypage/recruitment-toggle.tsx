@@ -22,7 +22,7 @@ import { useState, useTransition } from "react";
 import { useReducedMotion } from "motion/react";
 import * as m from "motion/react-m";
 
-import { updateRecruitmentStatus } from "@/app/mypage/actions";
+import { updateRecruitmentStatus } from "@/app/(tabs)/mypage/actions";
 import {
   RECRUITMENT_STATUSES,
   RECRUITMENT_STATUS_LABELS,

@@ -31,7 +31,7 @@ const ITEMS: BottomNavItem[] = [
 ];
 
 // 모바일 전용 하단 고정 탭 바 — md 미만에서만 노출
-// /circles/{uuid} 서클 상세 페이지에서는 T-013 의 「参加する」 액션 바가 자리를 차지하므로 자동 숨김
+// /circles/{uuid} 서클 상세 페이지에서는 CircleActions 「運営に問い合わせる」 액션 바가 자리를 차지하므로 자동 숨김
 // 등록 CTA 는 별도 컴포넌트 RegisterFloatingCTA 로 분리되어 우하단 floating 으로 표시됨
 export function BottomNav() {
   const pathname = usePathname();

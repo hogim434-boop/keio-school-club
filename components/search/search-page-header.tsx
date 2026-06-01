@@ -4,7 +4,7 @@ import { useContext, useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Search } from "lucide-react";
 
-import { SearchSlideOutContext } from "@/app/search/template";
+import { SearchSlideOutContext } from "@/app/(tabs)/search/template";
 import { RECENT_SEARCHES_KEY, RECENT_SEARCHES_MAX } from "@/components/search/recent-searches";
 import { buildCirclesUrl, type CirclesSearchParams } from "@/lib/circles/search-params";
 

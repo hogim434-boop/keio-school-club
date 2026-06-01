@@ -33,7 +33,7 @@ import { AnimatePresence, LazyMotion, domAnimation, useReducedMotion } from "mot
 import * as m from "motion/react-m";
 import { toast } from "sonner";
 
-import { deleteCircle } from "@/app/mypage/actions";
+import { deleteCircle } from "@/app/(tabs)/mypage/actions";
 import { LogoutButton } from "@/components/logout-button";
 import { type MyCircle } from "@/lib/supabase/queries/circles";
 import { enterContainer, enterItem } from "@/lib/motion/tokens";
