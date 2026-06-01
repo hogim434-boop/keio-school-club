@@ -133,3 +133,91 @@ export interface Favorite {
  * - huge: 200명 초과
  */
 export type MemberSize = "small" | "mid" | "large" | "huge";
+
+/**
+ * RSVP 모드 — events.rsvp_mode 컬럼 값.
+ * - light: 参加意思表明 (event_interests 테이블, Wave 2)
+ * - strict: 출결 관리 (event_rsvps 테이블 + 승인 플로우, Wave 2)
+ */
+export type RsvpMode = "light" | "strict";
+
+/**
+ * 이벤트 공개 범위 — events.visibility 컬럼 값.
+ * - public: 전체 공개 (비로그인도 열람 가능)
+ * - members: 멤버 전용 (로그인 + circle_members 인증 필요, Wave 2)
+ */
+export type EventVisibility = "public" | "members";
+
+/**
+ * 이벤트 댓글 한 건 — event_comments 행의 UI 표현.
+ *
+ * parent_id:
+ * - null → 최상위 댓글 (parent)
+ * - UUID → 답글 (1단계까지만 허용)
+ *
+ * children 배열: 서버에서 nest 후 주입 (DB에는 없는 클라이언트 전용 필드).
+ * author_display_name: profiles JOIN으로 취득.
+ */
+export interface EventComment {
+  id: string;
+  event_id: string;
+  user_id: string;
+  /** 답글 대상 댓글 UUID — null 이면 최상위 */
+  parent_id: string | null;
+  /** 댓글 본문 */
+  body: string;
+  /** 작성일 UTC timestamptz ISO 문자열 */
+  created_at: string;
+  /** profiles JOIN — 작성자 표시명 */
+  author_display_name: string | null;
+  /** 최상위 댓글 전용 — 자식 답글 목록 (서버 nest 처리) */
+  children?: EventComment[];
+}
+
+/**
+ * 이벤트 단건 상세 — F002 이벤트 풀스크린 상세 페이지에서 사용.
+ *
+ * DB events 테이블 + circles JOIN (circle_name, circle_cover_image_url) 결합 도메인 모델.
+ * RSVP 카운트·댓글은 Wave 2 산출 — 이번 Phase 에서는 미포함.
+ */
+export interface EventDetail {
+  id: string;
+  /** 이벤트 제목 */
+  title: string;
+  /** 이벤트 설명 (whitespace-pre-line 렌더) */
+  description: string | null;
+  /** 커버 이미지 URL (null 이면 플레이스홀더 표시) */
+  cover_image_url: string | null;
+  /** 이벤트 카테고리 — free text (예: "新歓", "演奏会", "勉強会") */
+  category: string | null;
+  /** 시작 시각 — UTC timestamptz ISO 문자열 */
+  starts_at: string;
+  /** 종료 시각 — UTC timestamptz ISO 문자열, null 허용 */
+  ends_at: string | null;
+  /** 종일 여부 — true 면 시간 미표시 */
+  is_all_day: boolean;
+  /** 개최 장소 (free text, null 허용) */
+  location: string | null;
+  /** 정원 (null 이면 무제한) */
+  capacity: number | null;
+  /** RSVP 마감 시각 (null 이면 당일까지) */
+  rsvp_deadline: string | null;
+  /** RSVP 모드 */
+  rsvp_mode: RsvpMode;
+  /** 사전 승인 필요 여부 */
+  requires_approval: boolean;
+  /** 공개 범위 */
+  visibility: EventVisibility;
+  /** 취소 시각 (null 이면 미취소) */
+  cancelled_at: string | null;
+  /** 취소 사유 (cancelled_at が入っているときのみ意味を持つ) */
+  cancellation_reason: string | null;
+  /** 소속 서클 UUID */
+  circle_id: string;
+  /** 소속 서클 이름 — circles JOIN */
+  circle_name: string;
+  /** 소속 서클 커버 이미지 URL — circles JOIN (아바타 표시용) */
+  circle_cover_image_url: string | null;
+  /** 이벤트 생성일 */
+  created_at: string;
+}
