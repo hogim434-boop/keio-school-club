@@ -1,9 +1,10 @@
 import React, { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { Calendar, Clock, RefreshCw, UserCheck, Users, type LucideIcon } from "lucide-react";
+import { Calendar, Clock, Instagram, RefreshCw, Twitter, UserCheck, Users, type LucideIcon } from "lucide-react";
 
 import { CircleActions } from "@/components/circles/circle-actions";
 import { CircleAlbum } from "@/components/circles/circle-album";
+import { CircleGalleryTab } from "@/components/circles/circle-gallery-tab";
 import { CoverCarousel } from "@/components/circles/cover-carousel";
 import { CircleDetailFadeIn } from "@/components/circles/circle-detail-fade-in";
 import { CircleDetailSkeleton } from "@/components/circles/circle-detail-skeleton";
@@ -17,6 +18,7 @@ import { MEMBER_BAND_LABELS } from "@/lib/constants/member-band";
 import { getOfficialTypeDisplayLabel } from "@/lib/constants/official-type";
 import { RECRUITMENT_STATUS_LABELS } from "@/lib/constants/recruitment-status";
 import { getReportsByCircle } from "@/lib/supabase/queries/activity-reports";
+import { listGalleries } from "@/lib/supabase/queries/circle-galleries";
 import {
   getApprovedCircleById,
   getCircleById,
@@ -74,9 +76,10 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
    *
    * - circle가 null(존재하지 않는 서클)인 경우엔 reports 조회는 빈 배열로 무해하게 끝남.
    */
-  const [circle, reports] = await Promise.all([
+  const [circle, reports, galleries] = await Promise.all([
     fetchCircleWithFallback(id),
     getReportsByCircle(id),
+    listGalleries(id),
   ]);
   if (!circle) notFound();
 
@@ -150,10 +153,9 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
           {isOwner && <OwnerProfileCard circle={circle} />}
 
           {/*
-           * 4. 탭 구조 — Client wrapper (state 관리) + Server Component children (homeContent).
-           * 「ホーム」 = SummaryGrid + Description + 活動レポート 미리보기 캐러셀
-           * 「掲示板」 = 活動レポート 전체 세로 리스트
-           * 「もっと見る」 클릭 시 내부 setTab("board") 으로 자동 전환.
+           * 3. 탭 구조 (2탭: ホーム / アルバム) — T-010 개편.
+           * 「ホーム」 = SummaryGrid + Description + 活動レポート 미리보기 + 全レポートリスト
+           * 「アルバム」 = 커버 + 리포트 사진 자동 집계
            * isOwner: 소유자 전용 「＋ 投稿する」 버튼 표시 여부 전달.
            */}
           {/*
@@ -162,6 +164,18 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
            * circle.images 는 circle_images(복수 커버) — 레거시 동아리는 쿼리 fallback 으로 cover_image_url 1장이 채워짐.
            */}
           {(() => {
+            /**
+             * アルバム 탭 구성 (T-011 개편):
+             *
+             * 섹션 1 — 활동 리포트 사진 자동 집계 (CircleAlbum)
+             *   커버 이미지(circle.images) + 활동 리포트(activity_reports) 사진을
+             *   추가 쿼리 없이 자동으로 합쳐서 표시.
+             *
+             * 섹션 2 — 갤러리 (CircleGalleryTab)
+             *   circle_galleries 테이블의 사진. 운영진이 직접 업로드한 활동 아카이브.
+             *   학기 필터(봄학기 / 가을학기)로 기간 좁히기 가능.
+             *   0건이면 빈 상태 메시지만 표시.
+             */
             const albumImages = [
               ...circle.images.map((img) => ({
                 url: img.image_url,
@@ -176,6 +190,32 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
               ),
             ];
 
+            // アルバム 탭 전체 콘텐츠
+            const albumContent = (
+              <div className="space-y-8">
+                {/* 섹션 1: 커버 + 리포트 자동 집계 — 기존 CircleAlbum 재사용 */}
+                {albumImages.length > 0 && (
+                  <section className="space-y-3">
+                    <h3 className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">
+                      活動レポートの写真
+                    </h3>
+                    <CircleAlbum images={albumImages} circleId={circle.id} />
+                  </section>
+                )}
+
+                {/* 섹션 2: circle_galleries — 운영진 업로드 아카이브 */}
+                <section className="space-y-3">
+                  {/* albumImages가 있을 때만 구분 헤더 표시 */}
+                  {albumImages.length > 0 && (
+                    <h3 className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">
+                      ギャラリー
+                    </h3>
+                  )}
+                  <CircleGalleryTab circleId={circle.id} galleries={galleries} />
+                </section>
+              </div>
+            );
+
             return (
               <CircleDetailTabs
                 circleId={circle.id}
@@ -187,15 +227,22 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
                     <ExpandableDescription text={circle.description} />
                   </>
                 }
-                // 관련 동아리 — 「ホーム」 탭 맨 아래(활동 리포트 미리보기 뒤)에만 표시. 0건이면 미표시.
+                // 관련 동아리 — 「ホーム」 탭 맨 아래(全レポートリスト 뒤)에 표시. 0건이면 미표시.
                 relatedContent={
                   relatedCircles.length > 0 ? <RelatedCircles circles={relatedCircles} /> : null
                 }
-                // アルバム 탭 — 커버 + 리포트 사진 자동 집계
-                albumContent={<CircleAlbum images={albumImages} circleId={circle.id} />}
+                // アルバム 탭 — 리포트 사진 집계 + circle_galleries 갤러리 (T-011)
+                albumContent={albumContent}
               />
             );
           })()}
+
+          {/*
+           * 4. 외부 SNS 풋터 — Instagram / X 링크만 표시 (LINE 그룹 링크 금지).
+           * T-010 요구사항: LINE 은 개인 정보 위험(무제한 링크 확산)으로 공개 금지.
+           * contact_instagram / contact_x 중 하나라도 있을 때만 섹션 렌더.
+           */}
+          <SnsSnsFooter circle={circle} />
         </div>
       </CircleDetailFadeIn>
 
@@ -339,6 +386,60 @@ function SummaryGrid({ circle }: { circle: CircleDetail }) {
         </div>
       ))}
     </dl>
+  );
+}
+
+/**
+ * SnsSnsFooter — 외부 SNS 풋터 (Instagram / X 만, LINE 금지).
+ *
+ * T-010 변경:
+ * - LINE 그룹 링크 공개 금지 (개인 정보 위험 — 무제한 링크 확산).
+ * - contact_line 데이터는 DB 에 보존, 운영진 DM 답신 시 개별 안내용.
+ *
+ * circle.contact_instagram / contact_x 가 모두 없으면 섹션 자체를 미렌더.
+ */
+function SnsSnsFooter({ circle }: { circle: CircleDetail }) {
+  const hasSns = circle.contact_instagram || circle.contact_x;
+  if (!hasSns) return null;
+
+  return (
+    <section className="border-t pt-6">
+      <h2 className="mb-4 text-base font-semibold text-muted-foreground">公式SNS</h2>
+      <div className="flex items-center gap-3">
+        {/* Instagram 링크 */}
+        {circle.contact_instagram && (
+          <a
+            href={circle.contact_instagram}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Instagram で見る"
+            className="flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+          >
+            {/* Instagram 공식 그라데이션 아이콘 배경 */}
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#feda75] via-[#d62976] to-[#4f5bd5]">
+              <Instagram className="size-3.5 text-white" aria-hidden />
+            </span>
+            Instagram
+          </a>
+        )}
+        {/* X (Twitter) 링크 */}
+        {circle.contact_x && (
+          <a
+            href={circle.contact_x}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="X (Twitter) で見る"
+            className="flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+          >
+            {/* X 공식 블랙 아이콘 배경 */}
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-black">
+              <Twitter className="size-3.5 text-white" aria-hidden />
+            </span>
+            X
+          </a>
+        )}
+      </div>
+    </section>
   );
 }
 

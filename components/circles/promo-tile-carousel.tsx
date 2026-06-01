@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AnimatePresence, m, type PanInfo } from "motion/react";
+import { AnimatePresence, LazyMotion, domAnimation, m, type PanInfo } from "motion/react";
 import { ChevronRight } from "lucide-react";
 
 import { Emoji, type EmojiName } from "@/components/ui/emoji";
@@ -63,8 +63,13 @@ type SlideDirection = "left" | "right";
  * - 손가락 드래그 또는 dots 클릭으로 수동 점프.
  * - reduced motion 사용자: x 변위 제거 + opacity 만 트랜지션.
  *
- * 부모 `CirclesPageShell` 이 이미 `LazyMotion features={domAnimation}` 을 제공하므로
- * 본 컴포넌트에선 `m.div` / `AnimatePresence` 만 import 해 사용한다 (중첩 회피).
+ * 본 컴포넌트는 self-contained — `<LazyMotion features={domAnimation}>` 를 직접 마운트해
+ * 부모(CirclesPageShell / ホーム page) 에 motion 컨텍스트 의존성을 두지 않는다.
+ * LazyMotion 중첩은 motion 라이브러리가 idempotent 처리하므로 안전.
+ *
+ * 배경: T-009 에서 ホーム(`app/(tabs)/page.tsx`)가 CirclesPageShell 의존을 끊은 뒤
+ * `m.div` 가 features 없이 렌더되어 `initial="enter"`(opacity 0) 상태로 멈춰 타일이
+ * 보이지 않는 회귀가 발생. 본 wrapper 가 그 회귀를 해소한다.
  */
 export function PromoTileCarousel() {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -131,17 +136,18 @@ export function PromoTileCarousel() {
   const activeTile = PROMO_TILES[activeIndex];
 
   return (
-    <section
-      role="region"
-      aria-roledescription="carousel"
-      aria-label="サークル探しの入口"
-      aria-live={isPaused ? "polite" : "off"}
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
-      onFocus={() => setIsFocused(true)}
-      onBlur={() => setIsFocused(false)}
-      className="space-y-2.5"
-    >
+    <LazyMotion features={domAnimation}>
+      <section
+        role="region"
+        aria-roledescription="carousel"
+        aria-label="サークル探しの入口"
+        aria-live={isPaused ? "polite" : "off"}
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        className="space-y-2.5"
+      >
       {/* 슬라이드 뷰포트 — overflow-hidden 으로 슬라이드 클리핑, touch-pan-y 로 수직 스크롤 위임 */}
       <div className="relative touch-pan-y overflow-hidden rounded-2xl">
         <AnimatePresence mode="wait" custom={direction}>
@@ -207,6 +213,7 @@ export function PromoTileCarousel() {
           />
         ))}
       </div>
-    </section>
+      </section>
+    </LazyMotion>
   );
 }

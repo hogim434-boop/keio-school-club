@@ -1,34 +1,33 @@
 "use client";
 
 /**
- * CircleDetailTabs — 상세 페이지 「ホーム / 掲示板 / アルバム」 controlled Tabs (Client Component).
+ * CircleDetailTabs — 상세 페이지 「ホーム / アルバム」 controlled Tabs (Client Component).
  *
  * 왜 Client 인가:
  * - Radix Tabs 자체는 Client. uncontrolled (defaultValue) 면 RSC 안에서 직접 써도 OK.
- * - 단, 「もっと見る」 클릭으로 외부 트리거 탭 전환이 필요 → useState + controlled value 필요.
+ * - tab state 관리가 필요하므로 Client Component 유지.
  *
  * RSC children-as-prop 패턴:
  * - homeContent (SummaryGrid + Description) 는 부모 (page.tsx RSC) 에서 만들어진 Server Component 그대로 전달.
  * - albumContent (CircleAlbum) 도 부모에서 생성해 전달.
+ * - reportsContent (ActivityReportsList) 는 「ホーム」 탭 하단에 배치.
  * - 자식 콘텐츠는 cacheComponents Suspense 안에서 정상 렌더링됨.
  *
  * 탭 트랙 슬라이드 (iOS 캐러셀 스타일):
- * - 세 TabsContent 를 가로로 나란히 배치한 "트랙" 구조.
- *   TAB_ORDER = ["home","board","album"] → target = -(index * width).
- * - 탭 전환은 "탭 클릭 / 「もっと見る」" 로만 한다(스와이프 제거).
+ * - 두 TabsContent 를 가로로 나란히 배치한 "트랙" 구조.
+ *   TAB_ORDER = ["home","album"] → target = -(index * width).
+ * - 탭 전환은 탭 클릭으로만 한다(스와이프 제거).
  * - tab state 가 단일 진실원천. x 는 파생값 — tab 변경 시 useEffect 가 animate 로 슬라이드.
  * - prefers-reduced-motion 시 x.set 으로 즉시 전환 (접근성).
  *
- * 활동 상세 → 뒤로가기 복귀 시 「掲示板」 탭 활성화:
- * - 활동 상세 template 이 router.back() 직전 sessionStorage 에 DETAIL_RETURN_TAB_FLAG="board" set.
- * - 본 컴포넌트가 mount 시 flag 확인 → 「掲示板」 으로 초기 setTab.
+ * 활동 상세 → 뒤로가기 복귀 시 탭 복귀:
+ * - 활동 상세 template 이 router.back() 직전 sessionStorage 에 DETAIL_RETURN_TAB_FLAG="album" set.
+ * - CircleDetailTabs mount 시 1회 소비 → 「アルバム」 탭이 활성화된 상태로 노출.
  * - flag 는 useEffect 안에서 자동 제거 안 함. 사용자가 탭 직접 클릭 (handleValueChange) 시점에 제거.
- *   이유: cacheComponents + Suspense streaming 환경에서 컴포넌트가 여러 차례 mount/unmount 반복되는데,
- *   첫 mount 가 flag 를 소비/삭제하면 후속 mount 가 default home 으로 다시 초기화되어 동작 실패.
  *
  * 패널 높이:
  * - items-start 로 각 패널이 자연 높이를 유지. 탭 전환 시 viewport 높이가 활성 패널 높이로 전환.
- * - panelHeights { home, board, album } 세 패널 모두 측정.
+ * - panelHeights { home, album } 두 패널 측정.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -44,22 +43,21 @@ import {
 import { DETAIL_RETURN_TAB_FLAG } from "@/app/circles/[id]/reports/[reportId]/template";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ActivityReportsList } from "@/components/circles/activity-reports-list";
-import { ActivityReportsPreview } from "@/components/circles/activity-reports-preview";
 import { ReportComposeSheet } from "@/components/circles/report-compose-sheet";
 import type { ActivityReport } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
 
 interface CircleDetailTabsProps {
-  /** 서클 ID — ActivityReportsList + ActivityReportsPreview 에 전달 */
+  /** 서클 ID — ActivityReportsList 에 전달 */
   circleId: string;
   /** 해당 서클의 전체 활동 리포트 (최신순 정렬된 상태) */
   reports: ActivityReport[];
   /** 「ホーム」 탭에 표시할 콘텐츠 — SummaryGrid + Description (Server Component children) */
   homeContent: React.ReactNode;
-  /** 「ホーム」 탭 맨 아래(활동 리포트 미리보기 뒤)에 표시할 콘텐츠 — 관련 동아리 등 */
+  /** 「ホーム」 탭 맨 아래(활동 리포트 섹션 뒤)에 표시할 콘텐츠 — 관련 동아리 등 */
   relatedContent?: React.ReactNode;
   /**
-   * 소유자 여부 — true 이면 「掲示板」 탭 상단에 「＋ 投稿する」 버튼 표시.
+   * 소유자 여부 — true 이면 「ホーム」 탭 활동 리포트 섹션에 「＋ 投稿する」 버튼 표시.
    * 서버에서 getClaims() + owner_id 비교로 계산 후 전달.
    */
   isOwner?: boolean;
@@ -67,8 +65,11 @@ interface CircleDetailTabsProps {
   albumContent?: React.ReactNode;
 }
 
-/** 탭 순서 — index 를 x 계산에 사용. board=1 이므로 DETAIL_RETURN_TAB_FLAG 로직 불변. */
-const TAB_ORDER = ["home", "board", "album"] as const;
+/**
+ * 탭 순서 — index 를 x 계산에 사용.
+ * home=0, album=1.
+ */
+const TAB_ORDER = ["home", "album"] as const;
 
 type TabValue = (typeof TAB_ORDER)[number];
 
@@ -101,12 +102,11 @@ export function CircleDetailTabs({
   // animation 없이 즉시 설정해야 초기 렌더에서 board 탭이 화면 밖으로 정확히 배치된다.
   const isFirstSync = useRef(true);
 
-  // 각 패널의 높이 — 세 패널 콘텐츠 길이가 다르므로 뷰포트 높이를 활성 패널 높이에 맞춰야 한다.
+  // 각 패널의 높이 — 두 패널 콘텐츠 길이가 다르므로 뷰포트 높이를 활성 패널 높이에 맞춰야 한다.
   // 안 그러면 짧은 탭에서도 뷰포트가 긴 home 높이를 유지해 캐러셀이 빈 영역으로 삐져나와 보인다.
   const homePanelRef = useRef<HTMLDivElement | null>(null);
-  const boardPanelRef = useRef<HTMLDivElement | null>(null);
   const albumPanelRef = useRef<HTMLDivElement | null>(null);
-  const [panelHeights, setPanelHeights] = useState({ home: 0, board: 0, album: 0 });
+  const [panelHeights, setPanelHeights] = useState({ home: 0, album: 0 });
 
   // ── ResizeObserver — 뷰포트 너비 + 패널 높이 측정 ────────────────────────
   useEffect(() => {
@@ -124,23 +124,20 @@ export function CircleDetailTabs({
     return () => ro.disconnect();
   }, []);
 
-  // 패널 높이 측정 — 세 패널을 함께 관찰하다 콘텐츠 변동(이미지 로드 등) 시 갱신.
+  // 패널 높이 측정 — 두 패널을 함께 관찰하다 콘텐츠 변동(이미지 로드 등) 시 갱신.
   useEffect(() => {
     const homeEl = homePanelRef.current;
-    const boardEl = boardPanelRef.current;
     const albumEl = albumPanelRef.current;
-    if (!homeEl || !boardEl || !albumEl) return;
+    if (!homeEl || !albumEl) return;
 
     const ro = new ResizeObserver(() => {
       setPanelHeights({
         home: homeEl.offsetHeight,
-        board: boardEl.offsetHeight,
         album: albumEl.offsetHeight,
       });
     });
 
     ro.observe(homeEl);
-    ro.observe(boardEl);
     ro.observe(albumEl);
     return () => ro.disconnect();
   }, []);
@@ -170,13 +167,16 @@ export function CircleDetailTabs({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, width, prefersReducedMotion]);
 
-  // ── sessionStorage 복귀 — 활동 상세 → 뒤로가기 시 「掲示板」 탭 복귀 ────
+  // ── sessionStorage 복귀 — 활동 상세 → 뒤로가기 시 탭 복귀 ─────────────
   // 자세한 동작 원리는 파일 상단 docstring 참조.
+  // template 이 "album" 을 set → mount 시 1회 소비해 アルバム 탭으로 복귀.
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem(DETAIL_RETURN_TAB_FLAG);
-      if (saved === "board" || saved === "home") {
-        setTab(saved);
+      if (saved === "home") {
+        setTab("home");
+      } else if (saved === "album") {
+        setTab("album");
       }
     } catch {
       // sessionStorage 접근 차단 환경 (private mode 등) — 기본 home 유지
@@ -193,11 +193,6 @@ export function CircleDetailTabs({
     } catch {
       // 무시 — flag 없어도 default 동작
     }
-  }
-
-  // 「もっと見る」 클릭 → 「掲示板」 탭. handleValueChange 경유로 flag 제거까지 일관 처리.
-  function handleMoreClick() {
-    handleValueChange("board");
   }
 
   return (
@@ -221,16 +216,13 @@ export function CircleDetailTabs({
         variant="line"
         className="bg-background sticky top-0 z-30 -mx-4 w-[calc(100%+2rem)] justify-start border-b px-4 pt-[env(safe-area-inset-top)] pb-0 group-data-[orientation=horizontal]/tabs:h-auto"
       >
+        {/* 1번째 탭 — ホーム */}
         <TabsTrigger
           value="home"
           className={cn(
             // 탭 바 높이 키우기 — shadcn 기본값이 group-data 복합 variant 라 같은 접두사로 override.
-            // - h-auto: 트리거 고정 높이(h-[calc(100%-1px)]) 해제 → pt/pb 가 실제 높이에 반영.
-            // - group-data-[orientation=horizontal]/tabs:after:bottom-0: 언더라인을 기본 -5px → 트리거 바닥
-            //   (= 회색 border-b 위)으로 끌어올려 글자 밑에 붙임(따로 안 뜨게).
-            // - pt-4 pb-3: 살짝 줄인 높이.
-            // - after:bottom-[-2px]: 언더라인을 회색 하단 보더 위로 정확히 내려 일치시킴
-            //   (트리거 투명 보더 오프셋 보정 — Playwright 실측으로 맞춤).
+            // - h-auto: 트리거 고정 높이 해제 → pt/pb 가 실제 높이에 반영.
+            // - after:bottom-[-2px]: 언더라인을 회색 하단 보더 위로 정확히 내려 일치.
             "h-auto px-5 pt-4 pb-3 text-base font-semibold group-data-[orientation=horizontal]/tabs:after:bottom-[-2px]",
             // 비활성: muted 색
             "text-muted-foreground",
@@ -241,25 +233,7 @@ export function CircleDetailTabs({
         >
           ホーム
         </TabsTrigger>
-        <TabsTrigger
-          value="board"
-          className={cn(
-            // 탭 바 높이 키우기 — shadcn 기본값이 group-data 복합 variant 라 같은 접두사로 override.
-            // - h-auto: 트리거 고정 높이(h-[calc(100%-1px)]) 해제 → pt/pb 가 실제 높이에 반영.
-            // - group-data-[orientation=horizontal]/tabs:after:bottom-0: 언더라인을 기본 -5px → 트리거 바닥
-            //   (= 회색 border-b 위)으로 끌어올려 글자 밑에 붙임(따로 안 뜨게).
-            // - pt-4 pb-3: 살짝 줄인 높이.
-            // - after:bottom-[-2px]: 언더라인을 회색 하단 보더 위로 정확히 내려 일치시킴
-            //   (트리거 투명 보더 오프셋 보정 — Playwright 실측으로 맞춤).
-            "h-auto px-5 pt-4 pb-3 text-base font-semibold group-data-[orientation=horizontal]/tabs:after:bottom-[-2px]",
-            "text-muted-foreground",
-            "data-[state=active]:text-keio-navy",
-            "data-[state=active]:after:bg-keio-navy data-[state=active]:after:h-[3px] data-[state=active]:after:rounded-full"
-          )}
-        >
-          掲示板
-        </TabsTrigger>
-        {/* 3번째 탭 — アルバム. 기존 트리거 className 그대로 복제 */}
+        {/* 2번째 탭 — アルバム */}
         <TabsTrigger
           value="album"
           className={cn(
@@ -278,7 +252,7 @@ export function CircleDetailTabs({
        * - overflow-hidden div: 뷰포트. 폭 측정용 containerRef 연결.
        * - m.div (트랙): 두 패널을 가로로 나란히 배치. width = 뷰포트 * 2 (or "200%").
        *   translateX(x) 로 좌우 이동 — 탭 클릭 시 tab↔x 동기화 effect 가 animate 로 슬라이드.
-       * - 각 패널 div (w-1/2 shrink-0): 뷰포트와 동일한 너비. 각각 home / board 콘텐츠 담음.
+       * - 각 패널 div (w-1/2 shrink-0): 뷰포트와 동일한 너비. 각각 home / album 콘텐츠 담음.
        *
        * forceMount: 두 패널이 항상 DOM 에 유지돼야 트랙이 가로로 이어진다.
        *   비활성 패널은 inert + aria-hidden 으로 AT(보조기술) / 포커스에서 차단.
@@ -286,8 +260,8 @@ export function CircleDetailTabs({
        * 드래그 제거: 가로 스와이프 제스처가 세로 스크롤과 경합하던 문제 해소.
        *   세로 스크롤은 100% 네이티브로 매끄럽게 동작.
        *
-       * height: 활성 패널 높이로 고정 + overflow-hidden. 짧은 board 탭에서 긴 home 패널의
-       *   캐러셀이 빈 영역으로 삐져나오는 것을 클립한다. 탭 전환 시 슬라이드(x)와 같은 곡선/시간으로
+       * height: 활성 패널 높이로 고정 + overflow-hidden. 짧은 album 탭에서 긴 home 패널의
+       *   콘텐츠가 빈 영역으로 삐져나오는 것을 클립한다. 탭 전환 시 슬라이드(x)와 같은 곡선/시간으로
        *   height 도 transition 시켜 자연스럽게 늘었다 줄었다 하게 한다.
        */}
       <LazyMotion features={domAnimation}>
@@ -302,32 +276,48 @@ export function CircleDetailTabs({
           }}
         >
           {/*
-           * 트랙 width: 뷰포트의 3배 (세 패널 나란히). width 미측정 시 "300%" fallback.
-           * 각 패널은 w-1/3 으로 뷰포트와 동일한 너비.
+           * 트랙 width: 뷰포트의 2배 (두 패널 나란히). width 미측정 시 "200%" fallback.
+           * 각 패널은 w-1/2 으로 뷰포트와 동일한 너비.
            */}
-          <m.div className="flex items-start" style={{ x, width: width > 0 ? width * 3 : "300%" }}>
+          <m.div className="flex items-start" style={{ x, width: width > 0 ? width * 2 : "200%" }}>
             {/*
              * ホーム 패널 — 비활성 시 inert + aria-hidden 으로 AT·포커스 차단.
              * forceMount 로 항상 DOM 에 존재하므로 접근성 처리 필수.
              *
              * inert: React 19 / @types/react 19 에서 boolean 으로 지원.
              * 비활성 패널의 키보드 포커스·보조기술 접근을 차단. aria-hidden 과 병행해 호환성 확보.
+             *
+             * 홈 탭 구성:
+             * - homeContent (SummaryGrid + ExpandableDescription)
+             * - ActivityReportsList (활동 리포트 전체 목록) — 「掲示板」 탭 폐기로 여기에 통합
+             * - relatedContent (관련 동아리)
+             *
+             * 활동 리포트는 전체 목록 1곳에만 표시 (이전 ActivityReportsPreview 미리보기 5건은
+             * 같은 패널 안에서 ActivityReportsList 와 중복 노출되었으므로 제거).
              */}
             <div
               ref={homePanelRef}
-              className="w-1/3 shrink-0 overflow-hidden"
+              className="w-1/2 shrink-0 overflow-hidden"
               inert={tab !== "home" || undefined}
               aria-hidden={tab !== "home"}
             >
               <TabsContent value="home" forceMount className="space-y-6 pt-6">
                 {homeContent}
-                <ActivityReportsPreview
-                  circleId={circleId}
-                  reports={reports.slice(0, 5)}
-                  onMoreClick={handleMoreClick}
-                  isOwner={isOwner}
-                />
-                {/* 관련 동아리 — 「ホーム」 탭 맨 아래(활동 리포트 미리보기 뒤).
+                {/*
+                 * 활동 리포트 전체 목록 — 홈 탭 하단 별도 섹션.
+                 * border-t 로 homeContent (SummaryGrid + Description) 와의 경계선 구분.
+                 * 소유자(isOwner=true) 인 경우 소유자 투고 박스 + 각 row ⋯ 수정·삭제 메뉴 표시.
+                 */}
+                <section className="border-t pt-6">
+                  <h2 className="mb-4 text-lg font-semibold">活動レポート</h2>
+                  {isOwner && reports.length > 0 && (
+                    <div className="mb-4">
+                      <ReportComposeSheet circleId={circleId} />
+                    </div>
+                  )}
+                  <ActivityReportsList circleId={circleId} reports={reports} isOwner={isOwner} />
+                </section>
+                {/* 관련 동아리 — 「ホーム」 탭 맨 아래.
                  * border-t 로 활동레포트와의 경계선 표시. relatedContent 가 있을 때만 감싸
                  * 빈 선이 생기지 않게 한다(없으면 page.tsx 에서 null 전달). */}
                 {relatedContent && <div className="border-t pt-6">{relatedContent}</div>}
@@ -335,37 +325,13 @@ export function CircleDetailTabs({
             </div>
 
             {/*
-             * 掲示板 패널 — 비활성 시 inert + aria-hidden 으로 AT·포커스 차단.
-             */}
-            <div
-              ref={boardPanelRef}
-              className="w-1/3 shrink-0 overflow-hidden"
-              inert={tab !== "board" || undefined}
-              aria-hidden={tab !== "board"}
-            >
-              <TabsContent value="board" forceMount className="pt-6">
-                {/*
-                 * 소유자 전용 투고 박스 — ActivityReportsList 상단에 풀폭 점선 박스.
-                 * 리포트가 1건 이상일 때만 표시한다. 0건(빈 상태)에서는
-                 * ActivityReportsList 의 빈 상태 안 투고 CTA 가 유도를 담당하므로 중복을 피한다.
-                 */}
-                {isOwner && reports.length > 0 && (
-                  <div className="mb-4">
-                    <ReportComposeSheet circleId={circleId} />
-                  </div>
-                )}
-                {/* isOwner 를 전달해 각 row 에 ⋯ 수정·삭제 메뉴를 표시 */}
-                <ActivityReportsList circleId={circleId} reports={reports} isOwner={isOwner} />
-              </TabsContent>
-            </div>
-
-            {/*
              * アルバム 패널 — 비활성 시 inert + aria-hidden 으로 AT·포커스 차단.
              * albumContent 는 부모(page.tsx)에서 <CircleAlbum> 을 생성해 전달.
+             * 「掲示板」 제거로 home=0, album=1 이 됨.
              */}
             <div
               ref={albumPanelRef}
-              className="w-1/3 shrink-0 overflow-hidden"
+              className="w-1/2 shrink-0 overflow-hidden"
               inert={tab !== "album" || undefined}
               aria-hidden={tab !== "album"}
             >
