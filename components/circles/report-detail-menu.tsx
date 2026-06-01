@@ -79,7 +79,8 @@ export function ReportDetailMenu({ circleId, report, isOwner }: ReportDetailMenu
       toast.success("削除しました");
       setDeleteDialogOpen(false);
       try {
-        sessionStorage.setItem(DETAIL_RETURN_TAB_FLAG, "board");
+        // 삭제 후 복귀 시 「アルバム」 탭으로 이동
+        sessionStorage.setItem(DETAIL_RETURN_TAB_FLAG, "album");
       } catch {
         // private mode 등 sessionStorage 차단 환경 — 무시 (기본 탭으로 복귀)
       }

@@ -32,7 +32,7 @@
 import { LazyMotion, domAnimation, useReducedMotion } from "motion/react";
 import * as m from "motion/react-m";
 
-import { Instagram, MessageCircle, Twitter } from "lucide-react";
+import { Instagram, Twitter } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 
 import { incrementInquiryCount } from "@/app/circles/[id]/actions";
@@ -95,9 +95,13 @@ const headerVariants = {
 /**
  * 채널 키별 라벨·아이콘·브랜드 컬러 매핑.
  * iconBg: 원형 아이콘 배경에 사용되는 Tailwind 클래스 문자열.
+ *
+ * LINE 은 T-010 에서 제거됨:
+ * - 그룹 링크 공개는 개인 정보 위험(무제한 링크 확산).
+ * - contact_line 데이터 자체는 DB 에 보존 — 운영진 DM 답신 시 개별 안내용.
  */
 const CHANNEL_META: Record<
-  "instagram" | "x" | "line",
+  "instagram" | "x",
   { label: string; Icon: typeof Instagram; iconBg: string }
 > = {
   instagram: {
@@ -111,12 +115,6 @@ const CHANNEL_META: Record<
     Icon: Twitter,
     /* X(구 Twitter) 공식 블랙 */
     iconBg: "bg-black",
-  },
-  line: {
-    label: "LINE",
-    Icon: MessageCircle,
-    /* LINE 공식 그린 */
-    iconBg: "bg-[#06C755]",
   },
 };
 
@@ -137,11 +135,13 @@ export function JoinChannelModal({ circle, open, onOpenChange }: JoinChannelModa
   /* OS "동작 줄이기" 감지 — true 면 stagger/whileTap 비활성 */
   const shouldReduceMotion = useReducedMotion();
 
-  /** 입력된 채널만 수집하여 배열 생성 */
-  const channels: { key: "instagram" | "x" | "line"; url: string }[] = [];
+  /**
+   * 입력된 채널만 수집하여 배열 생성.
+   * LINE(contact_line) 은 T-010 에서 노출 제거 — DB 컬럼 보존, 운영진 DM 답신 시 안내용.
+   */
+  const channels: { key: "instagram" | "x"; url: string }[] = [];
   if (circle.contact_instagram) channels.push({ key: "instagram", url: circle.contact_instagram });
   if (circle.contact_x) channels.push({ key: "x", url: circle.contact_x });
-  if (circle.contact_line) channels.push({ key: "line", url: circle.contact_line });
 
   /**
    * 채널 링크 클릭 처리.

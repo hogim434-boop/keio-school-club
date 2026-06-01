@@ -3,21 +3,24 @@
 /**
  * CircleActions — 서클 상세 페이지의 lagging spring sticky CTA
  *
- * 동작 정책 (2026-05):
+ * 동작 정책 (2026-05 T-010 개편):
  * - viewport 하단에 항상 sticky (createPortal 로 body 마운트)
  * - 스크롤 velocity 에 따라 spring 으로 부드럽게 lagging
  * - prefers-reduced-motion 시 모션 비활성
  *
  * 방향 A: 즐겨찾기는 localStorage 기반 게스트 방식 (로그인 불필요, useFavorites hook).
  *
- * UI: 좋아요 + 가입하기 가 하나의 통합 pill 로 표시 (테두리 없음).
- * - 왼쪽: 하트 아이콘 영역 (좋아요 토글)
- * - 오른쪽: 「参加する」 텍스트 영역 (모달 오픈)
+ * UI: 좋아요 + 운영 문의하기 가 하나의 통합 pill 로 표시 (테두리 없음).
+ * - 왼쪽: 하트 아이콘 영역 (좋아요 토글) — 유지
+ * - 오른쪽: 「運営に問い合わせる」 텍스트 영역 → /circles/{id}/dm 직접 이동
  * - 시각적으로 하나의 rounded-full bg-keio-navy pill, 클릭 영역만 내부 분리.
+ *
+ * JoinChannelModal 은 외부 SNS 풋터(page.tsx)에서 별도 트리거로 분리됨.
  */
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import {
   motion,
   useReducedMotion,
@@ -29,7 +32,6 @@ import {
 
 // Heart 아이콘은 AnimatedHeart 내부에서 캡슐화되어 있으므로 직접 import 불필요
 import { AnimatedHeart } from "@/components/circles/animated-heart";
-import { JoinChannelModal } from "@/components/circles/join-channel-modal";
 import { useFavorites } from "@/lib/circles/use-favorites";
 import type { CircleDetail } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
@@ -46,8 +48,7 @@ interface CircleActionsProps {
  * 스크롤 velocity 에 따라 CTA 가 살짝 「밀려」 부드럽게 따라오는 모션 구현.
  */
 export function CircleActions({ circle }: CircleActionsProps) {
-  /** 채널 선택 모달 열림 상태 */
-  const [modalOpen, setModalOpen] = useState(false);
+  const router = useRouter();
 
   /**
    * Portal 마운트 가드 — SSR 단계에서는 document 미존재로 createPortal 호출 불가.
@@ -82,15 +83,16 @@ export function CircleActions({ circle }: CircleActionsProps) {
   /** 즐겨찾기 hook — Supabase Server Action 기반 */
   const { isFavorited: favorited, toggle, isPending } = useFavorites(circle.id);
 
-  /** CTA 텍스트 — 채널(連絡) 모달 오픈 */
-  const ctaText = "問い合わせる";
+  /** CTA 텍스트 — 운영진 DM 문의 페이지로 이동 */
+  const ctaText = "運営に問い合わせる";
 
   function handleFavoriteToggle() {
     toggle();
   }
 
-  function handleJoin() {
-    setModalOpen(true);
+  /** 「運営に問い合わせる」 클릭 → /circles/{id}/dm 직접 이동 */
+  function handleInquiry() {
+    router.push(`/circles/${circle.id}/dm`);
   }
 
   /*
@@ -146,13 +148,13 @@ export function CircleActions({ circle }: CircleActionsProps) {
           </motion.button>
 
           {/*
-           * 가입하기 영역 — keio-navy 배경 + 흰 텍스트, font-bold + tracking-wide 로 강조.
-           * motion.button + whileTap: 누르는 순간 scale 0.97 → spring 복귀 (normal 강도).
-           * active:scale 은 motion whileTap 이 우선이므로 제거.
+           * 「運営に問い合わせる」 영역 — keio-navy 배경 + 흰 텍스트, font-bold + tracking-wide 강조.
+           * 클릭 시 router.push 로 /circles/{id}/dm 직접 이동.
+           * motion.button + whileTap: 누르는 순간 scale 0.97 → spring 복귀.
            */}
           <motion.button
             type="button"
-            onClick={handleJoin}
+            onClick={handleInquiry}
             whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
             transition={{ type: "spring", stiffness: 400, damping: 15 }}
             style={{ WebkitTapHighlightColor: "transparent" }}
@@ -174,9 +176,6 @@ export function CircleActions({ circle }: CircleActionsProps) {
     <>
       {/* hydration 후 portal 활성화 — SSR 단계는 빈 자리 (below-the-fold 라 인지 불가) */}
       {mounted && createPortal(ctaElement, document.body)}
-
-      {/* 채널 선택 모달 — Radix Sheet 의 내부 Portal 사용 */}
-      <JoinChannelModal circle={circle} open={modalOpen} onOpenChange={setModalOpen} />
     </>
   );
 }

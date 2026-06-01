@@ -258,7 +258,7 @@ export function PendingCircleCard({ circle, onResolved }: PendingCircleCardProps
               onChange={(e) => setReason(e.target.value)}
               maxLength={MAX_REJECTION_REASON}
               rows={4}
-              placeholder="例) 公認サークルとして確認できませんでした。学籍・公認状況をご確認のうえ再申請してください。"
+              placeholder="例) 申請内容を確認できませんでした。学籍・団体の状況をご確認のうえ再申請してください。"
               aria-label="却下理由"
             />
             <p className="text-muted-foreground mt-1 text-right text-xs">

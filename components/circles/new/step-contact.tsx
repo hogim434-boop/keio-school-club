@@ -289,7 +289,7 @@ export function StepContact({
                 id="submission_note"
                 rows={3}
                 maxLength={500}
-                placeholder="公認状況の補足など、審査担当者へ伝えたいことがあれば記入してください"
+                placeholder="団体の状況や補足情報など、審査担当者へ伝えたいことがあれば記入してください"
                 aria-invalid={!!errors.submission_note}
                 aria-describedby={
                   errors.submission_note ? "error-submission-note" : "hint-submission-note"
