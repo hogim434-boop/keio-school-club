@@ -109,10 +109,14 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
   return (
     <main className="flex flex-col">
       {/* ── ヘッダー: タイトル + 표示切替 ── */}
-      <div className="flex items-center justify-between px-4 pb-3 pt-4">
+      <div className="flex items-center justify-between px-4 pt-4 pb-3">
         <h1 className="text-lg font-bold">カレンダー</h1>
         {/* CalendarViewToggle 은 useSearchParams 를 사용하므로 Suspense 필요 */}
-        <Suspense fallback={<div className="h-7 w-28 animate-pulse rounded-lg bg-neutral-200 dark:bg-neutral-800" />}>
+        <Suspense
+          fallback={
+            <div className="h-7 w-28 animate-pulse rounded-lg bg-neutral-200 dark:bg-neutral-800" />
+          }
+        >
           <CalendarViewToggle currentView={view} />
         </Suspense>
       </div>
@@ -125,9 +129,12 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
             <div className="mx-4 mt-2 h-72 animate-pulse rounded-2xl bg-neutral-100 dark:bg-neutral-900" />
           }
         >
-          <div className="px-2">
-            <CalendarMonthView currentMonth={currentMonth} events={events} />
-          </div>
+          {/*
+            풀-블리드: 그리드를 좌우 화면 끝까지 펼침.
+            기존 px-2 제거 — 셀폭 ~38px 의 좁은 그리드 회귀를 해소.
+            CalendarMonthView 내부에서 shadcn Calendar 의 p-3 도 같이 제거됨.
+          */}
+          <CalendarMonthView currentMonth={currentMonth} events={events} />
         </Suspense>
       ) : (
         // CalendarListView 은 Server Component — Suspense 불필요하지만 통일

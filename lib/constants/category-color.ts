@@ -46,3 +46,25 @@ export const FALLBACK_DOT_COLOR = "bg-neutral-400";
 /** 알 수 없는 카테고리(null)에 사용하는 폴백 배지 색 */
 export const FALLBACK_BADGE_COLOR =
   "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300";
+
+/**
+ * 카테고리 → 좌측 컬러 막대 border 클래스 (Tailwind purge 안전한 정적 문자열).
+ * 캘린더 月表示 의 셀 내 「첫 이벤트 pill」 좌측 막대에 사용.
+ * P5: TimeTree + Google Calendar 표준 패턴.
+ * TINT 배경(bg-orange-50 등)을 쓰지 않는 이유:
+ *   다크모드에서 흰 배경이 번쩍이는 깜빡임 현상이 발생하기 때문.
+ *   border-l-2 만으로 카테고리 색상을 충분히 전달할 수 있다.
+ */
+export const CATEGORY_BAR_COLOR: Record<Category, string> = {
+  sports: "border-orange-500",
+  culture_art: "border-purple-500",
+  music: "border-pink-500",
+  academic: "border-blue-500",
+  international: "border-teal-500",
+  event: "border-yellow-500",
+  volunteer: "border-green-500",
+  media: "border-red-500",
+};
+
+/** 알 수 없는 카테고리(null) 폴백 좌측 막대 색. */
+export const FALLBACK_BAR_COLOR = "border-neutral-400";
