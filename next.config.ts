@@ -1,6 +1,16 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // React Strict Mode 는 의도적으로 꺼 둔다.
+  //
+  // Next.js default 는 true 라 dev 환경에서 component 를 mount → cleanup → mount 로
+  // 두 번 발화한다 (side effect 검출 목적). 이 동작이 framer-motion 의 m.div 와 충돌해
+  // entry 트랜지션이 두 번 시작 → race condition → 「반동」 같은 변칙적 떨림 발생.
+  //
+  // 본 앱은 motion/react 를 page transition 의 핵심으로 쓰므로, dev 에서 보이는 모션이
+  // production 과 동일하게 보이는 게 더 중요하다. side-effect 검출은 코드 리뷰·테스트로 대체.
+  reactStrictMode: false,
+
   // cacheComponents 는 의도적으로 켜지 않음.
   // 이 앱은 인증(쿠키)·필터/검색·즐겨찾기 등 대부분이 동적이라 캐시 이득이 작은 반면,
   // 켜 두면 dev(캐시 OFF)와 Vercel(캐시 ON 적극)의 동작이 갈려
