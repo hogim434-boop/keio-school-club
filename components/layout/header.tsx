@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { KCircleLogo } from "@/components/layout/kcircle-logo";
+import { MessagesLink } from "@/components/layout/messages-link";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { HeaderSearchLink } from "@/components/layout/header-search-link";
 
@@ -32,6 +33,8 @@ export function Header() {
         </Link>
 
         <div className="ml-auto flex items-center gap-1">
+          {/* メッセージアイコン: 未読バッジ付き Link — Client Component */}
+          <MessagesLink />
           {/* Bell 아이콘은 뱃지 로직이 필요해 Client Component로 분리 */}
           <NotificationBell />
           {/* 검색 아이콘은 현재 필터 유지가 필요해 Client Component로 분리 */}

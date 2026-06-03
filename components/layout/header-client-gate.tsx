@@ -19,6 +19,8 @@ import type { ReactNode } from "react";
 // - 셔플 페이지 (/shuffle) — Tinder 풀스크린 swipe deck
 // - 인증 페이지 (/auth/*) — 풀스크린 AuthScreen 이 헤더를 덮으므로 미노출
 // - 등록·수정 페이지 (/circles/new, /circles/{id}/edit) — 풀스크린 폼
+// - DM 채팅 페이지 (/circles/{id}/dm 및 하위 스레드 /dm/*) — 풀스크린 메신저형,
+//   DmChatHeader 가 자체 헤더(뒤로가기 포함)를 제공하므로 글로벌 헤더와 중복 방지
 export function HeaderClientGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const isCircleDetail = /^\/circles\/[0-9a-f-]+$/i.test(pathname) && pathname !== "/circles/new";
@@ -30,7 +32,19 @@ export function HeaderClientGate({ children }: { children: ReactNode }) {
   const isAuth = pathname.startsWith("/auth");
   // /circles/new(등록) · /circles/{id}/edit(수정) — 풀스크린 폼(AuthScreen). 헤더 미노출
   const isRegister = pathname === "/circles/new" || /^\/circles\/[^/]+\/edit$/.test(pathname);
-  if (isCircleDetail || isCircleReportDetail || isSearch || isShuffle || isAuth || isRegister)
+  // /circles/{id}/dm 및 하위 스레드(/dm/{inquiryId}) — 풀스크린 메신저형.
+  // DmChatHeader 가 자체 헤더를 제공하므로 글로벌 헤더 숨김.
+  // (circles/ 는 (tabs) 그룹 밖이므로 bottom-tabs 도 없음)
+  const isDmChat = /^\/circles\/[^/]+\/dm/.test(pathname);
+  if (
+    isCircleDetail ||
+    isCircleReportDetail ||
+    isSearch ||
+    isShuffle ||
+    isAuth ||
+    isRegister ||
+    isDmChat
+  )
     return null;
   return <>{children}</>;
 }

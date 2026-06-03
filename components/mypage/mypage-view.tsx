@@ -200,7 +200,21 @@ export function MyPageView({
           )}
         </m.section>
 
-        {/* ── 4. 로그아웃 버튼 (하단) ── */}
+        {/* ── 4. お問い合わせ履歴 링크 섹션 ── */}
+        {/* T-035 에서 본격 통합 예정. 현재는 간단한 링크 형태로 제공 */}
+        <m.section variants={itemVariants} aria-label="お問い合わせ">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold">お問い合わせ</h2>
+            <Link
+              href="/messages"
+              className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors"
+            >
+              履歴を見る →
+            </Link>
+          </div>
+        </m.section>
+
+        {/* ── 5. 로그아웃 버튼 (하단) ── */}
         <m.div variants={itemVariants} className="pt-2">
           <LogoutButton redirectTo="/circles" />
         </m.div>
