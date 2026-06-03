@@ -23,12 +23,14 @@ export default async function AdminCirclesPage() {
           サークル登録申請を確認し、承認または却下します。
           {pending.length > 0 && <span className="ml-1">（承認待ち {pending.length}件）</span>}
         </p>
-        <Link
-          href="/admin/announcements"
-          className="text-keio-navy mt-2 inline-block text-sm underline"
-        >
-          お知らせ管理へ →
-        </Link>
+        <div className="mt-2 flex gap-3 text-sm">
+          <Link href="/admin/announcements" className="text-keio-navy underline">
+            お知らせ管理へ →
+          </Link>
+          <Link href="/admin/inquiry-reports" className="text-keio-navy underline">
+            通報管理へ →
+          </Link>
+        </div>
       </header>
 
       <AdminQueueView initial={pending} />

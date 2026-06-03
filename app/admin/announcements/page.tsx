@@ -35,9 +35,14 @@ export default async function AdminAnnouncementsPage() {
         <p className="text-muted-foreground mt-1 text-sm">
           全ユーザーに表示されるお知らせ・イベントを作成します。
         </p>
-        <Link href="/admin/circles" className="text-keio-navy mt-2 inline-block text-sm underline">
-          ← 承認管理へ
-        </Link>
+        <div className="mt-2 flex gap-3 text-sm">
+          <Link href="/admin/circles" className="text-keio-navy underline">
+            ← 承認管理へ
+          </Link>
+          <Link href="/admin/inquiry-reports" className="text-keio-navy underline">
+            通報管理へ →
+          </Link>
+        </div>
       </header>
 
       {/* 작성 폼 */}
