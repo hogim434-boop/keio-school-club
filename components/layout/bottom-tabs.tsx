@@ -9,12 +9,13 @@ import { Icon } from "@iconify/react";
 import { cn } from "@/lib/utils";
 
 /**
- * 4탭 하단 내비게이션 바 — (tabs) route group 레이아웃에서 마운트.
+ * 5탭 하단 내비게이션 바 — (tabs) route group 레이아웃에서 마운트.
  *
- * 탭 목록:
+ * 탭 목록 (마이페이지를 항상 우측 끝에 두고 「お気に入り」 를 4번째 위치에 삽입):
  *   ホーム      → /  (redirect 로 /circles 도착)
  *   さがす      → /search
  *   カレンダー  → /calendar
+ *   お気に入り  → /favorites
  *   マイページ  → /mypage
  *
  * 아이콘 톤: Phosphor 채움(ph:*-fill) — 둥글고 친근한 아이콘.
@@ -39,6 +40,8 @@ const TABS: TabItem[] = [
   { href: "/", label: "ホーム", icon: "ph:house-fill", aria: "ホーム" },
   { href: "/search", label: "さがす", icon: "ph:magnifying-glass-fill", aria: "さがす" },
   { href: "/calendar", label: "カレンダー", icon: "ph:calendar-fill", aria: "カレンダー" },
+  // お気に入り 탭 — 4번째 위치. heart-fill 아이콘. /favorites 진입 시 active.
+  { href: "/favorites", label: "お気に入り", icon: "ph:heart-fill", aria: "お気に入り" },
   { href: "/mypage", label: "マイページ", icon: "ph:user-fill", aria: "マイページ" },
 ];
 

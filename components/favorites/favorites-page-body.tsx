@@ -35,7 +35,7 @@ import { LazyMotion, domAnimation, AnimatePresence, useReducedMotion } from "mot
 import * as m from "motion/react-m";
 
 import { getFavoriteIds, removeFavoriteLocal } from "@/lib/circles/use-favorites";
-import { getFavoriteCircles } from "@/app/favorites/actions";
+import { getFavoriteCircles } from "@/app/(tabs)/favorites/actions";
 import { FavoriteGridCard } from "@/components/favorites/favorite-grid-card";
 import type { CircleSummary } from "@/lib/types/domain";
 import {
