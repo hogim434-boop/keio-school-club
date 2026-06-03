@@ -23,7 +23,6 @@
 
 import { useContext } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { ChevronLeft, Share2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -52,13 +51,11 @@ interface EventDetailHeroProps {
 const RSVP_MODE_CONFIG = {
   light: {
     label: "参加表明",
-    className:
-      "bg-keio-navy/80 text-white",
+    className: "bg-keio-navy/80 text-white",
   },
   strict: {
     label: "事前申込",
-    className:
-      "bg-amber-600/80 text-white",
+    className: "bg-amber-600/80 text-white",
   },
 } as const;
 
@@ -76,7 +73,6 @@ const RSVP_MODE_CONFIG = {
  * 현재 Phase 에서는 카테고리 배지 + RSVP 모드 배지만 표시.
  */
 export function EventDetailHero({ event }: EventDetailHeroProps) {
-  const router = useRouter();
   // SlideOutContext 에서 슬라이드 아웃 트리거 함수를 가져옴.
   // 「戻る」 버튼은 이 함수를 호출 → template.tsx 가 슬라이드 아웃 애니메이션을 실행 → router.back().
   const slideOut = useContext(SlideOutContext);
@@ -124,7 +120,7 @@ export function EventDetailHero({ event }: EventDetailHeroProps) {
           />
         ) : (
           /* 커버 없음: 그라데이션 플레이스홀더 */
-          <div className="h-full w-full bg-gradient-to-br from-keio-navy/20 via-keio-navy/10 to-muted" />
+          <div className="from-keio-navy/20 via-keio-navy/10 to-muted h-full w-full bg-gradient-to-br" />
         )}
 
         {/* ── 취소된 이벤트 ribbon ────────────────────────────────────────── */}
@@ -133,7 +129,7 @@ export function EventDetailHero({ event }: EventDetailHeroProps) {
             aria-label="キャンセル済み"
             className="pointer-events-none absolute inset-0 flex items-center justify-center"
           >
-            <span className="rotate-[-20deg] rounded-lg bg-destructive/80 px-6 py-2 text-lg font-bold tracking-widest text-white backdrop-blur-sm">
+            <span className="bg-destructive/80 rotate-[-20deg] rounded-lg px-6 py-2 text-lg font-bold tracking-widest text-white backdrop-blur-sm">
               キャンセル
             </span>
           </div>
@@ -161,15 +157,12 @@ export function EventDetailHero({ event }: EventDetailHeroProps) {
             </span>
             {/* D-day 배지 — T-018: 이벤트 시작일까지 남은 일수를 JST 기준으로 표시 */}
             {!isCancelled && (
-              <DdayBadge
-                startsAt={event.starts_at}
-                className="text-xs backdrop-blur-sm"
-              />
+              <DdayBadge startsAt={event.starts_at} className="text-xs backdrop-blur-sm" />
             )}
           </div>
 
           {/* 이벤트 제목 */}
-          <h1 className="line-clamp-2 text-xl font-bold leading-tight text-white drop-shadow-sm md:text-2xl">
+          <h1 className="line-clamp-2 text-xl leading-tight font-bold text-white drop-shadow-sm md:text-2xl">
             {event.title}
           </h1>
         </div>
@@ -179,12 +172,7 @@ export function EventDetailHero({ event }: EventDetailHeroProps) {
           className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-4 pb-2"
           style={{ paddingTop: "max(env(safe-area-inset-top), 1rem)" }}
         >
-          <button
-            type="button"
-            onClick={slideOut}
-            aria-label="戻る"
-            className={iconButton}
-          >
+          <button type="button" onClick={slideOut} aria-label="戻る" className={iconButton}>
             <ChevronLeft className="size-5" aria-hidden="true" />
           </button>
           <button type="button" onClick={handleShare} aria-label="共有" className={iconButton}>

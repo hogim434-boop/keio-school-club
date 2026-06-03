@@ -41,16 +41,20 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const raw = await searchParams;
 
   return (
+    // div 사용 — (tabs)/layout.tsx 가 이미 <main> 으로 감싸므로 page 본체는 div.
+    //   중첩 <main> 은 HTML 표준 위반 + 진입 시 layout 재계산으로 sub-pixel jitter 발생
+    //   → SearchTemplate 의 m.div entry 트랜지션이 작동 안 하는 회귀의 진짜 원인.
     // overflow-x-clip — SearchCategories 의 음수 마진 가로 캐러셀이 페이지 자체 가로 스크롤로
-    // 전파되는 걸 차단. clip 은 scroll container 를 만들지 않아 stacking context 영향 X.
-    // 자식 캐러셀(overflow-x-auto)의 자체 가로 스크롤은 그대로 동작.
-    <main className="overflow-x-clip pb-20 md:pb-12">
+    //   전파되는 걸 차단. clip 은 scroll container 를 만들지 않아 stacking context 영향 X.
+    //   자식 캐러셀(overflow-x-auto)의 자체 가로 스크롤은 그대로 동작.
+    // pb-20 md:pb-12 — 이전 main 의 패딩 그대로 유지 (sticky CTA 영역 확보).
+    <div className="overflow-x-clip pb-20 md:pb-12">
       {/* key — searchParams 가 변경되면 Suspense 자식이 강제 리마운트되어
           새 RSC payload 로 평가됨. cacheComponents 환경에서 stale 결과 차단. */}
       <Suspense key={JSON.stringify(raw)} fallback={<SearchPageFallback />}>
         <SearchContent raw={raw} />
       </Suspense>
-    </main>
+    </div>
   );
 }
 
