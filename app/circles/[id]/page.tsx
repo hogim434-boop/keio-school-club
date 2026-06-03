@@ -1,6 +1,15 @@
 import React, { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { Calendar, Clock, Instagram, RefreshCw, Twitter, UserCheck, Users, type LucideIcon } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  Instagram,
+  RefreshCw,
+  Twitter,
+  UserCheck,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
 import { CircleActions } from "@/components/circles/circle-actions";
 import { CircleAlbum } from "@/components/circles/circle-album";
@@ -24,6 +33,8 @@ import {
   getCircleById,
   getCirclesByCategory,
 } from "@/lib/supabase/queries/circles";
+import { getAvgResponseTime } from "@/lib/supabase/queries/inquiries";
+import { AvgResponseTimeBadge } from "@/components/dm/avg-response-time";
 import { CircleCard } from "@/components/circles/circle-card";
 import { ExpandableDescription } from "@/components/circles/expandable-description";
 import { createClient } from "@/lib/supabase/server";
@@ -76,10 +87,12 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
    *
    * - circle가 null(존재하지 않는 서클)인 경우엔 reports 조회는 빈 배열로 무해하게 끝남.
    */
-  const [circle, reports, galleries] = await Promise.all([
+  const [circle, reports, galleries, avgResponseTime] = await Promise.all([
     fetchCircleWithFallback(id),
     getReportsByCircle(id),
     listGalleries(id),
+    // T-034: 평균 응답 시간 — 공개 집계 수치, unstable_cache(tags:["circles"]) 적용됨
+    getAvgResponseTime(id),
   ]);
   if (!circle) notFound();
 
@@ -196,7 +209,7 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
                 {/* 섹션 1: 커버 + 리포트 자동 집계 — 기존 CircleAlbum 재사용 */}
                 {albumImages.length > 0 && (
                   <section className="space-y-3">
-                    <h3 className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">
+                    <h3 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
                       活動レポートの写真
                     </h3>
                     <CircleAlbum images={albumImages} circleId={circle.id} />
@@ -207,7 +220,7 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
                 <section className="space-y-3">
                   {/* albumImages가 있을 때만 구분 헤더 표시 */}
                   {albumImages.length > 0 && (
-                    <h3 className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">
+                    <h3 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
                       ギャラリー
                     </h3>
                   )}
@@ -224,6 +237,14 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
                 homeContent={
                   <>
                     <SummaryGrid circle={circle} />
+                    {/*
+                     * T-034: 평균 응답 시간 배지 — SummaryGrid 아래, 소개글 위.
+                     * 「DM で質問する」CTA(CircleActions)와 연계해 반응속도를 미리 안내.
+                     * 강제·약속 표현 금지, 어디까지나 「平均的に」 톤.
+                     */}
+                    <div className="flex items-center gap-2 pt-1">
+                      <AvgResponseTimeBadge value={avgResponseTime} />
+                    </div>
                     <ExpandableDescription text={circle.description} />
                   </>
                 }
@@ -404,7 +425,7 @@ function SnsSnsFooter({ circle }: { circle: CircleDetail }) {
 
   return (
     <section className="border-t pt-6">
-      <h2 className="mb-4 text-base font-semibold text-muted-foreground">公式SNS</h2>
+      <h2 className="text-muted-foreground mb-4 text-base font-semibold">公式SNS</h2>
       <div className="flex items-center gap-3">
         {/* Instagram 링크 */}
         {circle.contact_instagram && (
@@ -413,7 +434,7 @@ function SnsSnsFooter({ circle }: { circle: CircleDetail }) {
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Instagram で見る"
-            className="flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+            className="hover:bg-muted flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors"
           >
             {/* Instagram 공식 그라데이션 아이콘 배경 */}
             <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#feda75] via-[#d62976] to-[#4f5bd5]">
@@ -429,7 +450,7 @@ function SnsSnsFooter({ circle }: { circle: CircleDetail }) {
             target="_blank"
             rel="noopener noreferrer"
             aria-label="X (Twitter) で見る"
-            className="flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+            className="hover:bg-muted flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors"
           >
             {/* X 공식 블랙 아이콘 배경 */}
             <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-black">

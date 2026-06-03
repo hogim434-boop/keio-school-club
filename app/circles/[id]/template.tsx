@@ -87,8 +87,13 @@ export default function CircleDetailTemplate({ children }: { children: ReactNode
   // 편집 페이지(/circles/{id}/edit)는 AuthScreen `fixed inset-0` 풀스크린 폼이다.
   // 상세 전환 모션의 `will-change-transform` + transform 래퍼가 fixed 의 containing block 을
   // 만들어 폼이 0높이로 붕괴되므로, 편집 경로에서는 모션 래퍼 없이 children 만 그대로 렌더한다.
+  //
+  // DM 문의 페이지(/circles/{id}/dm 및 하위 스레드 /dm/*)도 동일한 이유로 제외한다.
+  // inquiry-form 과 스레드 페이지가 fixed 레이아웃을 사용하므로, motion.div 의
+  // will-change-transform + transform 이 containing block 이 되어 페이지 높이가 0으로 붕괴됨.
+  //
   // (hooks 는 위에서 모두 호출했으므로 이 조건부 return 은 hooks 규칙을 위반하지 않는다)
-  if (pathname?.endsWith("/edit")) {
+  if (pathname?.endsWith("/edit") || pathname?.includes("/dm")) {
     return <>{children}</>;
   }
 
