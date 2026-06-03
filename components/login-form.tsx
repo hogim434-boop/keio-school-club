@@ -49,8 +49,9 @@ const FADE_UP_VARIANTS = {
 
 export function LoginForm() {
   // 로그인 전 가려던 경로 — 로그인 완료 후 복원하기 위해 사용
+  // next= を優先. 旧 redirect_to= も fallback として読む (下位互換・移行期安全策)
   const searchParams = useSearchParams();
-  const next = searchParams.get("next");
+  const next = searchParams.get("next") ?? searchParams.get("redirect_to");
 
   // ── 폼 상태 ──
   const [email, setEmail] = useState("");

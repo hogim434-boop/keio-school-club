@@ -27,6 +27,8 @@ function isPublicPath(pathname: string): boolean {
   // T-002 신규 — F002 이벤트 상세 풀스크린 비로그인 열람 허용 (페이지 내부에서 visibility 검증)
   if (pathname.startsWith("/events/")) return true;
   if (pathname === "/mypage") return false;
+  // /messages は DM 一覧(個人データ) → 明示的に認証必須とする
+  if (pathname === "/messages") return false;
   if (pathname.startsWith("/admin")) return false;
   if (pathname === "/circles") return true;
   if (pathname.startsWith("/circles/")) {

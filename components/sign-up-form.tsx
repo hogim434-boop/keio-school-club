@@ -35,10 +35,13 @@ import { GoogleButton } from "@/components/auth/google-button";
 import { PasswordInput } from "@/components/auth/password-input";
 import { KCircleLogo } from "@/components/layout/kcircle-logo";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { AUTH_INPUT_CLS } from "@/lib/auth/input-class";
 import { sendWelcomeEmail } from "@/app/auth/actions";
+import { agreeRespect } from "@/app/circles/[id]/dm/actions";
 
 // ── Primary CTA 버튼 스타일 토큰 ──
 // 검정(기본 Button=bg-primary) 배경으로 통일, disabled 시 회색 전환 없이 불투명도만 낮춤
@@ -95,6 +98,8 @@ export function SignUpForm() {
   // ── 3단계(닉네임) 전용 상태 ──
   const [nickname, setNickname] = useState("");
   const [nicknameError, setNicknameError] = useState<string | null>(null);
+  // 他者尊重 동의 체크박스 상태 — 필수 동의 항목
+  const [respectAgreed, setRespectAgreed] = useState(false);
 
   // 저장 중 상태 — 2단계·3단계 공통 (동시에 렌더되지 않으므로 공유 안전)
   const [isSaving, setIsSaving] = useState(false);
@@ -158,6 +163,11 @@ export function SignUpForm() {
       setNicknameError("1〜20文字で入力してください");
       return;
     }
+    // 他者尊重 동의 체크 필수 (미동의 시 저장 불가)
+    if (!respectAgreed) {
+      setNicknameError("コミュニティガイドラインへの同意が必要です");
+      return;
+    }
 
     setNicknameError(null);
     setIsSaving(true);
@@ -192,6 +202,11 @@ export function SignUpForm() {
       setIsSaving(false);
       return;
     }
+
+    // 他者尊重 동의 기록 — profiles.respect_agreed_at = now()
+    // ⚠️ await 로 기다리지 않고 best-effort. 기록 실패해도 가입 플로우는 계속.
+    //    미기록 시 inquiry-form.tsx 의 동의 모달에서 재동의할 수 있다.
+    void agreeRespect().catch((e) => console.error("[agreeRespect on sign-up]", e));
 
     // 온보딩 완료 시점에 가입 환영 메일 발송 (best-effort, 발사 후 망각).
     // ⚠️ await 로 기다리면 메일 발송이 지연/행(hang)될 때 화면이 "保存中…" 에서 멈춘다.
@@ -360,7 +375,7 @@ export function SignUpForm() {
               <Button
                 type="button"
                 onClick={handleSaveNickname}
-                disabled={isSaving || nickname.trim().length === 0}
+                disabled={isSaving || nickname.trim().length === 0 || !respectAgreed}
                 className={CTA_BTN_CLS}
               >
                 {isSaving ? (
@@ -433,6 +448,61 @@ export function SignUpForm() {
                   {nicknameError}
                 </p>
               )}
+            </m.div>
+
+            {/* 他者尊重 동의 체크박스 블록: delay 0.26s */}
+            <m.div
+              className="flex flex-col gap-3"
+              variants={FADE_UP_VARIANTS}
+              initial={initial}
+              animate="visible"
+              transition={makeFadeTransition(0.26)}
+            >
+              {/*
+                自律的同意(자율적 동의) 디자인 원칙:
+                - 강제·위협 표현 금지 (CLAUDE.md 카피 규칙)
+                - 체크하지 않으면 "次へ" 버튼이 비활성 — 시각적으로 안내
+                - 금지어(公認/公式LINEに参加/必ず) 미사용
+              */}
+              <div className="border-border bg-muted/40 rounded-xl border p-4">
+                <p className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">
+                  コミュニティガイドライン
+                </p>
+                <p className="text-foreground/80 text-sm leading-relaxed">
+                  K CLUB は、お互いを尊重し合えるコミュニティを目指しています。
+                  サークル・部活動の運営に関わる方には、メンバーや問い合わせをしてくれた方への
+                  誠実な対応をお願いしています。
+                </p>
+                <ul className="text-muted-foreground mt-2 list-inside list-disc space-y-1 text-xs">
+                  <li>相手を傷つける言葉や行為はご遠慮ください</li>
+                  <li>問い合わせへの返信は丁寧に行ってください</li>
+                  <li>個人情報の適切な取り扱いをお願いします</li>
+                </ul>
+              </div>
+
+              {/* 동의 체크박스 행 */}
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="respect-agree"
+                  checked={respectAgreed}
+                  onCheckedChange={(checked) => {
+                    setRespectAgreed(checked === true);
+                    // 체크하면 관련 에러 즉시 해소
+                    if (nicknameError?.includes("ガイドライン")) {
+                      setNicknameError(null);
+                    }
+                  }}
+                  disabled={isSaving}
+                  aria-required="true"
+                  className="mt-0.5"
+                />
+                <Label
+                  htmlFor="respect-agree"
+                  className="cursor-pointer text-sm leading-relaxed font-normal"
+                >
+                  上記のガイドラインを読み、コミュニティの精神に賛同します
+                </Label>
+              </div>
             </m.div>
           </div>
         </AuthScreen>
