@@ -47,11 +47,12 @@ const TABS: TabItem[] = [
 
 /**
  * 현재 경로가 탭의 href 와 매칭되는지 판단.
- *   - "/" 는 redirect 로 /circles 도착 → /circles 에서도 「ホーム」 탭 active
+ *   - "/" 는 현재 큐레이션 홈. "/circles" 는 카테고리·검색 결과 일람(홈의 「もっと見る」·
+ *     카테고리 클릭 도착지)이므로 둘 다 「ホーム」 탭으로 강조한다.
  *   - 그 외는 정확 매칭 또는 하위 경로 prefix 매칭
  */
 function isTabActive(pathname: string, href: string): boolean {
-  // ホーム 탭: "/" 와 "/circles" 모두 active (app/(tabs)/page.tsx 가 /circles 로 redirect)
+  // ホーム 탭: "/"(큐레이션 홈) + "/circles"(카테고리·검색 결과 일람) 둘 다 active
   if (href === "/") return pathname === "/" || pathname === "/circles";
   return pathname === href || pathname.startsWith(href + "/");
 }

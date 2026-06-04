@@ -93,7 +93,8 @@ export function LoginForm() {
     // 미들웨어(proxy)가 다시 로그인으로 돌려보내거나(바운스), 목적지 RSC 가 멈춰
     // 버튼이 "ログイン中…" 상태로 굳는 경우가 있다. 풀 리로드로 쿠키 전달을 보장한다.
     const safeNext = sanitizeNext(next);
-    window.location.assign(safeNext ?? "/circles");
+    // next 가 없으면 현재 홈("/", 큐레이션)으로. (구버전 일람 "/circles" 아님)
+    window.location.assign(safeNext ?? "/");
     // isLoading 은 페이지가 새로 로드되며 자연히 해제됨(여기서 false 로 두지 않음).
   };
 

@@ -24,7 +24,8 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
 
   // next 파라미터 — 로그인 전 가려던 경로 (sanitizeNext로 오픈 리다이렉트 방지)
-  const next = sanitizeNext(searchParams.get("next")) ?? "/circles";
+  // 지정이 없으면 현재 홈("/", 큐레이션)으로. (구버전 일람 "/circles" 아님)
+  const next = sanitizeNext(searchParams.get("next")) ?? "/";
 
   if (code) {
     // 서버 컴포넌트용 Supabase 클라이언트 (쿠키 기반 세션 관리)

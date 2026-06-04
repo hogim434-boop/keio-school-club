@@ -216,7 +216,7 @@ export function MyPageView({
 
         {/* ── 5. 로그아웃 버튼 (하단) ── */}
         <m.div variants={itemVariants} className="pt-2">
-          <LogoutButton redirectTo="/circles" />
+          <LogoutButton />
         </m.div>
       </m.div>
     </LazyMotion>
