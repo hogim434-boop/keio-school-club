@@ -35,7 +35,9 @@
 import { useCallback, useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LazyMotion, domAnimation, m, useMotionValue, useTransform, animate } from "motion/react";
+// domMax: drag/pan 제스처를 포함하는 feature 번들.
+// domAnimation 에는 drag 핸들러가 없어 <m.div drag="x"> 가 무시됨(스와이프 미작동) → domMax 필수.
+import { LazyMotion, domMax, m, useMotionValue, useTransform, animate } from "motion/react";
 import { Check, Trash2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -209,7 +211,7 @@ export default function MessageRow({ item, onOpen }: MessageRowProps) {
         </m.div>
 
         {/* ── 행 본문 (드래그 가능) ──────────────────────────────────────────── */}
-        <LazyMotion features={domAnimation}>
+        <LazyMotion features={domMax}>
           <m.div
             drag={reducedMotion ? false : "x"}
             // 오른쪽으로는 0 이상 드래그 불가, 왼쪽으로는 ACTION_WIDTH 까지
