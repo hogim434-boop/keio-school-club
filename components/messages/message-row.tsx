@@ -37,7 +37,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 // domMax: drag/pan 제스처를 포함하는 feature 번들.
 // domAnimation 에는 drag 핸들러가 없어 <m.div drag="x"> 가 무시됨(스와이프 미작동) → domMax 필수.
-import { LazyMotion, domMax, m, useMotionValue, useTransform, animate } from "motion/react";
+import {
+  LazyMotion,
+  domMax,
+  m,
+  useMotionValue,
+  useTransform,
+  animate,
+  type PanInfo,
+} from "motion/react";
 import { Check, Trash2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -60,8 +68,11 @@ import type { MyInquiryItem } from "@/lib/supabase/queries/inquiries";
 // ── 스와이프 아이콘 버튼 영역 너비 ─────────────────────────────────────────────
 // 읽음 처리(64px) + 삭제(64px) = 128px
 const ACTION_WIDTH = 128;
-// 스와이프 열림 임계 거리 (이 이상 밀면 버튼 고정)
-const SNAP_THRESHOLD = ACTION_WIDTH * 0.5;
+// 스와이프 열림 임계 거리 (이 이상 밀면 버튼 고정).
+// 0.5(64px)는 너무 멀어 어지간한 스와이프로는 닫혀버림 → 0.28(약 36px)로 낮춰 살짝만 밀어도 열림.
+const SNAP_THRESHOLD = ACTION_WIDTH * 0.28;
+// 빠른 좌측 플릭 임계(px/s). 거리가 부족해도 이보다 빠르게 밀면 열림(메신저 표준 동작).
+const VELOCITY_THRESHOLD = 350;
 
 // ── 열림 상태 공유를 위한 콜백 타입 ────────────────────────────────────────────
 // page.tsx 에서 "현재 열린 행" ref 를 내려줘서 다른 행 스와이프 시 이전 행 닫힘 구현
@@ -106,20 +117,27 @@ export default function MessageRow({ item, onOpen }: MessageRowProps) {
   }, [x]);
 
   // ── 드래그 종료 핸들러 ──────────────────────────────────────────────────────
-  const handleDragEnd = useCallback(() => {
-    const currentX = x.get();
-    if (currentX < -SNAP_THRESHOLD) {
-      // 임계 거리 이상: 버튼 고정 표시
-      animate(x, -ACTION_WIDTH, { type: "spring", stiffness: 300, damping: 30 });
-      isOpenRef.current = true;
-      // 다른 열린 행 닫기
-      onOpen?.(closeRow);
-    } else {
-      // 임계 미만: 원위치
-      animate(x, 0, { type: "spring", stiffness: 300, damping: 30 });
-      isOpenRef.current = false;
-    }
-  }, [x, closeRow, onOpen]);
+  // 위치(거리)뿐 아니라 속도(velocity)도 본다. 빠르게 휙 밀면 거리가 짧아도 열림.
+  const handleDragEnd = useCallback(
+    (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+      const currentX = x.get();
+      const velocityX = info?.velocity?.x ?? 0;
+      // 충분히 왼쪽으로 밀었거나(거리) OR 빠른 좌측 플릭(속도) → 열림
+      const shouldOpen = currentX < -SNAP_THRESHOLD || velocityX < -VELOCITY_THRESHOLD;
+      if (shouldOpen) {
+        // 버튼 고정 표시
+        animate(x, -ACTION_WIDTH, { type: "spring", stiffness: 300, damping: 30 });
+        isOpenRef.current = true;
+        // 다른 열린 행 닫기
+        onOpen?.(closeRow);
+      } else {
+        // 원위치
+        animate(x, 0, { type: "spring", stiffness: 300, damping: 30 });
+        isOpenRef.current = false;
+      }
+    },
+    [x, closeRow, onOpen]
+  );
 
   // ── 읽음 처리 핸들러 ────────────────────────────────────────────────────────
   const handleMarkRead = useCallback(async () => {
