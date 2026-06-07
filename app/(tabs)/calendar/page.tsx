@@ -17,6 +17,7 @@
  */
 
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { formatInTimeZone } from "date-fns-tz";
 
 import { CalendarMonthView } from "@/components/calendar/calendar-month-view";
@@ -25,6 +26,7 @@ import { CalendarViewToggle } from "@/components/calendar/calendar-view-toggle";
 import type { CalendarView } from "@/components/calendar/calendar-view-toggle";
 import { getUpcomingEventsByRange } from "@/lib/supabase/queries/events-public";
 import { JST } from "@/lib/format/jst";
+import { PUBLIC_EVENTS_ENABLED } from "@/lib/constants/features";
 
 // ─────────────────────────────────────────────
 //  월 범위 계산 헬퍼
@@ -90,6 +92,12 @@ interface CalendarPageProps {
 }
 
 export default async function CalendarPage({ searchParams }: CalendarPageProps) {
+  // 디렉터리 우선 단계: 빈 캘린더 노출 방지 — 홈으로 리다이렉트
+  // PUBLIC_EVENTS_ENABLED=true 로 바꾸면 기존 캘린더가 즉시 복구된다
+  if (!PUBLIC_EVENTS_ENABLED) {
+    redirect("/");
+  }
+
   // Next.js 15 — searchParams 는 Promise
   const params = await searchParams;
 

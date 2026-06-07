@@ -540,6 +540,27 @@ export async function getMyInquiries(): Promise<MyInquiryItem[]> {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+//  [섹션 4-2] getStaffUnreadTotal — 마이페이지 お問い合わせ 미읽음 합계
+// ══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * 운영진 입장에서 "내 동아리들로 들어온 미읽음 문의" 합계를 조회한다.
+ *
+ * 마이페이지 お問い合わせ 섹션의 미읽음 숫자 배지(A-5: 既読 표시 금지, 숫자만)용.
+ * getCircleInbox 를 동아리별로 호출해 unread_count 를 합산한다.
+ * (운영 동아리 수가 보통 1~2개라 N 회 호출 허용. RLS is_circle_staff 로 권한 보장.)
+ *
+ * @param circleIds - 운영(승인됨) 동아리 id 배열. 빈 배열이면 0 반환.
+ * @returns 미읽음 메시지 총합 (0 이상)
+ */
+export async function getStaffUnreadTotal(circleIds: string[]): Promise<number> {
+  if (circleIds.length === 0) return 0;
+
+  const inboxes = await Promise.all(circleIds.map((id) => getCircleInbox(id)));
+  return inboxes.flat().reduce((sum, item) => sum + item.unread_count, 0);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 //  [섹션 5] getAvgResponseTime — T-034
 // ══════════════════════════════════════════════════════════════════════════════
 

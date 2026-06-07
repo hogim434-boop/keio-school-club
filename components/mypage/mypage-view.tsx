@@ -37,6 +37,7 @@ import { deleteCircle } from "@/app/(tabs)/mypage/actions";
 import { LogoutButton } from "@/components/logout-button";
 import { type MyCircle } from "@/lib/supabase/queries/circles";
 import { enterContainer, enterItem } from "@/lib/motion/tokens";
+import { MESSAGING_ENABLED } from "@/lib/constants/features";
 
 import { ManagedCircleCard } from "./managed-circle-card";
 import { ManagedCirclesEmpty } from "./managed-circles-empty";
@@ -49,12 +50,15 @@ interface MyPageViewProps {
   keioVerified: boolean;
   /** 운영 중인 서클 목록 (전 상태 포함) */
   circles: MyCircle[];
+  /** お問い合わせ 미읽음 합계 (운영 수신 + 발신 답장). 0 이면 배지 미표시 */
+  unreadCount: number;
 }
 
 export function MyPageView({
   displayName,
   keioVerified,
   circles: initialCircles,
+  unreadCount,
 }: MyPageViewProps) {
   /* OS "동작 줄이기" 감지 */
   const shouldReduceMotion = useReducedMotion();
@@ -200,19 +204,29 @@ export function MyPageView({
           )}
         </m.section>
 
-        {/* ── 4. お問い合わせ履歴 링크 섹션 ── */}
-        {/* T-035 에서 본격 통합 예정. 현재는 간단한 링크 형태로 제공 */}
-        <m.section variants={itemVariants} aria-label="お問い合わせ">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold">お問い合わせ</h2>
+        {/* ── 4. お問い合わせ 섹션 ── MESSAGING_ENABLED が false の場合は非表示 */}
+        {/* 미읽음(운영 수신 + 발신 답장) 합계를 숫자 배지로 노출 (A-5: 既読 표시 금지, 숫자만) */}
+        {MESSAGING_ENABLED && (
+          <m.section variants={itemVariants} aria-label="お問い合わせ">
             <Link
               href="/messages"
-              className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors"
+              className="hover:bg-muted/40 -mx-2 flex items-center justify-between rounded-lg px-2 py-1.5 transition-colors"
             >
-              履歴を見る →
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-semibold">お問い合わせ</h2>
+                {unreadCount > 0 && (
+                  <span
+                    className="bg-keio-navy text-keio-navy-foreground inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-xs font-semibold tabular-nums"
+                    aria-label={`未読 ${unreadCount}件`}
+                  >
+                    {unreadCount}
+                  </span>
+                )}
+              </div>
+              <span className="text-muted-foreground text-sm font-medium">履歴を見る →</span>
             </Link>
-          </div>
-        </m.section>
+          </m.section>
+        )}
 
         {/* ── 5. 로그아웃 버튼 (하단) ── */}
         <m.div variants={itemVariants} className="pt-2">

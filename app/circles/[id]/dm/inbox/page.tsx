@@ -31,6 +31,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCircleInbox } from "@/lib/supabase/queries/inquiries";
 import { InboxList } from "@/components/dm/inbox-list";
 import { PresenceHeartbeat } from "@/components/dm/presence-heartbeat";
+import { MESSAGING_ENABLED } from "@/lib/constants/features";
 import DmInboxLoading from "./loading";
 
 // ── Props ──────────────────────────────────────────────────────────────────────
@@ -58,6 +59,12 @@ export default function DmInboxPage({ params }: DmInboxPageProps) {
 async function DmInboxContent({ params }: DmInboxPageProps) {
   // ── Next.js 15 필수: params 를 await 해서 실제 값 획득 ──────────────────
   const { id: circleId } = await params;
+
+  // ── MESSAGING_ENABLED ガード (인증 가드보다 먼저 체크) ───────────────────
+  // false の場合: 서클 상세 페이지로 리다이렉트
+  if (!MESSAGING_ENABLED) {
+    redirect(`/circles/${circleId}`);
+  }
 
   // ── Supabase 클라이언트 (Fluid compute 대응: 함수 내에서 새로 생성) ─────
   const supabase = await createClient();

@@ -4,6 +4,7 @@ import { KCircleLogo } from "@/components/layout/kcircle-logo";
 import { MessagesLink } from "@/components/layout/messages-link";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { HeaderSearchLink } from "@/components/layout/header-search-link";
+import { MESSAGING_ENABLED } from "@/lib/constants/features";
 
 /**
  * KCircle 글로벌 헤더 (RSC) — 당근앱/메루카리 모바일 우선 슬림 패턴.
@@ -33,8 +34,8 @@ export function Header() {
         </Link>
 
         <div className="ml-auto flex items-center gap-1">
-          {/* メッセージアイコン: 未読バッジ付き Link — Client Component */}
-          <MessagesLink />
+          {/* メッセージアイコン: MESSAGING_ENABLED false 시 숨김 */}
+          {MESSAGING_ENABLED && <MessagesLink />}
           {/* Bell 아이콘은 뱃지 로직이 필요해 Client Component로 분리 */}
           <NotificationBell />
           {/* 검색 아이콘은 현재 필터 유지가 필요해 Client Component로 분리 */}

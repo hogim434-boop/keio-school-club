@@ -42,6 +42,7 @@ import { MessageCircle } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { getMyInquiries } from "@/lib/supabase/queries/inquiries";
+import { MESSAGING_ENABLED } from "@/lib/constants/features";
 
 import MessagesList from "@/components/messages/messages-list";
 import MessagesLoading from "./loading";
@@ -49,6 +50,11 @@ import MessagesLoading from "./loading";
 // ── Suspense 境界 ─────────────────────────────────────────────────────────────
 
 export default function MessagesPage() {
+  // MESSAGING_ENABLED が false の場合: 직접 진입을 홈으로 리다이렉트 (시드 단계)
+  if (!MESSAGING_ENABLED) {
+    redirect("/");
+  }
+
   return (
     <Suspense fallback={<MessagesLoading />}>
       <MessagesContent />

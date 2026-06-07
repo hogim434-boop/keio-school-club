@@ -7,16 +7,21 @@ import * as m from "motion/react-m";
 import { Icon } from "@iconify/react";
 
 import { cn } from "@/lib/utils";
+import { PUBLIC_EVENTS_ENABLED } from "@/lib/constants/features";
 
 /**
- * 5탭 하단 내비게이션 바 — (tabs) route group 레이아웃에서 마운트.
+ * 하단 내비게이션 바 — (tabs) route group 레이아웃에서 마운트.
  *
- * 탭 목록 (마이페이지를 항상 우측 끝에 두고 「お気に入り」 를 4번째 위치에 삽입):
+ * 탭 목록:
  *   ホーム      → /  (redirect 로 /circles 도착)
  *   さがす      → /search
- *   カレンダー  → /calendar
+ *   カレンダー  → /calendar  ← PUBLIC_EVENTS_ENABLED=false 일 때 숨김
  *   お気に入り  → /favorites
  *   マイページ  → /mypage
+ *
+ * PUBLIC_EVENTS_ENABLED=false(디렉터리 우선 단계):
+ *   カレンダー 탭이 제거되어 4탭으로 줄어든다.
+ *   flex justify-around 가 자동으로 남은 탭들을 균등 분배한다.
  *
  * 아이콘 톤: Phosphor 채움(ph:*-fill) — 둥글고 친근한 아이콘.
  * 활성/비활성: 채움 색(활성=慶應 네이비 / 비활성=muted-foreground)으로 구분.
@@ -36,14 +41,24 @@ interface TabItem {
   aria: string;
 }
 
-const TABS: TabItem[] = [
+/** 전체 탭 정의. カレンダー 는 PUBLIC_EVENTS_ENABLED=false 일 때 제외된다. */
+const ALL_TABS: TabItem[] = [
   { href: "/", label: "ホーム", icon: "ph:house-fill", aria: "ホーム" },
   { href: "/search", label: "さがす", icon: "ph:magnifying-glass-fill", aria: "さがす" },
   { href: "/calendar", label: "カレンダー", icon: "ph:calendar-fill", aria: "カレンダー" },
-  // お気に入り 탭 — 4번째 위치. heart-fill 아이콘. /favorites 진입 시 active.
+  // お気に入り 탭 — heart-fill 아이콘. /favorites 진입 시 active.
   { href: "/favorites", label: "お気に入り", icon: "ph:heart-fill", aria: "お気に入り" },
   { href: "/mypage", label: "マイページ", icon: "ph:user-fill", aria: "マイページ" },
 ];
+
+/**
+ * 실제 렌더할 탭 목록.
+ * PUBLIC_EVENTS_ENABLED=false: カレンダー 제외 → 4탭
+ * PUBLIC_EVENTS_ENABLED=true:  전체 5탭
+ */
+const TABS: TabItem[] = PUBLIC_EVENTS_ENABLED
+  ? ALL_TABS
+  : ALL_TABS.filter((t) => t.href !== "/calendar");
 
 /**
  * 현재 경로가 탭의 href 와 매칭되는지 판단.
@@ -72,7 +87,7 @@ export function BottomTabs() {
       className="bg-background fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)] md:hidden"
     >
       <LazyMotion features={domAnimation}>
-        {/* 4탭 균등 분포 — flex justify-around */}
+        {/* 탭 균등 분포 — flex justify-around (탭 수에 관계없이 자동 분배) */}
         <ul className="flex justify-around">
           {TABS.map((tab) => {
             const active = isTabActive(pathname, tab.href);

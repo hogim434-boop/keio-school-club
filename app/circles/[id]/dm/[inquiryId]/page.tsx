@@ -27,6 +27,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getInquiryWithMessages } from "@/lib/supabase/queries/inquiries";
 import { DmThread } from "@/components/dm/dm-thread";
+import { MESSAGING_ENABLED } from "@/lib/constants/features";
 import DmThreadLoading from "./loading";
 
 // ── Props ──────────────────────────────────────────────────────────────────────
@@ -53,6 +54,12 @@ export default function DmThreadPage({ params }: DmThreadPageProps) {
 async function DmThreadContent({ params }: DmThreadPageProps) {
   // ── Next.js 15 필수: params 를 await 해서 실제 값 획득 ──────────────────────
   const { id: circleId, inquiryId } = await params;
+
+  // ── MESSAGING_ENABLED ガード (인증 가드보다 먼저 체크) ───────────────────────
+  // false の場合: 서클 상세 페이지로 리다이렉트
+  if (!MESSAGING_ENABLED) {
+    redirect(`/circles/${circleId}`);
+  }
 
   // ── Supabase 클라이언트 (Fluid compute 대응: 함수 내에서 새로 생성) ───────────
   const supabase = await createClient();

@@ -14,6 +14,7 @@ import {
   getRecommendedCircles,
   isShinkanSeason,
 } from "@/lib/supabase/queries/home-curation";
+import { PUBLIC_EVENTS_ENABLED } from "@/lib/constants/features";
 
 /**
  * ホーム画面 (RSC) — T-009 キュレーション 3セクション.
@@ -54,10 +55,11 @@ export default function HomePage() {
 async function HomeContent() {
   const inSeason = isShinkanSeason();
 
-  // 3クエリ並列実行 (Promise.all)
+  // 이벤트 쿼리는 PUBLIC_EVENTS_ENABLED=true 일 때만 실행 (false 이면 빈 배열로 대체)
+  // → 디렉터리 우선 단계에서 불필요한 DB 왕복 제거
   const [featured, upcomingEvents, recommended] = await Promise.all([
     getFeaturedCircles(8),
-    getUpcomingEvents(3),
+    PUBLIC_EVENTS_ENABLED ? getUpcomingEvents(3) : Promise.resolve([]),
     getRecommendedCircles(6),
   ]);
 
@@ -71,6 +73,12 @@ async function HomeContent() {
           シャッフル / お気に入り / カテゴリ検索 の 3タイル自動回転
           ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <PromoTileCarousel />
+
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          カテゴリグリッド (最上部へ移動)
+          カテゴリ → /circles?category={slug} へスライドイン遷移
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <HomeCategoryGrid />
 
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
           セクション 1: 今週新歓キュレーション
@@ -94,17 +102,11 @@ async function HomeContent() {
       <HourlyCategoryStrip />
 
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-          カテゴリグリッド
-          カテゴリ → /circles?category={slug} へスライドイン遷移
-          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <HomeCategoryGrid />
-
-      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
           直近のイベント (中間配置)
-          starts_at > now(), public, 未キャンセル, ASC 上位 3件
-          0件の場合は UpcomingEventsStrip が null を返してセクション非表示
+          PUBLIC_EVENTS_ENABLED=false の間は非表示 (디렉터리 우선 단계).
+          true に変えると即復活する.
           ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <UpcomingEventsStrip events={upcomingEvents} />
+      {PUBLIC_EVENTS_ENABLED && <UpcomingEventsStrip events={upcomingEvents} />}
 
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
           おすすめサークル
@@ -138,6 +140,16 @@ function HomePageFallback() {
       {/* PromoTile skeleton (検索바 직하 배치) */}
       <Skeleton className="h-20 w-full rounded-2xl" />
 
+      {/* カテゴリグリッド skeleton (最上部へ移動) */}
+      <div className="space-y-3">
+        <Skeleton className="h-5 w-24" />
+        <div className="grid grid-cols-4 gap-2">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-[88px] rounded-lg" />
+          ))}
+        </div>
+      </div>
+
       {/* 新歓セクション skeleton */}
       <div className="space-y-3">
         <Skeleton className="h-6 w-40" />
@@ -156,32 +168,24 @@ function HomePageFallback() {
         </div>
       </div>
 
-      {/* カテゴリグリッド skeleton */}
-      <div className="space-y-3">
-        <Skeleton className="h-5 w-24" />
-        <div className="grid grid-cols-4 gap-2">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Skeleton key={i} className="h-[88px] rounded-lg" />
-          ))}
-        </div>
-      </div>
-
-      {/* イベントセクション skeleton (中間配置) */}
-      <div className="space-y-2">
-        <Skeleton className="h-6 w-36" />
-        <div className="divide-y rounded-xl border">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="flex items-start gap-3 p-3">
-              <Skeleton className="size-16 shrink-0 rounded-lg" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-3 w-3/4" />
-                <Skeleton className="h-3 w-1/2" />
+      {/* イベントセクション skeleton — PUBLIC_EVENTS_ENABLED=true のときのみ表示 */}
+      {PUBLIC_EVENTS_ENABLED && (
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-36" />
+          <div className="divide-y rounded-xl border">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex items-start gap-3 p-3">
+                <Skeleton className="size-16 shrink-0 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-3 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* おすすめセクション skeleton */}
       <div className="space-y-3">
