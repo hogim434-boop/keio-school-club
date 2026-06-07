@@ -27,6 +27,7 @@ import * as React from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CalendarDays, MapPin, Sparkles, X } from "lucide-react";
+import { DDayChip } from "@/components/event/d-day-chip";
 import { ja } from "date-fns/locale";
 import type { DayButton as DayButtonProps } from "react-day-picker";
 // LazyMotion: motion 기능을 지연 로딩해 번들 크기를 줄이는 래퍼
@@ -50,7 +51,7 @@ import {
   FALLBACK_BADGE_COLOR,
   FALLBACK_BAR_COLOR, // ← P5 pill 폴백 막대 색 (신규)
 } from "@/lib/constants/category-color";
-import { formatJst, JST } from "@/lib/format/jst";
+import { calcDday, formatJst, JST } from "@/lib/format/jst";
 import { formatInTimeZone } from "date-fns-tz";
 
 // ─────────────────────────────────────────────
@@ -564,6 +565,7 @@ export function CalendarMonthView({ currentMonth, events }: CalendarMonthViewPro
         <Sheet open={selectedDate !== null} onOpenChange={(open) => !open && setSelectedDate(null)}>
           <SheetContent
             side="bottom"
+            showCloseButton={false}
             className="pb-safe max-h-[70dvh] overflow-y-auto rounded-t-2xl"
           >
             <SheetHeader className="pb-2">
@@ -594,7 +596,8 @@ export function CalendarMonthView({ currentMonth, events }: CalendarMonthViewPro
                       <Sparkles className="size-3.5 text-amber-500" aria-hidden="true" />
                       <p className="text-xs font-semibold">近くのイベント</p>
                     </div>
-                    <div className="flex flex-col divide-y">
+                    {/* 카드화로 divide-y 대신 space-y-2 간격 */}
+                    <div className="flex flex-col space-y-2">
                       {nearbyRecommended.map((event) => (
                         <SheetEventRow
                           key={event.id}
@@ -607,7 +610,8 @@ export function CalendarMonthView({ currentMonth, events }: CalendarMonthViewPro
                 )}
               </div>
             ) : (
-              <div className="flex flex-col divide-y px-4">
+              /* 카드화로 divide-y 대신 space-y-2 간격 */
+              <div className="flex flex-col space-y-2 px-4 pb-4">
                 {selectedEvents.map((event) => (
                   <SheetEventRow
                     key={event.id}
@@ -640,8 +644,17 @@ function SheetEventRow({ event, onClose }: SheetEventRowProps) {
     : FALLBACK_BADGE_COLOR;
   const categoryLabel = cat ? (CATEGORY_LABELS[cat] ?? event.category) : null;
 
+  // 취소 여부
+  const isCancelled = Boolean(event.cancelled_at);
+
+  // D-Day 계산 (JST 기준)
+  const dday = calcDday(event.starts_at);
+
+  // 시간 앵커 박스 색상 — 과거(dday<0) 또는 취소 이면 회색 톤
+  const anchorDim = dday < 0 || isCancelled;
+
   // 시작 시각 표시 (JST)
-  const timeLabel = event.is_all_day ? "終日" : formatJst(event.starts_at, "HH:mm");
+  const startTimeLabel = event.is_all_day ? "終日" : formatJst(event.starts_at, "HH:mm");
 
   // 종료 시각 (같은 날, 종일 아닌 경우만 표시)
   let endTimeLabel = "";
@@ -653,26 +666,94 @@ function SheetEventRow({ event, onClose }: SheetEventRowProps) {
     }
   }
 
+  // D-Day 칩 표시 조건 — 취소 이벤트 및 과거 이벤트는 미표시
+  const showDday = !isCancelled && dday >= 0;
+
   return (
+    // Link 가 카드 컨테이너 역할 겸 클릭 영역 — event-manage-card 동일 톤
     <Link
       href={`/events/${event.id}`}
       onClick={onClose}
-      className="group flex items-start gap-3 py-3 transition-opacity hover:opacity-70"
+      className={cn(
+        "flex items-start gap-3 rounded-xl border p-3 transition-opacity hover:opacity-75",
+        // 취소 이벤트만 전체 희미화 (과거는 캘린더 기록 뷰라 유지)
+        isCancelled && "opacity-60"
+      )}
     >
-      {/* 時刻帯 */}
-      <div className="text-muted-foreground w-[52px] shrink-0 pt-0.5 text-right text-xs leading-snug">
-        <span>{timeLabel}</span>
-        {endTimeLabel && (
+      {/* ── 좌측: 시간 앵커 박스 ── */}
+      {/*
+        스크린리더에는 우측 텍스트가 정보를 전달하므로 이 박스는 숨김.
+        manage-card 의 날짜 박스와 동일한 치수(w-14)와 색 규칙 적용.
+      */}
+      <div
+        aria-hidden="true"
+        className={cn(
+          "flex w-14 shrink-0 flex-col items-center justify-center gap-0.5 self-stretch rounded-lg py-2",
+          anchorDim ? "bg-muted" : "bg-keio-navy/10"
+        )}
+      >
+        {event.is_all_day ? (
+          // 종일 이벤트 — 「終日」 한 줄 표시
+          <span
+            className={cn(
+              "text-xs font-medium",
+              anchorDim ? "text-muted-foreground" : "text-keio-navy"
+            )}
+          >
+            終日
+          </span>
+        ) : (
           <>
-            <br />
-            <span>〜{endTimeLabel}</span>
+            {/* 시작 시각 — 크게 표시 */}
+            <span
+              className={cn(
+                "text-base leading-none font-bold",
+                anchorDim ? "text-muted-foreground" : "text-keio-navy"
+              )}
+            >
+              {startTimeLabel}
+            </span>
+            {/* 종료 시각 — 같은 날이면 「〜HH:mm」 작게 */}
+            {endTimeLabel && (
+              <span
+                className={cn(
+                  "text-[10px] leading-tight",
+                  anchorDim ? "text-muted-foreground" : "text-keio-navy/80"
+                )}
+              >
+                〜{endTimeLabel}
+              </span>
+            )}
           </>
         )}
       </div>
 
-      {/* イベント情報 */}
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <p className="line-clamp-2 text-sm leading-snug font-semibold">{event.title}</p>
+      {/* ── 우측: 이벤트 정보 ── */}
+      <div className="min-w-0 flex-1 space-y-1.5">
+        {/* 제목 줄 — 취소 이벤트는 취소선 + 「中止」 뱃지 */}
+        <div className="flex items-start gap-1.5">
+          <p
+            className={cn(
+              "line-clamp-2 min-w-0 flex-1 text-sm leading-snug font-semibold",
+              isCancelled && "text-muted-foreground line-through"
+            )}
+          >
+            {event.title}
+          </p>
+          {/* 취소 뱃지 */}
+          {isCancelled && (
+            <span className="bg-destructive/10 text-destructive inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-medium">
+              中止
+            </span>
+          )}
+        </div>
+
+        {/* D-Day 칩 — 예정 이벤트에만 표시 */}
+        {showDday && (
+          <div>
+            <DDayChip dday={dday} />
+          </div>
+        )}
 
         {/* 場所 */}
         {event.location && (

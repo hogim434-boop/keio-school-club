@@ -30,10 +30,8 @@
 import { useEffect, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Clock } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { EventModeBadge } from "@/components/event/event-mode-badge";
 import { setLightInterest, setStrictRsvp } from "@/app/events/[id]/actions";
 import type { EventDetail } from "@/lib/types/domain";
 
@@ -46,20 +44,11 @@ import type { EventDetail } from "@/lib/types/domain";
  * 호환성을 위해 기존 다섯 가지 status 를 그대로 받지만,
  * 본 컴포넌트는 「going 또는 pending = 참가 중」 / 그 외 = 미참가 만 구분한다.
  */
-export type CurrentRsvpStatus =
-  | "interested"
-  | "going"
-  | "maybe"
-  | "declined"
-  | "pending"
-  | null;
+export type CurrentRsvpStatus = "interested" | "going" | "maybe" | "declined" | "pending" | null;
 
 interface EventRsvpPillProps {
   /** 이벤트 상세 정보 (rsvp_mode, requires_approval, id, cancelled_at) */
-  event: Pick<
-    EventDetail,
-    "id" | "rsvp_mode" | "requires_approval" | "cancelled_at" | "capacity"
-  >;
+  event: Pick<EventDetail, "id" | "rsvp_mode" | "requires_approval" | "cancelled_at" | "capacity">;
   /** 로그인한 사용자 UUID (null=미로그인) */
   currentUserId: string | null;
   /** 현재 사용자의 RSVP 상태 (null=미등록) */
@@ -70,11 +59,7 @@ interface EventRsvpPillProps {
 // 메인 컴포넌트
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function EventRsvpPill({
-  event,
-  currentUserId,
-  initialStatus,
-}: EventRsvpPillProps) {
+export function EventRsvpPill({ event, currentUserId, initialStatus }: EventRsvpPillProps) {
   // Portal 마운트 가드 — SSR 단계에서는 document 미존재
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -82,16 +67,14 @@ export function EventRsvpPill({
   }, []);
 
   // 낙관적 UI — 서버 응답 전까지 로컬 상태로 즉시 반영
-  const [optimisticStatus, setOptimisticStatus] =
-    useState<CurrentRsvpStatus>(initialStatus);
+  const [optimisticStatus, setOptimisticStatus] = useState<CurrentRsvpStatus>(initialStatus);
   const [isPending, startTransition] = useTransition();
 
   const router = useRouter();
 
   const isCancelled = Boolean(event.cancelled_at);
   // 「参加中」 판정 — going(확정) 또는 pending(승인 대기) 모두 포함
-  const isJoined =
-    optimisticStatus === "going" || optimisticStatus === "pending";
+  const isJoined = optimisticStatus === "going" || optimisticStatus === "pending";
   const isPendingApproval = optimisticStatus === "pending";
 
   // ── 미로그인 처리 ─────────────────────────────────────────────────────────
@@ -154,59 +137,26 @@ export function EventRsvpPill({
   // ─────────────────────────────────────────────────────────────────────────
 
   const ctaElement = (
-    <div
-      className={cn(
-        "fixed right-0 bottom-0 left-0 z-30",
-        "pb-[env(safe-area-inset-bottom)]"
-      )}
-    >
+    <div className={cn("fixed right-0 bottom-0 left-0 z-30", "pb-[env(safe-area-inset-bottom)]")}>
       <div className="mx-auto max-w-md px-3 pb-3">
-        <div
+        {/* 카드 chrome 없이 단일 액션 버튼만 노출 (심플화).
+            상태(申請中/参加中/キャンセル済み 등)는 버튼 라벨로 전달되며,
+            버튼 자체 그림자로 콘텐츠 위에서 분리감을 유지한다. */}
+        <button
+          type="button"
+          disabled={isPending || isCancelled}
+          onClick={handleClick}
+          aria-pressed={isJoined}
           className={cn(
-            "rounded-2xl border bg-background/95 px-4 py-3 shadow-xl backdrop-blur-sm",
-            "transition-opacity duration-200",
-            isPending && "opacity-70"
+            "w-full rounded-full py-3 text-sm font-semibold shadow-lg transition-colors",
+            "focus-visible:ring-keio-navy/50 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none",
+            "disabled:pointer-events-none disabled:opacity-50",
+            "touch-manipulation select-none",
+            buttonColor
           )}
         >
-          {/* 상단: 모드 배지 + 취소/승인/확정 안내 */}
-          <div className="mb-3 flex items-center gap-2">
-            <EventModeBadge mode={event.rsvp_mode} />
-            {isCancelled && (
-              <span className="text-xs text-destructive font-medium">
-                このイベントはキャンセルされました
-              </span>
-            )}
-            {!isCancelled && isPendingApproval && (
-              <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
-                <Clock className="size-3 shrink-0" aria-hidden />
-                運営の確認後、参加が確定します
-              </span>
-            )}
-            {!isCancelled && !isPendingApproval && isJoined && (
-              <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
-                <CheckCircle2 className="size-3 shrink-0" aria-hidden />
-                参加が確定しました
-              </span>
-            )}
-          </div>
-
-          {/* 단일 액션 버튼 — 로그인 / 참가 / 취소 분기 */}
-          <button
-            type="button"
-            disabled={isPending || isCancelled}
-            onClick={handleClick}
-            aria-pressed={isJoined}
-            className={cn(
-              "w-full rounded-full py-3 text-sm font-semibold transition-colors",
-              "focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-keio-navy/50 focus-visible:outline-none",
-              "disabled:pointer-events-none disabled:opacity-50",
-              "touch-manipulation select-none",
-              buttonColor
-            )}
-          >
-            {buttonLabel}
-          </button>
-        </div>
+          {buttonLabel}
+        </button>
       </div>
     </div>
   );

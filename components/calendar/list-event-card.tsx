@@ -7,10 +7,22 @@
  * 원래 calendar-list-view.tsx 내부에 있었으나
  * viewport stagger reveal (P10) 적용을 위해 분리.
  *
- * 애니메이션 패턴:
+ * 디자인:
+ * - event-manage-card.tsx 와 동일한 시각 언어 (카드화 + 좌측 시간 앵커 박스 + D-Day 칩)
+ * - 썸네일 제거 → 시간 앵커 박스(w-14)로 대체
+ * - 좌측 시간 박스: 예정=navy 틴트, 과거/취소=회색
+ * - D-Day 칩: 예정 이벤트에만 표시 (DDayChip 공용 컴포넌트)
+ * - 취소: opacity-60 + 제목 line-through + 「中止」 뱃지
+ * - 과거(dday<0, 미취소): 시간박스 회색 + D-Day 칩 없음 (캘린더는 기록 뷰라 흐림 과도 적용 X)
+ *
+ * 애니메이션 패턴 (P10 유지):
  * - whileInView + viewport: once + margin → 스크롤 진입 시 1회만 발화
  * - 8px y 변위 + opacity fade (Material decel easing [0,0,0.2,1])
  * - reduced-motion 시 즉시 표시 (접근성 보장)
+ *
+ * View Transitions (P8 유지):
+ * - 카테고리 배지에 viewTransitionName `cal-event-{id}` 부여
+ * - 月 뷰 pill → 리스트 카드 배지로 morph 전환
  *
  * 왜 Server Component가 아닌 Client Component인가:
  * - useReducedMotion() hook 은 브라우저 환경에서만 동작
@@ -18,8 +30,7 @@
  */
 
 import Link from "next/link";
-import Image from "next/image";
-import { CalendarDays, MapPin, Clock } from "lucide-react";
+import { CalendarDays, MapPin } from "lucide-react";
 import { LazyMotion, domAnimation, m, useReducedMotion } from "motion/react";
 
 import { cn } from "@/lib/utils";
@@ -27,7 +38,8 @@ import type { EventDetail } from "@/lib/types/domain";
 import type { Category } from "@/lib/constants/category";
 import { CATEGORY_LABELS } from "@/lib/constants/category";
 import { CATEGORY_BADGE_COLOR, FALLBACK_BADGE_COLOR } from "@/lib/constants/category-color";
-import { formatJst } from "@/lib/format/jst";
+import { calcDday, formatJst } from "@/lib/format/jst";
+import { DDayChip } from "@/components/event/d-day-chip";
 
 interface ListEventCardProps {
   event: EventDetail;
@@ -47,8 +59,18 @@ export function ListEventCard({ event }: ListEventCardProps) {
   // cancelled_at 가 있으면 중지(中止) 처리
   const isCancelled = Boolean(event.cancelled_at);
 
-  // 시간 표시 — 종일이면 "終日", 아니면 "HH:mm"
-  const timeLabel = event.is_all_day ? "終日" : formatJst(event.starts_at, "HH:mm");
+  // D-Day 계산 (JST 기준)
+  const dday = calcDday(event.starts_at);
+
+  // 카드 비활성 여부 — 취소 이벤트만 opacity-60 (과거는 캘린더 기록 뷰라 유지)
+  const isInactive = isCancelled;
+
+  // 시간 앵커 박스 색상 — 과거 또는 취소 이면 회색 톤
+  const isPast = dday < 0;
+  const anchorDim = isPast || isCancelled;
+
+  // 시간 박스 표시값 계산 (JST 기준)
+  const startTimeLabel = event.is_all_day ? "終日" : formatJst(event.starts_at, "HH:mm");
 
   // 종료 시각 — 같은 날, 종일 아닌 경우에만 표시
   let endTimeLabel = "";
@@ -60,7 +82,8 @@ export function ListEventCard({ event }: ListEventCardProps) {
     }
   }
 
-  const timeDisplay = endTimeLabel ? `${timeLabel} 〜 ${endTimeLabel}` : timeLabel;
+  // D-Day 칩 표시 조건 — 취소 이벤트 및 과거 이벤트는 미표시
+  const showDday = !isCancelled && dday >= 0;
 
   return (
     // LazyMotion: motion/react 의 전체 번들 대신 domAnimation 기능만 로드
@@ -90,67 +113,94 @@ export function ListEventCard({ event }: ListEventCardProps) {
             : {
                 duration: 0.36,
                 // Material Design decel easing — 빠르게 출발해 부드럽게 멈춤
-                // [0,0,0.2,1] = cubic-bezier(0, 0, 0.2, 1)
                 ease: [0, 0, 0.2, 1] as [number, number, number, number],
               }
         }
       >
+        {/* ── 카드 컨테이너 (event-manage-card 와 동일 톤) ── */}
         <Link
           href={`/events/${event.id}`}
           className={cn(
-            "group flex items-start gap-3 py-3 transition-opacity hover:opacity-75",
-            // 취소된 이벤트는 전체를 반투명하게 처리
-            isCancelled && "opacity-50"
+            "flex items-start gap-3 rounded-xl border p-3 transition-opacity hover:opacity-75",
+            // 취소된 이벤트만 전체 희미화 (과거는 기록 뷰라 유지)
+            isInactive && "opacity-60"
           )}
         >
-          {/* サムネイル — 64×64px 둥근 사각형 */}
-          <div className="bg-muted relative size-16 shrink-0 overflow-hidden rounded-xl">
-            {event.cover_image_url ? (
-              <Image
-                src={event.cover_image_url}
-                alt={event.title}
-                fill
-                sizes="64px"
+          {/* ── 좌측: 시간 앵커 박스 ── */}
+          {/*
+            스크린리더에는 우측 텍스트 영역이 정보를 전달하므로 이 박스는 숨김.
+            manage-card 의 날짜 박스와 동일한 치수(w-14)와 색 규칙 적용.
+          */}
+          <div
+            aria-hidden="true"
+            className={cn(
+              "flex w-14 shrink-0 flex-col items-center justify-center gap-0.5 self-stretch rounded-lg py-2",
+              anchorDim ? "bg-muted" : "bg-keio-navy/10"
+            )}
+          >
+            {event.is_all_day ? (
+              // 종일 이벤트 — 「終日」 한 줄 표시
+              <span
                 className={cn(
-                  "object-cover",
-                  // 취소된 이벤트는 썸네일도 흑백으로 표시
-                  isCancelled && "grayscale"
+                  "text-xs font-medium",
+                  anchorDim ? "text-muted-foreground" : "text-keio-navy"
                 )}
-              />
+              >
+                終日
+              </span>
             ) : (
-              // 이미지 없으면 캘린더 아이콘으로 대체
-              <div className="text-muted-foreground flex h-full w-full items-center justify-center">
-                <CalendarDays className="size-6" aria-hidden="true" />
-              </div>
+              <>
+                {/* 시작 시각 — 크게 표시 */}
+                <span
+                  className={cn(
+                    "text-base leading-none font-bold",
+                    anchorDim ? "text-muted-foreground" : "text-keio-navy"
+                  )}
+                >
+                  {startTimeLabel}
+                </span>
+                {/* 종료 시각 — 같은 날이면 「〜HH:mm」 작게 */}
+                {endTimeLabel && (
+                  <span
+                    className={cn(
+                      "text-[10px] leading-tight",
+                      anchorDim ? "text-muted-foreground" : "text-keio-navy/80"
+                    )}
+                  >
+                    〜{endTimeLabel}
+                  </span>
+                )}
+              </>
             )}
           </div>
 
-          {/* テキスト 영역 */}
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
-            {/* タイトル — 취소된 이벤트는 취소선 적용 */}
-            <p
-              className={cn(
-                "line-clamp-2 text-sm leading-snug font-semibold",
-                isCancelled && "text-muted-foreground line-through"
+          {/* ── 우측: 이벤트 정보 ── */}
+          <div className="min-w-0 flex-1 space-y-1.5">
+            {/* 제목 줄 — 취소 이벤트는 취소선 + 「中止」 뱃지 */}
+            <div className="flex items-start gap-1.5">
+              <p
+                className={cn(
+                  "line-clamp-2 min-w-0 flex-1 text-sm leading-snug font-semibold",
+                  isCancelled && "text-muted-foreground line-through"
+                )}
+              >
+                {event.title}
+              </p>
+              {/* 취소 뱃지 */}
+              {isCancelled && (
+                <span className="bg-destructive/10 text-destructive inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-medium">
+                  中止
+                </span>
               )}
-            >
-              {event.title}
-            </p>
-
-            {/* 취소 배지 */}
-            {isCancelled && (
-              <span className="bg-destructive/10 text-destructive inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-medium">
-                中止
-              </span>
-            )}
-
-            {/* 時刻 */}
-            <div className="text-muted-foreground flex items-center gap-1 text-xs">
-              <Clock className="size-3 shrink-0" aria-hidden="true" />
-              <span>{timeDisplay}</span>
             </div>
 
-            {/* 場所 */}
+            {/* D-Day 칩 + 공통 메타 줄 */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {/* D-Day 칩 — 예정 이벤트에만 표시 */}
+              {showDday && <DDayChip dday={dday} />}
+            </div>
+
+            {/* 장소 */}
             {event.location && (
               <div className="text-muted-foreground flex items-center gap-1 text-xs">
                 <MapPin className="size-3 shrink-0" aria-hidden="true" />
@@ -159,7 +209,10 @@ export function ListEventCard({ event }: ListEventCardProps) {
             )}
 
             {/* 주최 サークル 이름 */}
-            <p className="text-muted-foreground truncate text-xs">{event.circle_name}</p>
+            <div className="text-muted-foreground flex items-center gap-1 text-xs">
+              <CalendarDays className="size-3 shrink-0" aria-hidden="true" />
+              <span className="truncate">{event.circle_name}</span>
+            </div>
 
             {/* カテゴリバッジ — 취소된 이벤트는 미표시 */}
             {categoryLabel && !isCancelled && (

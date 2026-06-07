@@ -90,12 +90,12 @@ export function CalendarListView({ events }: CalendarListViewProps) {
           {/* ── sticky 날짜 헤더 ── */}
           {/* cal-list-date-header: globals.css 의 scroll-driven animation 타겟 클래스 */}
           {/* sticky top-0 z-10: 스크롤 시 상단에 고정 (z-index 로 카드 위에 올라옴) */}
-          <div className="cal-list-date-header bg-background/90 sticky top-0 z-10 border-b px-4 py-2 backdrop-blur-sm">
+          <div className="cal-list-date-header bg-background/90 sticky top-0 z-10 px-4 py-2 backdrop-blur-sm">
             <h2 className="text-sm font-semibold">{group.dateLabel}</h2>
           </div>
 
-          {/* ── 이벤트 카드 리스트 ── */}
-          <div className="flex flex-col divide-y px-4">
+          {/* ── 이벤트 카드 리스트 — 카드화로 divide-y 대신 space-y-2 간격 ── */}
+          <div className="flex flex-col space-y-2 px-4 pb-2">
             {group.events.map((event) => (
               <ListEventCard key={event.id} event={event} />
             ))}
