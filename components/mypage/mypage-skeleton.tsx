@@ -4,11 +4,12 @@
  * 실제 레이아웃(ProfileHero + 운영 카드 2개)과 동일한 높이를 유지해
  * 데이터 로드 완료 후 레이아웃 점프를 방지한다.
  *
- * 구성:
+ * 구성(실제 카드 레이아웃과 높이 동기화):
  * 1. 프로필 줄 — 아바타 원 + 이름 줄 + 인증뱃지 줄
  * 2. 섹션 헤더 줄
- * 3. 카드 1개 — 16:9 커버 + 제목/뱃지 줄 + 메트릭 3분할
- * 4. 카드 2개 (축소) — 커버 + 제목 줄
+ * 3. 카드 1개 (approved 풀) — 커버 + 제목/뱃지 + 메트릭 1줄 + 모집 토글 + 完成度 요약 + 2버튼
+ * 4. 카드 2개 (축소) — 커버 + 제목 + 버튼
+ * 5. お問い合わせ 줄
  */
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,7 +35,7 @@ export function MyPageSkeleton() {
         <Skeleton className="h-5 w-20" />
       </div>
 
-      {/* ── 3. 운영 카드 1 (풀 디테일: 커버 + 메트릭) ── */}
+      {/* ── 3. 운영 카드 1 (approved 풀 디테일) ── */}
       <div className="space-y-3 overflow-hidden rounded-xl border p-0">
         {/* 커버 이미지 16:9 */}
         <Skeleton className="aspect-video w-full rounded-none" />
@@ -46,18 +47,20 @@ export function MyPageSkeleton() {
           </div>
           {/* 카테고리 라벨 */}
           <Skeleton className="h-4 w-24" />
-          {/* 메트릭 3분할 */}
-          <div className="grid grid-cols-3 gap-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="flex flex-col items-center gap-1 rounded-md border p-3">
-                <Skeleton className="size-5" />
-                <Skeleton className="h-5 w-10" />
-                <Skeleton className="h-3 w-8" />
-              </div>
-            ))}
+          {/* 메트릭 1줄 (閲覧·問合·部員) */}
+          <Skeleton className="h-3 w-48" />
+          {/* 모집 상태 토글 */}
+          <Skeleton className="h-9 w-full rounded-lg" />
+          {/* 完成度 요약 한 줄 + 진행 막대 */}
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-2 w-full rounded-full" />
           </div>
-          {/* 편집 버튼 */}
-          <Skeleton className="h-10 w-full rounded-md" />
+          {/* 編集 / イベント管理 2버튼 */}
+          <div className="grid grid-cols-2 gap-2">
+            <Skeleton className="h-10 w-full rounded-md" />
+            <Skeleton className="h-10 w-full rounded-md" />
+          </div>
         </div>
       </div>
 
@@ -70,8 +73,17 @@ export function MyPageSkeleton() {
             <Skeleton className="h-5 w-14 rounded-full" />
           </div>
           <Skeleton className="h-4 w-20" />
-          <Skeleton className="h-10 w-full rounded-md" />
+          <div className="grid grid-cols-2 gap-2">
+            <Skeleton className="h-10 w-full rounded-md" />
+            <Skeleton className="h-10 w-full rounded-md" />
+          </div>
         </div>
+      </div>
+
+      {/* ── 5. お問い合わせ 줄 ── */}
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-5 w-28" />
+        <Skeleton className="h-4 w-20" />
       </div>
     </div>
   );

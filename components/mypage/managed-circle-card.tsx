@@ -29,7 +29,7 @@
 import { useCallback, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Construction, Ellipsis, Trash2, Users } from "lucide-react";
+import { CalendarCog, Construction, Ellipsis, Trash2 } from "lucide-react";
 
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -249,8 +249,7 @@ export function ManagedCircleCard({ circle, onRequestDelete, className }: Manage
         }}
         title={
           <>
-            {/* 서클명을 따옴표로 감싸 어떤 서클인지 명확히 표시 */}
-            「{circle.name}」を削除しますか?
+            {/* 서클명을 따옴표로 감싸 어떤 서클인지 명확히 표시 */}「{circle.name}」を削除しますか?
           </>
         }
         description="この操作は取り消せません。活動レポートなどの関連データもすべて削除されます。"
@@ -267,24 +266,18 @@ export function ManagedCircleCard({ circle, onRequestDelete, className }: Manage
 // 상태별 분기 서브 컴포넌트
 // ──────────────────────────────────────────────────────────────
 
-/** approved: 메트릭(閲覧/問合 2분할) + 부원 수 범위 뱃지 + 모집 상태 토글 + 編集する 링크 */
+/** approved: 메트릭 1줄(閲覧·問合·部員) + 모집 토글 + 完成度(접기) + 編集·イベント管理 2버튼 */
 function ApprovedContent({ circle }: { circle: MyCircle }) {
   return (
     <>
-      {/* 카테고리 라벨 줄 아래에 부원 수 범위 뱃지 — member_band 있을 때만 표시
+      {/* 운영 지표 한 줄 (閲覧·問合·部員) — member_band 를 흡수해 카드 세로 길이 절감.
           비인터랙티브 영역: stretched-link 가 클릭을 받아 상세 이동 */}
-      {circle.member_band && (
-        <div className="flex items-center gap-1.5">
-          <Badge variant="outline" className="flex items-center gap-1 text-xs font-normal">
-            {/* Users 아이콘으로 부원 범위임을 시각적으로 구분 */}
-            <Users className="size-3" aria-hidden="true" />
-            {MEMBER_BAND_LABELS[circle.member_band]}
-          </Badge>
-        </div>
-      )}
-
-      {/* 운영 지표 2분할 (閲覧 / 問合) — 비인터랙티브, stretched-link 로 상세 이동 */}
-      <CircleMetrics viewCount={circle.view_count} inquiryCount={circle.inquiry_count} />
+      <CircleMetrics
+        variant="compact"
+        viewCount={circle.view_count}
+        inquiryCount={circle.inquiry_count}
+        memberBandLabel={circle.member_band ? MEMBER_BAND_LABELS[circle.member_band] : null}
+      />
 
       {/* 모집 상태 빠른 토글 — relative z-10: stretched-link 위에 배치해 토글이 독립 동작
           stopPropagation 은 내부 Switch 에 이미 있으나, wrapper 에도 추가해 이중 보호 */}
@@ -294,15 +287,21 @@ function ApprovedContent({ circle }: { circle: MyCircle }) {
         </div>
       )}
 
-      {/* 프로필 完成度 게이지 — 라벨·%·진행 막대 영역은 stretched-link 로 상세 이동.
-          내부 「次のおすすめ」 추천 카드(편집폼 Link)만 자체 relative z-10 으로 분리돼 편집폼으로 이동. */}
-      <ProfileCompletion circle={circle} />
+      {/* 프로필 完成度 게이지 — 접기 모드: 한 줄 요약 + 탭하면 추천 카드 펼침.
+          100% 완성 시 렌더 안 함(공간 절약). collapsible 내부에서 z-10/stopPropagation 처리. */}
+      <ProfileCompletion circle={circle} collapsible />
 
-      {/* 編集する 버튼 — relative z-10 + stopPropagation: stretched-link 보다 위에서 독립 동작
-          내부가 <Link href=".../edit"> 이므로 <a> 중첩 없이 Button asChild + Link 조합 사용 */}
-      <div className="relative z-10" onClick={(e) => e.stopPropagation()}>
-        <Button asChild className="h-10 w-full">
+      {/* 운영 액션 2종 — 編集(프로필 편집) / イベント管理(이벤트 허브).
+          relative z-10 + stopPropagation: stretched-link 보다 위에서 독립 동작. */}
+      <div className="relative z-10 grid grid-cols-2 gap-2" onClick={(e) => e.stopPropagation()}>
+        <Button asChild variant="outline" className="h-10">
           <Link href={`/circles/${circle.id}/edit`}>編集する</Link>
+        </Button>
+        <Button asChild className="h-10">
+          <Link href={`/circles/${circle.id}/events`}>
+            <CalendarCog className="size-4" aria-hidden="true" />
+            イベント管理
+          </Link>
         </Button>
       </div>
     </>

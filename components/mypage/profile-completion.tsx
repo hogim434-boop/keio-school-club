@@ -13,12 +13,13 @@
  * 추천 카드 클릭 → 편집폼(/circles/[id]/edit)의 해당 항목으로 딥링크 이동(focus 스크롤).
  */
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
   CalendarDays,
   CheckCircle2,
+  ChevronDown,
   Clock,
   FileText,
   ImageIcon,
@@ -77,9 +78,22 @@ const STAGE_TONE_CLS: Record<CompletionStage["tone"], string> = {
   complete: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
 };
 
-export function ProfileCompletion({ circle }: { circle: CompletionCircle }) {
+export function ProfileCompletion({
+  circle,
+  collapsible = false,
+}: {
+  circle: CompletionCircle;
+  /**
+   * true 이면 마이페이지 카드용 "접기" 모드:
+   * - 100% 완성 시 아예 렌더하지 않음(카드 공간 절약)
+   * - 미완성 시 한 줄 요약(완성도 % + 진행 막대)만 보이고, 탭하면 추천 카드 펼침
+   */
+  collapsible?: boolean;
+}) {
   const { percent, nextRecommended, stage } = computeProfileCompletion(circle);
   const reducedMotion = useReducedMotion();
+  // 접기 모드 펼침 여부 (collapsible=false 면 사용 안 함)
+  const [expanded, setExpanded] = useState(false);
 
   // 편집폼 딥링크 — 태그는 태그 단계로, 나머지(basic 단계 항목)는 해당 섹션으로 자동 스크롤되도록 focus 부여
   const editHref = (key: string) =>
@@ -107,8 +121,11 @@ export function ProfileCompletion({ circle }: { circle: CompletionCircle }) {
     });
   }, [percent, reducedMotion, circle.id]);
 
-  // 100% — 보강 완료. 완성 카드(화사하게 강조).
+  // 100% — 보강 완료.
   if (percent === 100) {
+    // 접기 모드(마이페이지 카드): 완성되면 공간 절약 위해 렌더하지 않음
+    if (collapsible) return null;
+    // 기본 모드(상세 owner 카드 등): 완성 카드(화사하게 강조)
     return (
       <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 dark:border-emerald-900/50 dark:bg-emerald-950/30">
         <CheckCircle2
@@ -122,81 +139,125 @@ export function ProfileCompletion({ circle }: { circle: CompletionCircle }) {
     );
   }
 
+  // ── 두 모드 공용 조각 ─────────────────────────────────────────────────
+  // 진행 막대 — 네이비→블루 그라데이션
+  const progressBar = (
+    <div
+      className="bg-muted h-2 w-full overflow-hidden rounded-full"
+      role="progressbar"
+      aria-valuenow={percent}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label="プロフィール完成度"
+    >
+      <div
+        className="from-keio-navy h-full rounded-full bg-gradient-to-r to-blue-500 transition-[width] duration-500"
+        style={{ width: `${percent}%` }}
+      />
+    </div>
+  );
+
+  // (C) 다음 추천 행동 — 컬러 아이콘 미니 카드 + (A) 혜택 카피
+  const recommendation = nextRecommended
+    ? (() => {
+        const visual = ITEM_VISUAL[nextRecommended.key];
+        const Icon = visual.icon;
+        return (
+          <div className="space-y-1 pt-0.5">
+            <p className="text-muted-foreground text-[11px] font-medium">次のおすすめ</p>
+            <Link
+              href={editHref(nextRecommended.key)}
+              // relative z-10: 마이페이지 카드의 stretched-link(상세 이동) 위로 올려
+              // 이 추천 카드만 편집폼으로 이동하게 분리 (상세 카드 컨텍스트엔 무영향)
+              className="group border-border bg-card hover:border-keio-navy/30 hover:bg-muted/40 relative z-10 flex items-center gap-3 rounded-xl border p-2.5 transition-colors"
+            >
+              {/* 항목 컬러 아이콘 */}
+              <span
+                className={cn(
+                  "flex size-9 shrink-0 items-center justify-center rounded-lg",
+                  visual.cls
+                )}
+              >
+                <Icon className="size-5" aria-hidden="true" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="text-foreground flex items-center gap-1 text-sm font-semibold">
+                  {nextRecommended.label_ja}を追加
+                  <ArrowRight
+                    className="text-keio-navy size-3.5 transition-transform group-hover:translate-x-0.5"
+                    aria-hidden="true"
+                  />
+                </span>
+                {nextRecommended.benefit_ja && (
+                  <span className="text-muted-foreground mt-0.5 block text-[11px] leading-snug">
+                    {nextRecommended.benefit_ja}
+                  </span>
+                )}
+              </span>
+            </Link>
+          </div>
+        );
+      })()
+    : null;
+
+  // 단계 배지 (두 모드 공용)
+  const stageBadge = (
+    <span
+      className={cn(
+        "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+        STAGE_TONE_CLS[stage.tone]
+      )}
+    >
+      {stage.label_ja}
+    </span>
+  );
+
+  // ── 접기 모드(마이페이지): 한 줄 요약 토글 + 펼침 시 추천 카드 ──────────
+  if (collapsible) {
+    return (
+      // relative z-10 + stopPropagation: stretched-link(상세 이동) 위에서 독립 동작
+      <div className="relative z-10 space-y-2" onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          className="flex w-full items-center justify-between gap-2 text-xs"
+        >
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="text-muted-foreground shrink-0">プロフィール完成度</span>
+            {stageBadge}
+          </span>
+          <span className="flex shrink-0 items-center gap-1">
+            <span className="text-foreground text-sm font-bold tabular-nums">{percent}%</span>
+            <ChevronDown
+              className={cn(
+                "text-muted-foreground size-4 transition-transform",
+                expanded && "rotate-180"
+              )}
+              aria-hidden="true"
+            />
+          </span>
+        </button>
+        {progressBar}
+        {expanded && recommendation}
+      </div>
+    );
+  }
+
+  // ── 기본 모드(상세 owner 카드 등): 전체 표시 ──────────────────────────
   return (
     <div className="space-y-2.5">
       {/* 헤더: 라벨 + 단계 배지(B) + 퍼센트 */}
       <div className="flex items-center justify-between gap-2 text-xs">
         <div className="flex min-w-0 items-center gap-1.5">
           <span className="text-muted-foreground shrink-0">プロフィール完成度</span>
-          {/* (B) 진행 단계 레이블 배지 */}
-          <span
-            className={cn(
-              "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-              STAGE_TONE_CLS[stage.tone]
-            )}
-          >
-            {stage.label_ja}
-          </span>
+          {stageBadge}
         </div>
         <span className="text-foreground shrink-0 text-sm font-bold tabular-nums">{percent}%</span>
       </div>
 
-      {/* 진행 막대 — 네이비→블루 그라데이션으로 생기 부여 */}
-      <div
-        className="bg-muted h-2 w-full overflow-hidden rounded-full"
-        role="progressbar"
-        aria-valuenow={percent}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-label="プロフィール完成度"
-      >
-        <div
-          className="from-keio-navy h-full rounded-full bg-gradient-to-r to-blue-500 transition-[width] duration-500"
-          style={{ width: `${percent}%` }}
-        />
-      </div>
-
-      {/* (C) 다음 추천 행동 — 컬러 아이콘 미니 카드 + (A) 혜택 카피 */}
-      {nextRecommended &&
-        (() => {
-          const visual = ITEM_VISUAL[nextRecommended.key];
-          const Icon = visual.icon;
-          return (
-            <div className="space-y-1 pt-0.5">
-              <p className="text-muted-foreground text-[11px] font-medium">次のおすすめ</p>
-              <Link
-                href={editHref(nextRecommended.key)}
-                // relative z-10: 마이페이지 카드의 stretched-link(상세 이동) 위로 올려
-                // 이 추천 카드만 편집폼으로 이동하게 분리 (상세 카드 컨텍스트엔 무영향)
-                className="group border-border bg-card hover:border-keio-navy/30 hover:bg-muted/40 relative z-10 flex items-center gap-3 rounded-xl border p-2.5 transition-colors"
-              >
-                {/* 항목 컬러 아이콘 */}
-                <span
-                  className={cn(
-                    "flex size-9 shrink-0 items-center justify-center rounded-lg",
-                    visual.cls
-                  )}
-                >
-                  <Icon className="size-5" aria-hidden="true" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="text-foreground flex items-center gap-1 text-sm font-semibold">
-                    {nextRecommended.label_ja}を追加
-                    <ArrowRight
-                      className="text-keio-navy size-3.5 transition-transform group-hover:translate-x-0.5"
-                      aria-hidden="true"
-                    />
-                  </span>
-                  {nextRecommended.benefit_ja && (
-                    <span className="text-muted-foreground mt-0.5 block text-[11px] leading-snug">
-                      {nextRecommended.benefit_ja}
-                    </span>
-                  )}
-                </span>
-              </Link>
-            </div>
-          );
-        })()}
+      {progressBar}
+      {recommendation}
     </div>
   );
 }
