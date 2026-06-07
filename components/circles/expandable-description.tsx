@@ -36,7 +36,7 @@ export function ExpandableDescription({ text }: { text: string }) {
   }, [text]);
 
   return (
-    <section className="space-y-2 border-b py-4">
+    <section className="space-y-2">
       <h2 className="text-lg font-semibold">概要</h2>
 
       {/* 본문 — 접힘 시 line-clamp, 펼침 시 전체. 줄바꿈·이모지 보존. */}
