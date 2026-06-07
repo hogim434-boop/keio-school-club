@@ -107,6 +107,54 @@ export type Database = {
         };
         Relationships: [];
       };
+      circle_claims: {
+        Row: {
+          id: string;
+          circle_id: string;
+          requester_id: string;
+          contact_note: string;
+          status: "pending" | "approved" | "rejected";
+          created_at: string;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          circle_id: string;
+          requester_id: string;
+          contact_note: string;
+          status?: "pending" | "approved" | "rejected";
+          created_at?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          circle_id?: string;
+          requester_id?: string;
+          contact_note?: string;
+          status?: "pending" | "approved" | "rejected";
+          created_at?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "circle_claims_circle_id_fkey";
+            columns: ["circle_id"];
+            isOneToOne: false;
+            referencedRelation: "circles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "circle_claims_requester_id_fkey";
+            columns: ["requester_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       circle_images: {
         Row: {
           circle_id: string;
@@ -183,6 +231,13 @@ export type Database = {
           description: string;
           id: string;
           inquiry_count: number;
+          /**
+           * 실제 운영자가 소유권을 확정(claim)했는지 — M-024.
+           * false=시드(미claim): 인앱 DM 비활성, 公式SNS 핸드오프.
+           * true=운영자가 직접 등록 또는 claim 완료: 인앱 DM 활성.
+           * UPDATE 화이트리스트에서 제외 — service_role/admin RPC 만 변경 가능.
+           */
+          is_claimed: boolean;
           /** 부원 수 범위 — 마이그레이션 008. nullable (任意 필드) */
           member_band: Database["public"]["Enums"]["member_band_enum"] | null;
           member_count: number;
@@ -214,6 +269,11 @@ export type Database = {
           description?: string;
           id?: string;
           inquiry_count?: number;
+          /**
+           * 직접 등록 시 true 를 명시적으로 지정(운영자 본인이 만든 = 이미 claim 됨).
+           * 시드 INSERT 는 지정하지 않으면 DEFAULT false → 미claim 상태.
+           */
+          is_claimed?: boolean;
           /** 부원 수 범위 — nullable (任意) */
           member_band?: Database["public"]["Enums"]["member_band_enum"] | null;
           member_count?: number;
@@ -245,6 +305,8 @@ export type Database = {
           description?: string;
           id?: string;
           inquiry_count?: number;
+          // is_claimed 는 UPDATE 화이트리스트에 없음 — 일반 사용자 변조 방지.
+          // service_role / admin RPC 에서만 변경 가능하므로 Update 타입에서 제외.
           /** 부원 수 범위 — nullable (任意) */
           member_band?: Database["public"]["Enums"]["member_band_enum"] | null;
           member_count?: number;
@@ -338,6 +400,8 @@ export type Database = {
           id: string;
           keio_verified: boolean;
           role: string;
+          /** 가입 의도(general/operator). 온보딩 UX·분석용. 권한 게이트 아님. */
+          signup_intent: string;
         };
         Insert: {
           created_at?: string;
@@ -345,6 +409,7 @@ export type Database = {
           id: string;
           keio_verified?: boolean;
           role?: string;
+          signup_intent?: string;
         };
         Update: {
           created_at?: string;
@@ -352,6 +417,7 @@ export type Database = {
           id?: string;
           keio_verified?: boolean;
           role?: string;
+          signup_intent?: string;
         };
         Relationships: [];
       };

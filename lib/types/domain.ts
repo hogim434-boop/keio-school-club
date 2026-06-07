@@ -60,6 +60,12 @@ export interface CircleDetail extends CircleSummary {
   owner_id: string;
   /** 심사 상태 — owner / admin 에게만 노출. 공개 페이지에서는 'approved' 만 fetch */
   status: CircleStatus;
+  /**
+   * 실제 운영자가 소유권을 확정(claim)했는지 — M-024.
+   * false=시드(미claim): 인앱 DM 비활성, 公式SNS 핸드오프.
+   * true=운영자가 직접 등록 또는 claim 완료: 인앱 DM 활성.
+   */
+  is_claimed: boolean;
   /** 활동 시간대 — 복수 가능. weekday_day / weekday_night / weekend (optional) */
   activity_time_band?: ActivityTimeBand[];
 }
