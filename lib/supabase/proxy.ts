@@ -112,12 +112,13 @@ export async function updateSession(request: NextRequest) {
       .eq("id", user.sub)
       .maybeSingle();
 
-    // 프로필 행이 있고 display_name 이 비어 있으면 온보딩 미완료 → 비밀번호 설정 단계부터 재개
+    // 프로필 행이 있고 display_name 이 비어 있으면 온보딩 미완료 → 닉네임 입력 단계로 재개
+    // (비밀번호 단계 제거 후 profile 단계가 첫 온보딩 진입점)
     if (profile && !profile.display_name) {
       const url = request.nextUrl.clone();
       url.pathname = "/auth/sign-up";
       url.search = ""; // 기존 쿼리(next 등) 제거 후 step 만 부여
-      url.searchParams.set("step", "password");
+      url.searchParams.set("step", "profile");
       return NextResponse.redirect(url);
     }
   }

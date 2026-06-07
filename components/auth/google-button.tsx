@@ -4,7 +4,7 @@
  * GoogleButton — Google OAuth 로그인 버튼
  *
  * 클릭 시 Supabase OAuth 플로우를 시작해 Google 로그인 화면으로 이동한다.
- * - hd=keio.jp: Google 계정 선택 화면에서 keio.jp 힌트를 표시 (강제 차단은 아님)
+ * - 개방 정책: 도메인 제한(hd) 없음 — 모든 Google 계정 허용. @keio.jp 메일은 keio_verified 배지만 자동 부여.
  * - prompt=select_account: 이미 로그인된 계정이 있어도 선택 화면을 노출
  * - redirectTo: Google 인증 완료 후 돌아올 콜백 URL. next 파라미터를 그대로 전달해
  *   콜백 라우트(/auth/callback)에서 원래 목적지로 최종 리다이렉트한다.
@@ -25,9 +25,16 @@ interface GoogleButtonProps {
   label?: string;
   /** 추가 Tailwind 클래스 */
   className?: string;
+  /** 가입 의도 — 콜백 라우트에서 온보딩 분기에 사용 */
+  intent?: "general" | "operator";
 }
 
-export function GoogleButton({ next, label = "Googleで続ける", className }: GoogleButtonProps) {
+export function GoogleButton({
+  next,
+  label = "Googleで続ける",
+  className,
+  intent,
+}: GoogleButtonProps) {
   // 로딩 상태 — OAuth 리다이렉트 중에는 버튼을 비활성화하여 중복 클릭 방지
   const [isLoading, setIsLoading] = useState(false);
 
@@ -40,10 +47,15 @@ export function GoogleButton({ next, label = "Googleで続ける", className }: 
     // 오픈 리다이렉트 방지: next 파라미터를 안전한 상대 경로로 검증
     const safeNext = sanitizeNext(next ?? null);
 
-    // 콜백 URL 조립: /auth/callback?next=<safe-path>
-    // next가 없으면 쿼리스트링 없이 /auth/callback 만 사용
+    // 콜백 URL 조립: /auth/callback?next=<safe-path>&intent=<intent>
+    // - next, intent 모두 없으면 /auth/callback 만 사용
+    // - intent는 콜백 라우트에서 신규 사용자 온보딩 분기에 사용
+    const callbackParams = new URLSearchParams();
+    if (safeNext) callbackParams.set("next", safeNext);
+    if (intent) callbackParams.set("intent", intent);
+    const callbackQuery = callbackParams.toString();
     const callbackUrl = `${window.location.origin}/auth/callback${
-      safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""
+      callbackQuery ? `?${callbackQuery}` : ""
     }`;
 
     const { error } = await supabase.auth.signInWithOAuth({
@@ -51,8 +63,8 @@ export function GoogleButton({ next, label = "Googleで続ける", className }: 
       options: {
         redirectTo: callbackUrl,
         queryParams: {
-          // Google 계정 선택 화면에서 keio.jp 도메인 힌트 제공
-          hd: "keio.jp",
+          // 개방 정책: keio.jp 도메인 힌트(hd) 제거 → 모든 Google 계정으로 가입/로그인 가능.
+          // (@keio.jp 메일은 trigger 의 is_keio_email 로 keio_verified 배지만 자동 부여 — 차단 아님)
           // 이미 로그인 상태여도 계정 선택 화면 표시 (계정 전환 가능)
           prompt: "select_account",
         },

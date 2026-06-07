@@ -1,41 +1,28 @@
 "use client";
 
 /**
- * LoginForm — 이메일+비밀번호 로그인 화면
+ * LoginForm — Google 전용 로그인 화면
  *
- * Google OAuth를 제거하고 Keio 이메일(@keio.jp) + 비밀번호로만 로그인.
- * AuthScreen 풀스크린 셸을 사용한다.
+ * 가입이 Google OAuth 전용(비밀번호 단계 없음)이고, 비밀번호로 만들어진
+ * 기존 사용자가 없으므로 이메일+비밀번호 폼은 제거했다.
+ * → 로그인 수단은 Google 하나로 통일.
  *
  * useSearchParams()를 사용하므로 page.tsx에서 반드시 <Suspense>로 감싸야 한다.
  *
  * 애니메이션 전략:
  *   - LazyMotion + domAnimation + m.* 패턴 (프로젝트 표준)
- *   - 로고(자체 애니메이션) → 타이틀(delay 0.15s) stagger
- *   - 폼 영역: 진입 애니메이션은 다음 단계 전문가가 stagger 추가 예정
- *   - 로그인 버튼: m.div whileTap press 피드백
+ *   - 로고(자체 애니메이션) → 서브카피(0.15s) → GoogleButton(0.21s) → 신규가입 링크(0.30s)
  *   - KCircleLogo는 자체 mount 애니메이션 보유 → 중복 방지
  *   - useReducedMotion() 준수 (WCAG SC 2.3.3)
  */
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useState, type FormEvent } from "react";
 import { LazyMotion, domAnimation, m, useReducedMotion } from "motion/react";
-import { ArrowRight } from "lucide-react";
 
 import { AuthScreen } from "@/components/auth/auth-screen";
-import { PasswordInput } from "@/components/auth/password-input";
+import { GoogleButton } from "@/components/auth/google-button";
 import { KCircleLogo } from "@/components/layout/kcircle-logo";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { createClient } from "@/lib/supabase/client";
-import { sanitizeNext } from "@/lib/auth/sanitize-next";
-import { AUTH_INPUT_CLS } from "@/lib/auth/input-class";
-
-// ── Primary CTA 버튼 스타일 토큰 ──
-// 검정(기본 Button=bg-primary) 배경으로 통일, disabled 시 회색 전환 없이 불투명도만 낮춤
-const CTA_BTN_CLS =
-  "h-12 w-full rounded-xl bg-primary text-base font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40";
 
 // ── 공통 easing — 프로젝트 표준 expo-out (iOS 풍, 빠르게 시작해 부드럽게 멈춤)
 const EASE_EXPO_OUT = [0.22, 1, 0.36, 1] as const;
@@ -48,16 +35,10 @@ const FADE_UP_VARIANTS = {
 } as const;
 
 export function LoginForm() {
-  // 로그인 전 가려던 경로 — 로그인 완료 후 복원하기 위해 사용
+  // 로그인 전 가려던 경로 — 로그인 완료 후 복원하기 위해 사용.
   // next= を優先. 旧 redirect_to= も fallback として読む (下位互換・移行期安全策)
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? searchParams.get("redirect_to");
-
-  // ── 폼 상태 ──
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
 
   // reduced motion 사용자는 initial을 완성 상태로 강제 (애니메이션 즉시 완료)
   const reducedMotion = useReducedMotion();
@@ -67,134 +48,49 @@ export function LoginForm() {
   const makeTransition = (delay: number) =>
     reducedMotion ? { duration: 0 } : { duration: 0.42, ease: EASE_EXPO_OUT, delay };
 
-  // ── 로그인 처리 핸들러 ──
-  const handleLogin = async (e: FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-
-    const supabase = createClient();
-
-    // 이메일+비밀번호로 로그인 시도
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (signInError) {
-      // 보안상 구체적 실패 이유를 노출하지 않음 (이메일/비밀번호 구분 없이 동일 메시지)
-      setError("メールアドレスまたはパスワードが正しくありません");
-      setIsLoading(false);
-      return;
-    }
-
-    // 로그인 성공 → 하드 내비게이션(풀 리로드)으로 이동.
-    // router.push(소프트 내비)는 새 세션 쿠키가 서버에 전달되기 전 보호 경로로 가면
-    // 미들웨어(proxy)가 다시 로그인으로 돌려보내거나(바운스), 목적지 RSC 가 멈춰
-    // 버튼이 "ログイン中…" 상태로 굳는 경우가 있다. 풀 리로드로 쿠키 전달을 보장한다.
-    const safeNext = sanitizeNext(next);
-    // next 가 없으면 현재 홈("/", 큐레이션)으로. (구버전 일람 "/circles" 아님)
-    window.location.assign(safeNext ?? "/");
-    // isLoading 은 페이지가 새로 로드되며 자연히 해제됨(여기서 false 로 두지 않음).
-  };
-
   return (
     <LazyMotion features={domAnimation}>
       <AuthScreen align="center" backHref="/">
-        {/* ── 중앙 집약 그룹 ── 로고·타이틀·폼·신규가입 링크를 한 덩어리로 */}
-        <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-5">
+        {/* ── 중앙 집약 그룹 ── 로고·서브카피·Google 버튼·신규가입 링크를 한 덩어리로 */}
+        <div className="mx-auto flex w-full max-w-sm flex-col items-center gap-6">
           {/*
             KCircleLogo는 자체 Ring Draw 애니메이션을 보유하므로
             별도 모션 래퍼 없이 그대로 사용 (중복 방지).
           */}
           <KCircleLogo size="lg" />
 
-          {/* 제목 제거 — 로그인 버튼이 페이지 목적을 라벨링하므로 중복 */}
+          {/* 서브카피: delay 0.15s — 로고 다음 자연스럽게 이어짐 */}
+          <m.p
+            className="text-muted-foreground text-center text-sm leading-relaxed"
+            variants={FADE_UP_VARIANTS}
+            initial={initial}
+            animate="visible"
+            transition={makeTransition(0.15)}
+          >
+            慶應アカウントでログイン
+          </m.p>
 
-          {/* ── 로그인 폼 — 엔터 제출 지원을 위해 <form>으로 감쌈 ── */}
-          <form onSubmit={handleLogin} className="flex w-full flex-col gap-4">
-            {/* 이메일 필드: delay 0.21s — 타이틀(0.15s) 다음 0.06s stagger 간격 */}
-            <m.div
-              className="flex flex-col gap-2"
-              variants={FADE_UP_VARIANTS}
-              initial={initial}
-              animate="visible"
-              transition={makeTransition(0.21)}
-            >
-              {/* 라벨 제거 → placeholder 가 라벨 역할 + aria-label 로 접근성 보완 */}
-              <Input
-                id="email"
-                type="email"
-                placeholder="メールアドレス"
-                aria-label="メールアドレス"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-                className={AUTH_INPUT_CLS}
-              />
-            </m.div>
+          {/*
+            Google 로그인 버튼 — 유일한 로그인 수단.
+            delay 0.21s — 서브카피 다음 0.06s stagger 간격.
+          */}
+          <m.div
+            className="w-full"
+            variants={FADE_UP_VARIANTS}
+            initial={initial}
+            animate="visible"
+            transition={makeTransition(0.21)}
+          >
+            <GoogleButton next={next} label="Googleでログイン" />
+          </m.div>
 
-            {/* 비밀번호 필드: delay 0.27s — 이메일 필드 다음 0.06s stagger 간격 */}
-            <m.div
-              className="flex flex-col gap-2"
-              variants={FADE_UP_VARIANTS}
-              initial={initial}
-              animate="visible"
-              transition={makeTransition(0.27)}
-            >
-              {/* 라벨 제거 → placeholder + aria-label. show/hide 토글 내장 */}
-              <PasswordInput
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="パスワード"
-                ariaLabel="パスワード"
-                autoComplete="current-password"
-              />
-            </m.div>
-
-            {/* 인라인 에러 메시지 — 동적 표시 요소이므로 애니메이션 없이 그대로 */}
-            {error && (
-              <p className="text-sm text-red-500" role="alert">
-                {error}
-              </p>
-            )}
-
-            {/*
-              로그인 버튼: delay 0.33s — 비밀번호 필드(0.27s) 다음 0.06s stagger 간격.
-              진입 FADE_UP + whileTap press 피드백을 한 엘리먼트에 공존.
-              whileTap 내부에 transition을 직접 지정해 진입 transition(0.42s)과 격리.
-              Button type="submit" — form의 onSubmit 트리거는 그대로 유지.
-            */}
-            <m.div
-              variants={FADE_UP_VARIANTS}
-              initial={initial}
-              animate="visible"
-              transition={makeTransition(0.33)}
-              whileTap={reducedMotion ? undefined : { scale: 0.98, transition: { duration: 0.1 } }}
-            >
-              {/* CTA 스타일: 네이비 배경, disabled 시 회색 전환 없이 불투명도만 낮춤 */}
-              <Button type="submit" disabled={isLoading} className={CTA_BTN_CLS}>
-                {isLoading ? (
-                  "ログイン中…"
-                ) : (
-                  /* 텍스트 + 화살표 아이콘 — flex 정렬로 나란히 배치 */
-                  <span className="flex items-center justify-center gap-2">
-                    ログイン
-                    <ArrowRight className="size-4" aria-hidden="true" />
-                  </span>
-                )}
-              </Button>
-            </m.div>
-          </form>
-
-          {/* 신규 가입 안내 — 로그인 버튼 바로 아래(눈에 잘 띄게). next 보존. */}
+          {/* 신규 가입 안내 — Google 버튼 바로 아래. next 보존. */}
           <m.p
             className="text-muted-foreground text-center text-sm"
             variants={FADE_UP_VARIANTS}
             initial={initial}
             animate="visible"
-            transition={makeTransition(0.39)}
+            transition={makeTransition(0.3)}
           >
             アカウントをお持ちでないですか?{" "}
             <Link

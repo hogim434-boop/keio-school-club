@@ -7,7 +7,7 @@
  * 흐름:
  *   1. URL 쿼리스트링에서 code, next 추출
  *   2. code → 세션 교환 (exchangeCodeForSession)
- *   3. 신규 판별: profiles.display_name IS NULL → 온보딩(/auth/sign-up?step=profile)
+ *   3. 신규 판별: profiles.display_name IS NULL → 닉네임 입력(/auth/sign-up?step=profile)
  *   4. 재방문: next 파라미터 또는 기본값 /circles 로 이동
  *   5. 에러: /auth/error 로 이동
  */
@@ -26,6 +26,12 @@ export async function GET(request: NextRequest) {
   // next 파라미터 — 로그인 전 가려던 경로 (sanitizeNext로 오픈 리다이렉트 방지)
   // 지정이 없으면 현재 홈("/", 큐레이션)으로. (구버전 일람 "/circles" 아님)
   const next = sanitizeNext(searchParams.get("next")) ?? "/";
+
+  // intent 파라미터 — 가입 의도(general/operator). 신규 사용자 온보딩 URL에만 전달.
+  // 허용 값 이외의 문자열은 undefined 처리해 URL 오염 방지.
+  const rawIntent = searchParams.get("intent");
+  const intentParam: "general" | "operator" | undefined =
+    rawIntent === "general" || rawIntent === "operator" ? rawIntent : undefined;
 
   if (code) {
     // 서버 컴포넌트용 Supabase 클라이언트 (쿠키 기반 세션 관리)
@@ -53,9 +59,14 @@ export async function GET(request: NextRequest) {
           .single();
 
         if (!profile?.display_name) {
-          // 신규 사용자(온보딩 미완): 비밀번호 설정 단계로 이동
-          // (비번 설정 → 닉네임 → 완료 순서. display_name이 채워지면 온보딩 완료로 간주)
-          target = "/auth/sign-up?step=password";
+          // 신규 사용자(온보딩 미완): 닉네임 입력 단계로 이동
+          // (비밀번호 단계 제거 후 Google 인증 → 닉네임 → 완료 순서)
+          // display_name이 채워지면 온보딩 완료로 간주
+          // intent·next를 쿼리로 이어 붙여 온보딩 전 단계에서 보존
+          target =
+            "/auth/sign-up?step=profile" +
+            (intentParam ? `&intent=${intentParam}` : "") +
+            (next !== "/" ? `&next=${encodeURIComponent(next)}` : "");
         }
       }
 
