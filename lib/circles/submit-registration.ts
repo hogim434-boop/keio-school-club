@@ -117,6 +117,9 @@ export async function submitRegistration(
       contact_line: lineIdToUrl(values.contact_line?.trim()) || null,
       // 서약 동의 시각 기록 (pledge1·pledge2 모두 z.literal(true) 로 보증됨)
       pledge_accepted_at: new Date().toISOString(),
+      // 운영자가 직접 등록 = 이미 claim 됨 → is_claimed: true 명시 (M-024).
+      // 시드 INSERT(관리자 직접 SQL)는 이 코드를 통하지 않으므로 DEFAULT false(미claim)가 됨.
+      is_claimed: true,
       // status, annual_fee_yen 은 DB default('pending', 0) 을 사용하므로 미지정
     })
     .select("id")

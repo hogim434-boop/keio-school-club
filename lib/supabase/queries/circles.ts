@@ -202,6 +202,9 @@ function toCircleDetail(row: Record<string, unknown>): CircleDetail {
     owner_id: (row.owner_id as string | null) ?? "",
     status: (row.status as CircleDetail["status"]) ?? "approved",
     activity_time_band: row.activity_time_band as CircleDetail["activity_time_band"],
+    // is_claimed: 시드 동아리는 false, 운영자가 직접 등록한 경우는 true (M-024)
+    // DB DEFAULT false なので null/undefined が来た場合も false にフォールバック
+    is_claimed: (row.is_claimed as boolean | null) ?? false,
   };
 }
 

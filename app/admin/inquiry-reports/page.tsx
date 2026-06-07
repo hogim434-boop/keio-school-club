@@ -137,6 +137,9 @@ export default async function AdminInquiryReportsPage() {
           <Link href="/admin/circles" className="text-keio-navy underline">
             ← 承認管理へ
           </Link>
+          <Link href="/admin/claims" className="text-keio-navy underline">
+            claim申請へ →
+          </Link>
           <Link href="/admin/announcements" className="text-keio-navy underline">
             お知らせ管理へ →
           </Link>

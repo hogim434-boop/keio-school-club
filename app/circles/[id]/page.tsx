@@ -9,6 +9,7 @@ import {
   UserCheck,
   Users,
   type LucideIcon,
+  Info,
 } from "lucide-react";
 
 import { CircleActions } from "@/components/circles/circle-actions";
@@ -417,15 +418,35 @@ function SummaryGrid({ circle }: { circle: CircleDetail }) {
  * - LINE 그룹 링크 공개 금지 (개인 정보 위험 — 무제한 링크 확산).
  * - contact_line 데이터는 DB 에 보존, 운영진 DM 답신 시 개별 안내용.
  *
- * circle.contact_instagram / contact_x 가 모두 없으면 섹션 자체를 미렌더.
+ * M-024 변경 (미claim 핸드오프):
+ * - is_claimed=false: SNS 링크를 「연락 창구」로 격상하는 헤더 문구로 변경.
+ * - is_claimed=true: 기존 「公式SNS」 표기 유지.
+ * - 두 경우 모두 contact_instagram / contact_x 가 없으면 섹션 자체 미렌더.
+ *
+ * 추가: 미claim 동아리에게 「管理する」 유도 배너 표시.
  */
 function SnsSnsFooter({ circle }: { circle: CircleDetail }) {
   const hasSns = circle.contact_instagram || circle.contact_x;
-  if (!hasSns) return null;
+  if (!hasSns && circle.is_claimed) return null;
+  if (!hasSns && !circle.is_claimed) {
+    // 未claim + SNS なし: 管理유도 배너만 표示
+    return <UnclaimedBanner circleId={circle.id} />;
+  }
+
+  // SNS あり — claim 여부에 따라 섹션 헤더 문구 분기
+  const sectionHeading = circle.is_claimed ? "公式SNS" : "このサークル・部活動への問い合わせ先";
 
   return (
-    <section className="border-t pt-6">
-      <h2 className="text-muted-foreground mb-4 text-base font-semibold">公式SNS</h2>
+    <section className="space-y-4 border-t pt-6">
+      <h2 className="text-muted-foreground text-base font-semibold">{sectionHeading}</h2>
+
+      {/* 미claim 안내 문구 — 인앱 DM 없음을 자연스럽게 설명 */}
+      {!circle.is_claimed && (
+        <p className="text-muted-foreground text-sm leading-relaxed">
+          現在、公式SNSからお問い合わせください。
+        </p>
+      )}
+
       <div className="flex items-center gap-3">
         {/* Instagram 링크 */}
         {circle.contact_instagram && (
@@ -460,7 +481,39 @@ function SnsSnsFooter({ circle }: { circle: CircleDetail }) {
           </a>
         )}
       </div>
+
+      {/* 미claim 動아리 관리 유도 배너 */}
+      {!circle.is_claimed && <UnclaimedBanner circleId={circle.id} />}
     </section>
+  );
+}
+
+/**
+ * UnclaimedBanner — 미claim 동아리에 표시하는 「管理する」 유도 배너 (M-024).
+ *
+ * 실제 운영자에게 인앱 관리 등록을 안내한다.
+ * claim 본 플로우는 후속 구현 예정 — 현재는 /mypage 로 임시 안내.
+ *
+ * 카피 규칙: 「公認」「必ず」등 금지어 미사용. 동아리は「サークル・部活動」.
+ */
+function UnclaimedBanner({ circleId }: { circleId: string }) {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-dashed px-4 py-3">
+      <Info className="text-muted-foreground mt-0.5 size-4 shrink-0" aria-hidden />
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium">このサークル・部活動を運営していますか？</p>
+        <p className="text-muted-foreground mt-0.5 text-xs">
+          登録することで、アプリ内でのお問い合わせ管理や情報更新が可能になります。
+        </p>
+        {/* claim 신청 라우트 (M-025) */}
+        <a
+          href={`/circles/${circleId}/claim`}
+          className="text-keio-navy mt-1.5 inline-block text-xs font-semibold underline-offset-2 hover:underline"
+        >
+          管理する
+        </a>
+      </div>
+    </div>
   );
 }
 

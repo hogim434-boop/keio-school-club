@@ -24,6 +24,9 @@ export default async function AdminCirclesPage() {
           {pending.length > 0 && <span className="ml-1">（承認待ち {pending.length}件）</span>}
         </p>
         <div className="mt-2 flex gap-3 text-sm">
+          <Link href="/admin/claims" className="text-keio-navy underline">
+            claim申請へ →
+          </Link>
           <Link href="/admin/announcements" className="text-keio-navy underline">
             お知らせ管理へ →
           </Link>

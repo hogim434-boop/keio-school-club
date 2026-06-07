@@ -93,7 +93,7 @@ export default function CircleDetailTemplate({ children }: { children: ReactNode
   // will-change-transform + transform 이 containing block 이 되어 페이지 높이가 0으로 붕괴됨.
   //
   // (hooks 는 위에서 모두 호출했으므로 이 조건부 return 은 hooks 규칙을 위반하지 않는다)
-  if (pathname?.endsWith("/edit") || pathname?.includes("/dm")) {
+  if (pathname?.endsWith("/edit") || pathname?.includes("/dm") || pathname?.endsWith("/claim")) {
     return <>{children}</>;
   }
 
