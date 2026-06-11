@@ -3,12 +3,12 @@
 /**
  * StepTags — 서클 등록 2단계: 태그 선택
  *
- * 담당 필드: tags (string[], 최대 5개)
+ * 담당 필드: tags (string[], 개수 제한 없음 — 무제한 선택)
  *
  * 구조:
  *  - FormProvider(CircleRegistrationForm) 아래에서 useFormContext<RegistrationValues>() 로 접근
  *  - 제출 버튼 없음 — 단계 이동은 컨테이너 footer의 "次へ" 버튼이 담당
- *  - 선택 0개도 다음 단계 진행 가능 (tags 는 optional — schema max(5) 만 있음)
+ *  - 선택 0개도 다음 단계 진행 가능 (tags 는 optional — 개수 상한 없음)
  *
  * 태그 데이터:
  *  - filter-labels.ts 의 TAG_SEEDS 정적 상수 7종을 사용 (DB 조회 없음)
@@ -24,10 +24,6 @@ import { LazyMotion, domAnimation, m, useReducedMotion } from "motion/react";
 import type { RegistrationValues } from "@/lib/circles/registration-schema";
 import { TAG_SEEDS } from "@/lib/circles/filter-labels";
 import { cn } from "@/lib/utils";
-
-// ── 상수 ──────────────────────────────────────────────────────────────────────
-/** 한 번에 선택 가능한 최대 태그 수 */
-const MAX_TAGS = 5;
 
 // ── 스타일 토큰 ────────────────────────────────────────────────────────────────
 // step-contact.tsx 와 동일한 상수명/값 사용
@@ -46,14 +42,12 @@ const ERROR_MSG_CLS = "text-xs text-red-500";
 /**
  * 태그 선택 스텝.
  *
- * 칩 토글 동작:
- *  - 선택되지 않은 태그 클릭 → 추가 (최대 5개 미만일 때만)
+ * 칩 토글 동작 (개수 제한 없음):
+ *  - 선택되지 않은 태그 클릭 → 추가
  *  - 선택된 태그 클릭 → 해제
- *  - 5개 도달 시 미선택 칩: disabled + opacity-40 + cursor-not-allowed
  *
  * setValue 규약:
  *  - setValue("tags", nextSlugs, { shouldValidate: true })
- *  - shouldValidate: true 로 max(5) zod 검증을 즉시 반영
  */
 export function StepTags() {
   // ── FormContext 접근 ─────────────────────────────────────────────────────
@@ -77,10 +71,9 @@ export function StepTags() {
 
   // ── 태그 토글 핸들러 ─────────────────────────────────────────────────────
   /**
-   * 태그 칩 클릭 시 호출됩니다.
+   * 태그 칩 클릭 시 호출됩니다 (개수 제한 없음).
    * - 이미 선택된 태그: 배열에서 제거
-   * - 미선택 태그 + 5개 미만: 배열에 추가
-   * - 미선택 태그 + 5개 도달: 무시 (버튼 자체가 disabled 이지만 방어 코드)
+   * - 미선택 태그: 배열에 추가
    */
   function toggleTag(slug: string) {
     if (selectedTags.includes(slug)) {
@@ -90,15 +83,11 @@ export function StepTags() {
         selectedTags.filter((s) => s !== slug),
         { shouldValidate: true }
       );
-    } else if (selectedTags.length < MAX_TAGS) {
-      // 선택 추가
+    } else {
+      // 선택 추가 (상한 없음)
       setValue("tags", [...selectedTags, slug], { shouldValidate: true });
     }
-    // 이미 5개인 경우: 아무 동작 없음 (버튼이 disabled 이므로 여기 도달 X)
   }
-
-  /** 현재 최대 태그 수에 도달했는지 여부 */
-  const isMaxReached = selectedTags.length >= MAX_TAGS;
 
   return (
     <LazyMotion features={domAnimation}>
@@ -114,9 +103,7 @@ export function StepTags() {
           <h1 className="text-[1.75rem] leading-snug font-bold tracking-tight">
             サークルの特徴を選んでください
           </h1>
-          <p className="text-muted-foreground text-sm">
-            当てはまるタグを最大{MAX_TAGS}個まで選択できます
-          </p>
+          <p className="text-muted-foreground text-sm">当てはまるタグをすべて選択できます</p>
         </m.div>
 
         {/* ── 선택 카운터 + 안내 ──────────────────────────────────────────── */}
@@ -127,26 +114,18 @@ export function StepTags() {
           animate="visible"
           transition={makeFadeTransition(0.12)}
         >
-          {/* 현재 선택 수 / 최대 수 */}
+          {/* 현재 선택 수 */}
           <span className="text-foreground text-sm font-medium">
             <span
               className={cn(
                 "tabular-nums transition-colors",
-                // 최대 도달 시 강조 색상
-                isMaxReached ? "text-keio-navy font-semibold" : "text-muted-foreground"
+                selectedTags.length > 0 ? "text-keio-navy font-semibold" : "text-muted-foreground"
               )}
             >
               {selectedTags.length}
             </span>
-            <span className="text-muted-foreground">/{MAX_TAGS}個選択中</span>
+            <span className="text-muted-foreground">個選択中</span>
           </span>
-
-          {/* 최대 도달 시 안내 텍스트 */}
-          {isMaxReached && (
-            <span role="status" aria-live="polite" className="text-keio-navy text-xs font-medium">
-              タグは{MAX_TAGS}個まで選択できます
-            </span>
-          )}
         </m.div>
 
         {/* ── 태그 칩 그리드 ──────────────────────────────────────────────── */}
@@ -164,22 +143,15 @@ export function StepTags() {
           <ul className="flex flex-wrap gap-2" role="group" aria-label="タグ選択">
             {TAG_SEEDS.map((tag) => {
               const isSelected = selectedTags.includes(tag.slug);
-              // 미선택 + 최대 도달 시 비활성화
-              const isDisabled = !isSelected && isMaxReached;
 
               return (
                 <li key={tag.slug}>
                   <button
                     type="button"
                     onClick={() => toggleTag(tag.slug)}
-                    disabled={isDisabled}
                     aria-pressed={isSelected}
                     aria-label={
-                      isDisabled
-                        ? `${tag.label_ja}（これ以上選択できません）`
-                        : isSelected
-                          ? `${tag.label_ja}（選択済み、クリックで解除）`
-                          : tag.label_ja
+                      isSelected ? `${tag.label_ja}（選択済み、クリックで解除）` : tag.label_ja
                     }
                     className={cn(
                       // 기본 스타일: SegmentedOption 과 동일 (filter-panel 톤 일치)
@@ -188,11 +160,8 @@ export function StepTags() {
                       // 선택 상태: 慶應 네이비 채움 (등록 폼 전용 — filter 와 차별화)
                       isSelected
                         ? "border-keio-navy bg-keio-navy text-keio-navy-foreground font-semibold"
-                        : isDisabled
-                          ? // 비활성 (최대 도달로 선택 불가)
-                            "border-border text-muted-foreground cursor-not-allowed opacity-40"
-                          : // 비선택 일반
-                            "border-border text-muted-foreground hover:border-muted-foreground"
+                        : // 비선택 일반
+                          "border-border text-muted-foreground hover:border-muted-foreground"
                     )}
                   >
                     {tag.label_ja}
@@ -203,7 +172,7 @@ export function StepTags() {
           </ul>
         </m.div>
 
-        {/* ── 태그 에러 메시지 (max 5 초과 — UI 제한으로 이론상 미발생) ──── */}
+        {/* ── 태그 에러 메시지 (개수 제한 없음 — 이론상 미발생, 방어용) ──── */}
         {errors.tags && (
           <p role="alert" className={ERROR_MSG_CLS}>
             {/* errors.tags 는 FieldError 또는 { root?: FieldError } 형태일 수 있음 */}

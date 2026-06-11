@@ -54,7 +54,7 @@ import { instagramUrlToHandle, xUrlToHandle, lineUrlToId } from "@/lib/circles/s
 /**
  * 활동 요일 한자 토큰 7종 (月〜日).
  * activity_days 텍스트(예: "月・水・金" / "毎週火曜")에서 요일만 정규 추출할 때 사용.
- * (lib/dummy/circles.ts 의 parseActivityWeekdays · DB 의 parse_activity_weekdays 와 동일 규칙)
+ * (DB 의 parse_activity_weekdays 함수와 동일 규칙)
  */
 const WEEKDAY_TOKENS = ["月", "火", "水", "木", "金", "土", "日"] as const;
 
@@ -157,12 +157,12 @@ const baseSchema = z.object({
   // ── 단계 2: 태그 ───────────────────────
 
   /**
-   * 태그 slug 배열 (최대 5개).
+   * 태그 slug 배열 (개수 제한 없음 — 무제한 선택 가능).
    * 초기값은 폼 컨테이너 defaultValues(tags: [])에서 부여한다.
    * .default([]) 를 스키마에 두면 zod input(tags?) / output(tags) 타입이 갈려
    * zodResolver(@hookform/resolvers v5)와 RHF Resolver 타입이 불일치하므로 사용하지 않는다.
    */
-  tags: z.array(z.string()).max(5, "タグは5個以内で選択してください"),
+  tags: z.array(z.string()),
 
   // ── 단계 3: 연락처 + 서약 ──────────────
 
