@@ -2,7 +2,7 @@
  * lib/supabase/queries/circles.ts
  *
  * RSC(Server Components)에서 호출하는 circles 관련 fetch 함수 모음.
- * Phase 1.2 T-009 와이어업 — lib/dummy/circles.ts의 더미 데이터를 대체.
+ * Supabase DB(circles 테이블)에서 직접 조회한다.
  *
  * 주의:
  * - createClient()는 함수 내부에서 매번 새로 생성 (Fluid compute 전역 변수 금지)
