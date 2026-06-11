@@ -458,9 +458,22 @@ export type Database = {
       is_admin: { Args: { uid?: string }; Returns: boolean };
     };
     Enums: {
-      activity_frequency_enum: "weekly_1" | "weekly_2_3" | "monthly";
+      activity_frequency_enum:
+        | "weekly_1"
+        | "weekly_2_3"
+        | "monthly"
+        | "daily"
+        | "weekly_3_4"
+        | "weekly_5_6";
       activity_report_type_enum: "practice" | "camp" | "event" | "meeting" | "other";
-      activity_time_band_enum: "weekday_day" | "weekday_night" | "weekend";
+      activity_time_band_enum:
+        | "weekday_day"
+        | "weekday_night"
+        | "weekend"
+        | "morning"
+        | "noon"
+        | "evening"
+        | "irregular";
       category_enum:
         | "sports"
         | "culture_art"
@@ -606,9 +619,24 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      activity_frequency_enum: ["weekly_1", "weekly_2_3", "monthly"],
+      activity_frequency_enum: [
+        "weekly_1",
+        "weekly_2_3",
+        "monthly",
+        "daily",
+        "weekly_3_4",
+        "weekly_5_6",
+      ],
       activity_report_type_enum: ["practice", "camp", "event", "meeting", "other"],
-      activity_time_band_enum: ["weekday_day", "weekday_night", "weekend"],
+      activity_time_band_enum: [
+        "weekday_day",
+        "weekday_night",
+        "weekend",
+        "morning",
+        "noon",
+        "evening",
+        "irregular",
+      ],
       category_enum: [
         "sports",
         "culture_art",
