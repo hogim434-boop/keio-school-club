@@ -31,6 +31,11 @@ const nextConfig: NextConfig = {
         hostname: "picsum.photos",
       },
       {
+        // Unsplash: 시드 동아리 커버 이미지(종목별 무료 사진) placeholder
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
+      {
         // Supabase Storage: circles-public 버킷 공개 이미지 — T-008 추가
         protocol: "https",
         hostname: "qugoxkrwlejeqarijztt.supabase.co",
