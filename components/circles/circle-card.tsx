@@ -13,13 +13,15 @@ import type { CircleSummary } from "@/lib/types/domain";
 
 interface CircleCardProps {
   circle: CircleSummary;
+  /** 신착 섹션 내 카드 여부 — true 면 커버 좌측 상단에 NEW 배지 표시 */
+  isNew?: boolean;
 }
 
 // 서클 카드 컴포넌트 (RSC) — F002, F001 검색 결과, F008 비교 송출 등에서 재사용.
 // props 는 CircleSummary 만 받아 DB·더미 데이터 모두 호환.
 // FavoriteToggleButton (Client) 을 우상단에 배치 — T-013b 에서 placeholder span 교체 완료.
 // 카드 전체를 Link 로 감싸 카드 어디를 눌러도 상세 페이지로 이동.
-export function CircleCard({ circle }: CircleCardProps) {
+export function CircleCard({ circle, isNew = false }: CircleCardProps) {
   const {
     id,
     name,
@@ -53,6 +55,17 @@ export function CircleCard({ circle }: CircleCardProps) {
             <div className="text-muted-foreground flex h-full w-full items-center justify-center">
               <Construction className="h-8 w-8" />
             </div>
+          )}
+
+          {/* 신착 배지 — 좌측 상단 (우측 상단은 favorite 버튼이 점유).
+              스타일은 circle-list-card 의 NEW 배지와 통일 (rose outline + pulse). */}
+          {isNew && (
+            <span
+              className="bg-background/80 absolute top-2 left-2 rounded border border-rose-400 px-1.5 py-0.5 text-[10px] font-medium text-rose-500 backdrop-blur-sm motion-safe:animate-pulse"
+              aria-label="新着のサークル"
+            >
+              NEW
+            </span>
           )}
 
           {/* 즐겨찾기 버튼 — FavoriteToggleButton (Client) 으로 교체 완료 (T-013b) */}

@@ -4,6 +4,7 @@ import { HomeCategoryGrid } from "@/components/circles/home-category-grid-simple
 import { HomeSearchBar } from "@/components/circles/home-search-bar";
 import { HorizontalCircleStrip } from "@/components/circles/horizontal-circle-strip";
 import { HourlyCategoryStrip } from "@/components/circles/hourly-category-strip";
+import { NewCirclesStrip } from "@/components/circles/new-circles-strip";
 import { PromoTileCarousel } from "@/components/circles/promo-tile-carousel";
 import { HomeCoachmark } from "@/components/onboarding/home-coachmark";
 import { UpcomingEventsStrip } from "@/components/home/upcoming-events-strip";
@@ -14,6 +15,7 @@ import {
   getRecommendedCircles,
   isShinkanSeason,
 } from "@/lib/supabase/queries/home-curation";
+import { getNewCircles } from "@/lib/supabase/queries/circles";
 import { PUBLIC_EVENTS_ENABLED } from "@/lib/constants/features";
 
 /**
@@ -57,10 +59,11 @@ async function HomeContent() {
 
   // 이벤트 쿼리는 PUBLIC_EVENTS_ENABLED=true 일 때만 실행 (false 이면 빈 배열로 대체)
   // → 디렉터리 우선 단계에서 불필요한 DB 왕복 제거
-  const [featured, upcomingEvents, recommended] = await Promise.all([
+  const [featured, upcomingEvents, recommended, newCircles] = await Promise.all([
     getFeaturedCircles(8),
     PUBLIC_EVENTS_ENABLED ? getUpcomingEvents(3) : Promise.resolve([]),
     getRecommendedCircles(6),
+    getNewCircles(8),
   ]);
 
   return (
@@ -118,6 +121,18 @@ async function HomeContent() {
           circles={recommended}
           seeMoreHref="/circles"
           layout="carousel"
+        />
+      )}
+
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          新着のサークル・部活動 (홈 최하단)
+          created_at 최신순 — 큰 16:9 커버 카드 가로 캐러셀 + NEW 배지
+          ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      {newCircles.length > 0 && (
+        <NewCirclesStrip
+          title="新着のサークル・部活動"
+          circles={newCircles}
+          seeMoreHref="/circles?sort=recent"
         />
       )}
 
@@ -192,6 +207,15 @@ function HomePageFallback() {
         <Skeleton className="h-6 w-48" />
         <div className="flex gap-4">
           <Skeleton className="h-24 w-[88%] shrink-0 rounded-lg" />
+        </div>
+      </div>
+
+      {/* 新着セクション skeleton — 큰 16:9 커버 카드 가로 레일 */}
+      <div className="space-y-3">
+        <Skeleton className="h-6 w-40" />
+        <div className="flex gap-4">
+          <Skeleton className="aspect-[16/9] w-[72%] shrink-0 rounded-lg" />
+          <Skeleton className="aspect-[16/9] w-[72%] shrink-0 rounded-lg" />
         </div>
       </div>
     </div>
