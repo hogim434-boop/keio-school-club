@@ -718,6 +718,66 @@ export async function getMyCircles(userId: string): Promise<MyCircle[]> {
   });
 }
 
+/**
+ * 내 권한 이양(claim) 신청 — 마이페이지 「審査中の申請」 섹션 표시용.
+ * circle_claims(status='pending') 중 본인(requester) 신청 + 대상 동아리 기본 정보 JOIN.
+ */
+export type MyPendingClaim = {
+  /** claim 레코드 id */
+  id: string;
+  /** 대상 동아리 id */
+  circle_id: string;
+  /** 대상 동아리명 */
+  circle_name: string;
+  /** 대상 동아리 커버 이미지 (nullable) */
+  cover_image_url: string | null;
+  /** 대상 동아리 카테고리 */
+  category: Category;
+  /** 신청 일시 */
+  created_at: string;
+};
+
+/**
+ * 내가 신청한 심사중(pending) claim 목록.
+ * RLS circle_claims_select_* 정책으로 requester 본인 행만 조회된다.
+ * 인증 필수 + 개인 데이터 → unstable_cache 금지(매번 최신).
+ *
+ * @param userId 인증된 사용자 UUID
+ */
+export async function getMyPendingClaims(userId: string): Promise<MyPendingClaim[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("circle_claims")
+    .select("id, circle_id, created_at, circles(name, cover_image_url, category)")
+    .eq("requester_id", userId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+  if (error) {
+    console.error("[getMyPendingClaims]", error.message);
+    return [];
+  }
+  return (data ?? []).flatMap((row) => {
+    const r = row as Record<string, unknown>;
+    // circles JOIN 결과 — 대상 동아리가 삭제되었으면 null → 해당 항목 제외
+    const circle = r.circles as {
+      name: string;
+      cover_image_url: string | null;
+      category: Category;
+    } | null;
+    if (!circle) return [];
+    return [
+      {
+        id: r.id as string,
+        circle_id: r.circle_id as string,
+        circle_name: circle.name,
+        cover_image_url: circle.cover_image_url ?? null,
+        category: circle.category,
+        created_at: r.created_at as string,
+      },
+    ];
+  });
+}
+
 // ============================================================
 // 관리자 승인 큐용 타입 및 fetch 함수 (T-019)
 // ============================================================

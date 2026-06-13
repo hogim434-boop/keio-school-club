@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 
 import { requireUser } from "@/lib/auth/require-user";
-import { getMyProfile, getMyCircles } from "@/lib/supabase/queries/circles";
+import { getMyProfile, getMyCircles, getMyPendingClaims } from "@/lib/supabase/queries/circles";
 import { getMyInquiries, getStaffUnreadTotal } from "@/lib/supabase/queries/inquiries";
 import { MyPageSkeleton } from "@/components/mypage/mypage-skeleton";
 import { MyPageView } from "@/components/mypage/mypage-view";
@@ -38,9 +38,11 @@ async function MyPageContent() {
 
   /* 프로필·서클 목록 병렬 조회.
      MESSAGING_ENABLED が true の場合のみ getMyInquiries も同時取得 (쿼리 절약). */
-  const [profile, circles, myInquiries] = await Promise.all([
+  const [profile, circles, pendingClaims, myInquiries] = await Promise.all([
     getMyProfile(userId),
     getMyCircles(userId),
+    // 권한 이양(claim) 심사중 신청 — 「審査中の申請」 섹션 표시용
+    getMyPendingClaims(userId),
     // MESSAGING_ENABLED が false の場合: 문의 쿼리 스킵 → 빈 배열로 단락
     MESSAGING_ENABLED ? getMyInquiries() : Promise.resolve([]),
   ]);
@@ -62,6 +64,7 @@ async function MyPageContent() {
       displayName={profile?.display_name ?? null}
       keioVerified={profile?.keio_verified ?? false}
       circles={circles}
+      pendingClaims={pendingClaims}
       unreadCount={unreadCount}
     />
   );

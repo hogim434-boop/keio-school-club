@@ -29,15 +29,17 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { AnimatePresence, LazyMotion, domAnimation, useReducedMotion } from "motion/react";
 import * as m from "motion/react-m";
 import { toast } from "sonner";
 
 import { deleteCircle } from "@/app/(tabs)/mypage/actions";
 import { LogoutButton } from "@/components/logout-button";
-import { type MyCircle } from "@/lib/supabase/queries/circles";
+import { type MyCircle, type MyPendingClaim } from "@/lib/supabase/queries/circles";
 import { enterContainer, enterItem } from "@/lib/motion/tokens";
 import { MESSAGING_ENABLED } from "@/lib/constants/features";
+import { CATEGORY_LABELS } from "@/lib/constants/category";
 
 import { ManagedCircleCard } from "./managed-circle-card";
 import { ManagedCirclesEmpty } from "./managed-circles-empty";
@@ -50,6 +52,8 @@ interface MyPageViewProps {
   keioVerified: boolean;
   /** 운영 중인 서클 목록 (전 상태 포함) */
   circles: MyCircle[];
+  /** 권한 이양(claim) 심사중 신청 목록. 빈 배열이면 섹션 미표시 */
+  pendingClaims: MyPendingClaim[];
   /** お問い合わせ 미읽음 합계 (운영 수신 + 발신 답장). 0 이면 배지 미표시 */
   unreadCount: number;
 }
@@ -58,6 +62,7 @@ export function MyPageView({
   displayName,
   keioVerified,
   circles: initialCircles,
+  pendingClaims,
   unreadCount,
 }: MyPageViewProps) {
   /* OS "동작 줄이기" 감지 */
@@ -125,6 +130,59 @@ export function MyPageView({
         <m.div variants={itemVariants}>
           <ProfileHero displayName={displayName} keioVerified={keioVerified} />
         </m.div>
+
+        {/* ── 2.5. 審査中の申請 섹션 (심사중 claim 이 있을 때만) ── */}
+        {pendingClaims.length > 0 && (
+          <m.section variants={itemVariants} aria-label="審査中の申請">
+            <div className="mb-3">
+              <h2 className="text-base font-semibold">
+                審査中の申請
+                <span className="text-muted-foreground ml-1.5 text-sm font-normal">
+                  ({pendingClaims.length})
+                </span>
+              </h2>
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                運営権限の申請を審査しています。確認後ご連絡します。
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {pendingClaims.map((claim) => (
+                <Link
+                  key={claim.id}
+                  href={`/circles/${claim.circle_id}`}
+                  className="bg-card hover:bg-accent flex items-center gap-3 rounded-xl border p-3 transition-colors"
+                >
+                  {/* 동아리 썸네일 (없으면 회색 플레이스홀더) */}
+                  <div className="bg-muted relative size-12 shrink-0 overflow-hidden rounded-lg">
+                    {claim.cover_image_url && (
+                      <Image
+                        src={claim.cover_image_url}
+                        alt=""
+                        fill
+                        sizes="48px"
+                        className="object-cover"
+                      />
+                    )}
+                  </div>
+
+                  {/* 동아리명 + 카테고리 */}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{claim.circle_name}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {CATEGORY_LABELS[claim.category]}
+                    </p>
+                  </div>
+
+                  {/* 심사중 배지 (amber) */}
+                  <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">
+                    審査中
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </m.section>
+        )}
 
         {/* ── 3. 운영 중인 서클 섹션 ── */}
         <m.section variants={itemVariants} aria-label="運営中のサークル">
