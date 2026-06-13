@@ -1,10 +1,10 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { SearchPageBody } from "@/components/search/search-page-body";
 import { SearchPageHeader } from "@/components/search/search-page-header";
 import { CircleListCard } from "@/components/circles/circle-list-card";
+import { Pager } from "@/components/circles/pager";
 import { SortDropdown } from "@/components/search/sort-dropdown";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -116,9 +116,20 @@ async function SearchContent({ raw }: { raw: Record<string, string | string[] | 
                 ))}
               </ul>
 
-              {/* 페이지네이션 — 2페이지 이상일 때만 표시 */}
+              {/* 페이지네이션 — 2페이지 이상일 때만 표시. 공통 Pager 컴포넌트 사용 */}
               {totalPages > 1 && (
-                <SearchPagination current={currentPage} totalPages={totalPages} initial={initial} />
+                <Pager
+                  current={currentPage}
+                  totalPages={totalPages}
+                  prevHref={
+                    currentPage <= 1 ? null : buildSearchUrl({ ...initial, page: currentPage - 1 })
+                  }
+                  nextHref={
+                    currentPage >= totalPages
+                      ? null
+                      : buildSearchUrl({ ...initial, page: currentPage + 1 })
+                  }
+                />
               )}
             </>
           )}
@@ -157,57 +168,6 @@ function SearchEmptyState() {
         <Link href="/search">検索をリセット</Link>
       </Button>
     </div>
-  );
-}
-
-/**
- * 검색 결과 페이지네이션 — 「前へ / X / 次へ」.
- * 기존 필터(q, sort 등)는 buildSearchUrl 로 보존.
- */
-function SearchPagination({
-  current,
-  totalPages,
-  initial,
-}: {
-  current: number;
-  totalPages: number;
-  initial: ReturnType<typeof parseCirclesSearchParams>;
-}) {
-  const prevDisabled = current <= 1;
-  const nextDisabled = current >= totalPages;
-
-  return (
-    <nav aria-label="ページネーション" className="flex items-center justify-center gap-2 pt-6">
-      <Button asChild={!prevDisabled} variant="outline" size="sm" disabled={prevDisabled}>
-        {prevDisabled ? (
-          <span>
-            <ChevronLeft className="size-4" />
-            前へ
-          </span>
-        ) : (
-          <Link href={buildSearchUrl({ ...initial, page: current - 1 })}>
-            <ChevronLeft className="size-4" />
-            前へ
-          </Link>
-        )}
-      </Button>
-      <span className="text-muted-foreground px-2 text-sm">
-        {current} / {totalPages}
-      </span>
-      <Button asChild={!nextDisabled} variant="outline" size="sm" disabled={nextDisabled}>
-        {nextDisabled ? (
-          <span>
-            次へ
-            <ChevronRight className="size-4" />
-          </span>
-        ) : (
-          <Link href={buildSearchUrl({ ...initial, page: current + 1 })}>
-            次へ
-            <ChevronRight className="size-4" />
-          </Link>
-        )}
-      </Button>
-    </nav>
   );
 }
 

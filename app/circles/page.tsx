@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 
 import { CircleCard } from "@/components/circles/circle-card";
 import { CirclesPageShell } from "@/components/circles/circles-page-shell";
@@ -10,6 +10,7 @@ import { HomeSearchBar } from "@/components/circles/home-search-bar";
 import { HomeCoachmark } from "@/components/onboarding/home-coachmark";
 import { HorizontalCircleStrip } from "@/components/circles/horizontal-circle-strip";
 import { HourlyCategoryStrip } from "@/components/circles/hourly-category-strip";
+import { Pager } from "@/components/circles/pager";
 import { PromoTileCarousel } from "@/components/circles/promo-tile-carousel";
 import { RecruitingStrip } from "@/components/circles/recruiting-strip";
 import { Button } from "@/components/ui/button";
@@ -214,7 +215,15 @@ async function Results({ params }: { params: CirclesSearchParams }) {
         ))}
       </div>
       {totalPages > 1 && (
-        <Pagination current={currentPage} totalPages={totalPages} baseSearchParams={params} />
+        /* 공통 Pager 컴포넌트 — prevHref/nextHref 를 미리 계산해 전달 */
+        <Pager
+          current={currentPage}
+          totalPages={totalPages}
+          prevHref={currentPage <= 1 ? null : buildCirclesUrl({ ...params, page: currentPage - 1 })}
+          nextHref={
+            currentPage >= totalPages ? null : buildCirclesUrl({ ...params, page: currentPage + 1 })
+          }
+        />
       )}
     </div>
   );
@@ -247,53 +256,5 @@ function EmptyState() {
         <Link href="/circles">フィルターをリセット</Link>
       </Button>
     </div>
-  );
-}
-
-/** 페이지네이션 — 「前へ / X / 次へ」, 다른 필터는 buildCirclesUrl 로 보존 */
-function Pagination({
-  current,
-  totalPages,
-  baseSearchParams,
-}: {
-  current: number;
-  totalPages: number;
-  baseSearchParams: CirclesSearchParams;
-}) {
-  const prevDisabled = current <= 1;
-  const nextDisabled = current >= totalPages;
-
-  return (
-    <nav aria-label="ページネーション" className="flex items-center justify-center gap-2 pt-4">
-      <Button asChild={!prevDisabled} variant="outline" size="sm" disabled={prevDisabled}>
-        {prevDisabled ? (
-          <span>
-            <ChevronLeft className="size-4" />
-            前へ
-          </span>
-        ) : (
-          <Link href={buildCirclesUrl({ ...baseSearchParams, page: current - 1 })}>
-            <ChevronLeft className="size-4" />
-            前へ
-          </Link>
-        )}
-      </Button>
-      <span className="text-muted-foreground px-2 text-sm">
-        {current} / {totalPages}
-      </span>
-      <Button asChild={!nextDisabled} variant="outline" size="sm" disabled={nextDisabled}>
-        {nextDisabled ? (
-          <span>
-            次へ
-            <ChevronRight className="size-4" />
-          </span>
-        ) : (
-          <Link href={buildCirclesUrl({ ...baseSearchParams, page: current + 1 })}>
-            次へ
-            <ChevronRight className="size-4" />
-          </Link>
-        )}
-      </Button>
-    </nav>
   );
 }
