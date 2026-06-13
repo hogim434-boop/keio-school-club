@@ -16,10 +16,10 @@
  */
 
 import { useCallback, useRef, useState } from "react";
-import Image from "next/image";
 import { Construction } from "lucide-react";
 
 import { DetailPageHeader } from "@/components/circles/detail-page-header";
+import { FadeInImage } from "@/components/circles/fade-in-image";
 import { cn } from "@/lib/utils";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -85,7 +85,8 @@ export function CoverCarousel({ images, circleName }: CoverCarouselProps) {
   if (images.length === 1) {
     return (
       <div className="bg-muted relative aspect-[16/9] w-full md:aspect-[21/9]">
-        <Image
+        {/* FadeInImage: 상세 커버 1장. priority 이미지라 빠르게 로드→즉시 페이드인. */}
+        <FadeInImage
           src={images[0].image_url}
           alt={circleName}
           fill
@@ -116,9 +117,9 @@ export function CoverCarousel({ images, circleName }: CoverCarouselProps) {
         onScroll={handleScroll}
         className={cn(
           "flex snap-x snap-mandatory overflow-x-auto",
-          "[overscroll-behavior-x:contain] [scroll-padding-inline:0px]",
+          "[scroll-padding-inline:0px] [overscroll-behavior-x:contain]",
           // 스크롤바 숨김
-          "[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+          "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
         )}
         aria-roledescription="carousel"
         aria-label={`${circleName}のカバー画像`}
@@ -132,11 +133,12 @@ export function CoverCarousel({ images, circleName }: CoverCarouselProps) {
             aria-label={`${images.length}枚のうち ${idx + 1}枚目`}
           >
             <div className="bg-muted relative h-full w-full">
-              <Image
+              {/* FadeInImage: 캐러셀 각 장. 첫 장만 priority, 나머지는 lazy. */}
+              <FadeInImage
                 src={img.image_url}
                 alt={`${circleName} カバー画像 ${idx + 1}`}
                 fill
-                priority={idx === 0} // 첫 장만 priority(LCP 개선)
+                priority={idx === 0}
                 sizes="100vw"
                 className="object-cover"
               />
@@ -158,7 +160,7 @@ export function CoverCarousel({ images, circleName }: CoverCarouselProps) {
        */}
       <div
         aria-live="polite"
-        className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-black/60 px-2 py-0.5 text-xs font-medium text-white tabular-nums"
+        className="pointer-events-none absolute right-3 bottom-3 rounded-full bg-black/60 px-2 py-0.5 text-xs font-medium text-white tabular-nums"
       >
         {currentIndex + 1} / {images.length}
       </div>

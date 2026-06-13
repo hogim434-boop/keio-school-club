@@ -69,6 +69,9 @@ export function HorizontalCircleStrip({
             // 모바일 풀-블리드 가로 스크롤 + column 단위 snap
             "-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4",
             "scroll-px-4 overscroll-x-contain",
+            // 양끝 페이드 마스크: "더 스크롤할 내용이 있음" 시각 신호 (globals.css 정의)
+            // sm+: 그리드로 전환되므로 마스크 제거 (CSS @media 에서 처리)
+            "scroll-rail-fade",
             // sm+: 가로 스크롤 해제 → 2열 grid
             "sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-x-6 sm:overflow-visible sm:px-0",
           ].join(" ")}

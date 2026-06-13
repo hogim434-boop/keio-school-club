@@ -1,9 +1,9 @@
-import Image from "next/image";
 import { Construction } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { CircleCardLink } from "@/components/circles/circle-card-link";
+import { FadeInImage } from "@/components/circles/fade-in-image";
 import { FavoriteToggleButton } from "@/components/circles/favorite-toggle-button";
 import { TAG_LABELS } from "@/lib/circles/filter-labels";
 import { ACTIVITY_FREQUENCY_LABELS } from "@/lib/constants/activity-frequency";
@@ -40,16 +40,21 @@ export function CircleCard({ circle, isNew = false }: CircleCardProps) {
       href={`/circles/${id}`}
       className="group focus-visible:ring-ring block rounded-lg focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
     >
-      <Card className="overflow-hidden transition-shadow group-hover:shadow-md">
-        {/* 커버 이미지 영역 — 16:9 비율 고정, next/image fill */}
-        <div className="bg-muted relative aspect-[16/9]">
+      {/* transition-all duration-300: shadow + lift(-translate-y-0.5=−2px) 을 함께 전환
+          group-hover:-translate-y-0.5: hover 시 카드 전체가 살짝 뜨는 효과 */}
+      <Card className="overflow-hidden transition-all duration-300 group-hover:-translate-y-0.5 group-hover:shadow-md">
+        {/* 커버 이미지 영역 — 16:9 비율 고정, next/image fill
+            overflow-hidden: 이미지 scale 확대 시 커버 영역 밖으로 삐져나오는 것 방지 */}
+        <div className="bg-muted relative aspect-[16/9] overflow-hidden">
           {cover_image_url ? (
-            <Image
+            // FadeInImage: 로드 완료 시 opacity 0→1 페이드인 (500ms).
+            // 기존 hover 줌 클래스(group-hover:scale-[1.04])는 className으로 그대로 전달.
+            <FadeInImage
               src={cover_image_url}
               alt={name}
               fill
               sizes="(min-width: 768px) 33vw, (min-width: 640px) 50vw, 100vw"
-              className="object-cover"
+              className="object-cover transition-transform duration-[450ms] ease-out group-hover:scale-[1.04] motion-reduce:transform-none"
             />
           ) : (
             <div className="text-muted-foreground flex h-full w-full items-center justify-center">

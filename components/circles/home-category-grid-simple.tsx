@@ -34,11 +34,7 @@ const CATEGORY_EMOJIS: Record<Category, EmojiName> = {
  */
 export function HomeCategoryGrid() {
   return (
-    <section
-      className="space-y-3"
-      aria-label="カテゴリから探す"
-      data-coachmark="category"
-    >
+    <section className="space-y-3" aria-label="カテゴリから探す" data-coachmark="category">
       <h2 className="text-base font-semibold">カテゴリ</h2>
       <ul className="grid grid-cols-4 gap-2 sm:gap-3">
         {CATEGORIES.map((category) => (
@@ -48,7 +44,11 @@ export function HomeCategoryGrid() {
               aria-label={`${CATEGORY_LABELS[category]}のサークル・部活動を見る`}
               className="group focus-visible:ring-ring flex min-h-[88px] w-full flex-col items-center justify-start gap-2 rounded-lg p-2 transition-colors focus-visible:ring-2 focus-visible:outline-none sm:min-h-[96px] sm:p-3"
             >
-              <div className="bg-muted group-hover:bg-muted/70 flex size-12 shrink-0 items-center justify-center rounded-full transition-all sm:size-14">
+              {/* transition-all duration-200: 배경색 + scale 변화를 함께 전환
+                  group-hover:scale-105: 마우스 hover 시 아이콘 원 5% 확대
+                  group-active:scale-90: 탭/클릭 순간 10% 수축 (spring press 느낌)
+                  motion-reduce:transform-none: 「애니메이션 줄이기」 설정 시 scale 비활성 */}
+              <div className="bg-muted group-hover:bg-muted/70 flex size-12 shrink-0 items-center justify-center rounded-full transition-all duration-200 group-hover:scale-105 group-active:scale-90 motion-reduce:transform-none sm:size-14">
                 <Emoji name={CATEGORY_EMOJIS[category]} size={28} />
               </div>
               <span className="text-foreground w-full text-center text-xs leading-tight font-medium">

@@ -187,3 +187,88 @@
     animation-duration: 0.01ms !important;
   }
 }
+
+/* ─── B: 섹션 스크롤 리빌 (scroll-driven, animation-timeline: view()) ───
+   요소가 뷰포트에 진입할 때 translateY(16px) → 0 + opacity 0 → 1 로 부드럽게 등장.
+   entry 0%: 요소 상단이 뷰포트 하단에 닿는 순간 (진입 시작)
+   entry 35%: 요소의 35%가 뷰포트 안에 들어온 순간 (등장 완료)
+   @supports 블록: 미지원 브라우저(Firefox < 132 등)는 블록 진입 불가 → 요소 항상 표시. */
+@supports (animation-timeline: view()) {
+  .reveal-on-view {
+    animation: reveal-up linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 35%;
+  }
+  @keyframes reveal-up {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+/* 「애니메이션 줄이기」 설정 시: 즉시 표시 보장 */
+@media (prefers-reduced-motion: reduce) {
+  .reveal-on-view {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* ─── C: 가로 스크롤 레일 엣지 페이드 마스크 ───
+   가로 스크롤 캐러셀 양끝을 투명 → 불투명 그라디언트로 마스킹.
+   "더 스크롤할 내용이 있다"는 시각 신호 + 엣지가 잘린 느낌 제거.
+   sm(640px)+ 에서는 그리드 레이아웃으로 전환되므로 마스크 제거. */
+.scroll-rail-fade {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 16px,
+    black calc(100% - 16px),
+    transparent
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 16px,
+    black calc(100% - 16px),
+    transparent
+  );
+}
+@media (min-width: 640px) {
+  .scroll-rail-fade {
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+}
+
+/* ─── D: 스켈레톤 shimmer 효과 ───
+   큰 커버 스켈레톤에 적용하는 좌→우 광택 sweep 효과.
+   animate-pulse 대비 고급스러운 느낌 + 실제 로딩 진행감 표현.
+   translateX(-100%) → translateX(100%): 요소 전폭을 1.6초마다 sweep. */
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.55), transparent);
+  animation: skeleton-sweep 1.6s ease-in-out infinite;
+}
+@keyframes skeleton-sweep {
+  100% {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer::after {
+    animation: none;
+  }
+}

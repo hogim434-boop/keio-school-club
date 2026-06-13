@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { type MouseEvent, type ReactNode } from "react";
 
+import { cn } from "@/lib/utils";
+
 interface Props {
   href: string;
   className?: string;
@@ -36,7 +38,16 @@ export function CircleCardLink({ href, className, children }: Props) {
   };
 
   return (
-    <Link href={href} className={className} onClick={handleClick}>
+    // active:scale-[0.98]: 탭/클릭 순간 카드가 살짝 눌리는 press 효과 (150ms로 빠르게)
+    // motion-reduce:active:scale-100: 「애니메이션 줄이기」 설정 시 press 효과 비활성
+    <Link
+      href={href}
+      className={cn(
+        "transition-transform duration-150 active:scale-[0.98] motion-reduce:active:scale-100",
+        className
+      )}
+      onClick={handleClick}
+    >
       {children}
     </Link>
   );

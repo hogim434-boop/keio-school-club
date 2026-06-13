@@ -1,8 +1,8 @@
-import Image from "next/image";
 import { Construction } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { CircleCardLink } from "@/components/circles/circle-card-link";
+import { FadeInImage } from "@/components/circles/fade-in-image";
 import { FavoriteToggleButton } from "@/components/circles/favorite-toggle-button";
 import { TAG_LABELS } from "@/lib/circles/filter-labels";
 import { ACTIVITY_FREQUENCY_LABELS } from "@/lib/constants/activity-frequency";
@@ -62,7 +62,15 @@ export function CircleListCard({
           aria-label={cover_image_url ? undefined : name}
         >
           {cover_image_url ? (
-            <Image src={cover_image_url} alt={name} fill sizes="88px" className="object-cover" />
+            // FadeInImage: 로드 완료 시 opacity 0→1 페이드인 (500ms).
+            // hover 줌 클래스(group-hover:scale-[1.04])는 className으로 그대로 유지.
+            <FadeInImage
+              src={cover_image_url}
+              alt={name}
+              fill
+              sizes="88px"
+              className="object-cover transition-transform duration-[450ms] ease-out group-hover:scale-[1.04] motion-reduce:transform-none"
+            />
           ) : (
             <div className="text-muted-foreground flex h-full w-full items-center justify-center">
               <Construction className="size-6" aria-hidden="true" />

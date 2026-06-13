@@ -40,6 +40,8 @@ export function NewCirclesStrip({ title, circles, seeMoreHref }: NewCirclesStrip
         className={[
           "-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4",
           "scroll-px-4 overscroll-x-contain",
+          // 양끝 페이드 마스크 (globals.css .scroll-rail-fade 참조)
+          "scroll-rail-fade",
           "sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-6 sm:overflow-visible sm:px-0",
         ].join(" ")}
       >
