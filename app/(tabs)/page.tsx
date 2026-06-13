@@ -17,6 +17,7 @@ import {
 } from "@/lib/supabase/queries/home-curation";
 import { getNewCircles } from "@/lib/supabase/queries/circles";
 import { PUBLIC_EVENTS_ENABLED } from "@/lib/constants/features";
+import { getCurrentRecruitingStatuses } from "@/lib/constants/recruitment-status";
 
 /**
  * ホーム画面 (RSC) — T-009 キュレーション 3セクション.
@@ -92,8 +93,10 @@ async function HomeContent() {
         <HorizontalCircleStrip
           title={inSeason ? "今週の新歓サークル" : "募集中のサークル・部活動"}
           circles={featured}
-          seeMoreHref="/circles?recruit=year_round,newcomer_only"
+          // 시기별 모집 상태로 필터 — 평시: 募集中(year_round)만 / 新歓시즌: 新歓+募集中
+          seeMoreHref={`/circles?recruit=${getCurrentRecruitingStatuses().join(",")}`}
           layout="carousel"
+          markRecruiting
         />
       )}
 

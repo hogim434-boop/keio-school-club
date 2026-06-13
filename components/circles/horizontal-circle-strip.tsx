@@ -16,6 +16,8 @@ interface HorizontalCircleStripProps {
   layout?: "carousel" | "stack";
   /** true 면 각 자식 `CircleListCard` 에 `isNew` 를 전파 — 신착 strip 전용 */
   markNew?: boolean;
+  /** true 면 각 자식 `CircleListCard` 에 `isRecruiting` 를 전파 — 모집중 strip 전용 */
+  markRecruiting?: boolean;
 }
 
 /**
@@ -37,6 +39,7 @@ export function HorizontalCircleStrip({
   seeMoreHref,
   layout = "carousel",
   markNew = false,
+  markRecruiting = false,
 }: HorizontalCircleStripProps) {
   return (
     <section className="space-y-3">
@@ -55,7 +58,7 @@ export function HorizontalCircleStrip({
         <ul className="divide-border divide-y">
           {circles.slice(0, 10).map((circle) => (
             <li key={circle.id}>
-              <CircleListCard circle={circle} isNew={markNew} />
+              <CircleListCard circle={circle} isNew={markNew} isRecruiting={markRecruiting} />
             </li>
           ))}
         </ul>
@@ -79,7 +82,12 @@ export function HorizontalCircleStrip({
                 className="divide-border w-[88%] shrink-0 snap-start divide-y sm:w-auto"
               >
                 {columnCircles.map((circle) => (
-                  <CircleListCard key={circle.id} circle={circle} />
+                  <CircleListCard
+                    key={circle.id}
+                    circle={circle}
+                    isNew={markNew}
+                    isRecruiting={markRecruiting}
+                  />
                 ))}
               </li>
             );

@@ -14,6 +14,8 @@ interface CircleListCardProps {
   circle: CircleSummary;
   /** 신착 섹션 내 카드 여부 — true 면 1행 우측 끝에 NEW outline 배지 표시 */
   isNew?: boolean;
+  /** 모집중 섹션 내 카드 여부 — true 면 1행 우측 끝에 募集中 outline 배지 표시 */
+  isRecruiting?: boolean;
 }
 
 /**
@@ -29,7 +31,11 @@ interface CircleListCardProps {
  * truncate 동작 — flex item 기본 `min-width: auto` 가 자식 truncate 를 깨므로
  * 텍스트 영역 div 와 1행 inner div 둘 다 `min-w-0` 필수.
  */
-export function CircleListCard({ circle, isNew = false }: CircleListCardProps) {
+export function CircleListCard({
+  circle,
+  isNew = false,
+  isRecruiting = false,
+}: CircleListCardProps) {
   const {
     id,
     name,
@@ -84,6 +90,14 @@ export function CircleListCard({ circle, isNew = false }: CircleListCardProps) {
                 aria-label="新着のサークル"
               >
                 NEW
+              </span>
+            )}
+            {isRecruiting && (
+              <span
+                className="ml-auto shrink-0 rounded border border-emerald-400 px-1.5 py-0.5 text-[9px] leading-none font-medium text-emerald-600 motion-safe:animate-pulse"
+                aria-label="現在募集中"
+              >
+                募集中
               </span>
             )}
           </div>
