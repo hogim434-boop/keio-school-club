@@ -5,8 +5,9 @@
  * 주의: TagKind 의 'frequency' 와는 namespace 다름
  * (TagKind.frequency = 태그 분류 그룹 헤더 / ActivityFrequency = 컬럼 값)
  */
-// 빈번 → 드뭄 순서로 노출 (毎日 → 月数回). daily·weekly_3_4 는 2026-05 추가.
+// 빈번 → 드뭄 순서로 노출 (毎日 → 月数回 → 不定期). daily·weekly_3_4 는 2026-05 추가.
 // weekly_5_6(週5-6回) 는 2026-06 추가 — 週6 활동을 毎日로 과장 표기하던 문제 해소.
+// irregular(不定期) 는 2026-06 추가 — 정례 없는 단체(연구회·문예 등) 대응. 맨 끝(가장 드묾)에 노출.
 export const ACTIVITY_FREQUENCIES = [
   "daily",
   "weekly_5_6",
@@ -14,6 +15,7 @@ export const ACTIVITY_FREQUENCIES = [
   "weekly_2_3",
   "weekly_1",
   "monthly",
+  "irregular",
 ] as const;
 
 export type ActivityFrequency = (typeof ACTIVITY_FREQUENCIES)[number];
@@ -25,6 +27,7 @@ export const ACTIVITY_FREQUENCY_LABELS: Record<ActivityFrequency, string> = {
   weekly_2_3: "週2-3回",
   weekly_1: "週1回",
   monthly: "月数回",
+  irregular: "不定期",
 };
 
 /** 필터·정렬 UI 의 노출 순서 (빈번 → 드뭄) */
