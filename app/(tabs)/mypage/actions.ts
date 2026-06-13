@@ -54,6 +54,8 @@ export async function updateRecruitmentStatus(
   revalidatePath("/mypage");
   // 공개 목록 캐시("circles" 태그) 무효화 — 모집 상태 변경이 홈/모집중 섹션에 즉시 반영
   revalidateTag("circles", { expire: 0 });
+  // 검색 페이지(/search)·홈 큐레이션은 별도 태그라 함께 무효화해야 즉시 반영됨
+  revalidateTag("circles:public", { expire: 0 });
   return { ok: true };
 }
 
@@ -89,5 +91,7 @@ export async function deleteCircle(circleId: string): Promise<{ ok: boolean; err
   revalidatePath("/mypage");
   // 공개 목록 캐시("circles" 태그) 무효화 — 삭제된 동아리가 홈/카테고리 목록에서 즉시 사라지도록
   revalidateTag("circles", { expire: 0 });
+  // 검색 페이지(/search)·홈 큐레이션은 별도 태그라 함께 무효화해야 즉시 반영됨
+  revalidateTag("circles:public", { expire: 0 });
   return { ok: true };
 }

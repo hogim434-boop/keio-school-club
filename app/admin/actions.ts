@@ -115,6 +115,8 @@ export async function approveCircle(circleId: string): Promise<ActionResult> {
   // 승인 큐 재검증 + 공개 목록 캐시 무효화(승인된 동아리가 홈/목록에 즉시 노출)
   revalidatePath("/admin/circles");
   revalidateTag("circles", { expire: 0 });
+  // 검색 페이지(/search)·홈 큐레이션은 별도 태그라 함께 무효화해야 즉시 반영됨
+  revalidateTag("circles:public", { expire: 0 });
   return { ok: true };
 }
 
