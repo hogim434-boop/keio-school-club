@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 
+import { PullToRefresh } from "@/components/layout/pull-to-refresh";
 import { HomeCategoryGrid } from "@/components/circles/home-category-grid-simple";
 import { HomeSearchBar } from "@/components/circles/home-search-bar";
 import { HorizontalCircleStrip } from "@/components/circles/horizontal-circle-strip";
@@ -39,12 +40,17 @@ import { getCurrentRecruitingStatuses } from "@/lib/constants/recruitment-status
  */
 export default function HomePage() {
   return (
-    <main className="pb-20 md:pb-12">
-      {/* 각 섹션은 Suspense로 독립적으로 스트리밍. 하나가 느려도 다른 섹션은 즉시 표시. */}
-      <Suspense fallback={<HomePageFallback />}>
-        <HomeContent />
-      </Suspense>
-    </main>
+    // PullToRefresh: 서버 컴포넌트(HomePage) 내부에서 클라이언트 래퍼로 children 전달.
+    // overscroll-behavior-y: contain 으로 브라우저 기본 PTR 억제 + 터치 제스처 감지.
+    // 레이아웃은 변경 없음 — main 태그가 그대로 children으로 전달됨.
+    <PullToRefresh>
+      <main className="pb-20 md:pb-12">
+        {/* 각 섹션은 Suspense로 독립적으로 스트리밍. 하나가 느려도 다른 섹션은 즉시 표시. */}
+        <Suspense fallback={<HomePageFallback />}>
+          <HomeContent />
+        </Suspense>
+      </main>
+    </PullToRefresh>
   );
 }
 
@@ -86,57 +92,63 @@ async function HomeContent() {
 
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
           セクション 1: 今週新歓キュレーション
-          シーズン中 (4·5·10·11月): 募集中サークルを強調表示
-          シーズン外: 通年募集サークルのみ (セクションは表示維持)
+          reveal-on-view: 스크롤로 뷰포트 진입 시 fade+slide-up 등장
+          (검색바·프로모·카테고리는 초기 화면 노출이므로 제외)
           ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       {featured.length > 0 && (
-        <HorizontalCircleStrip
-          title={inSeason ? "今週の新歓サークル" : "募集中のサークル・部活動"}
-          circles={featured}
-          // 시기별 모집 상태로 필터 — 평시: 募集中(year_round)만 / 新歓시즌: 新歓+募集中
-          seeMoreHref={`/circles?recruit=${getCurrentRecruitingStatuses().join(",")}`}
-          layout="carousel"
-          markRecruiting
-        />
+        <div className="reveal-on-view">
+          <HorizontalCircleStrip
+            title={inSeason ? "今週の新歓サークル" : "募集中のサークル・部活動"}
+            circles={featured}
+            // 시기별 모집 상태로 필터 — 평시: 募集中(year_round)만 / 新歓시즌: 新歓+募集中
+            seeMoreHref={`/circles?recruit=${getCurrentRecruitingStatuses().join(",")}`}
+            layout="carousel"
+            markRecruiting
+          />
+        </div>
       )}
 
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
           セクション 3: 時間帯カテゴリ (T-009 前の構造に復元)
-          Math.floor(Date.now() / 3_600_000) で1時間ごとに表示カテゴリが順環する
-          async RSC — 親 Suspense が処理
           ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <HourlyCategoryStrip />
+      <div className="reveal-on-view">
+        <HourlyCategoryStrip />
+      </div>
 
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
           直近のイベント (中間配置)
-          PUBLIC_EVENTS_ENABLED=false の間は非表示 (디렉터리 우선 단계).
-          true に変えると即復活する.
           ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      {PUBLIC_EVENTS_ENABLED && <UpcomingEventsStrip events={upcomingEvents} />}
+      {PUBLIC_EVENTS_ENABLED && (
+        <div className="reveal-on-view">
+          <UpcomingEventsStrip events={upcomingEvents} />
+        </div>
+      )}
 
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
           おすすめサークル
-          view_count 降順 (Phase 2 でパーソナライズ予定)
           ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       {recommended.length > 0 && (
-        <HorizontalCircleStrip
-          title="おすすめのサークル・部活動"
-          circles={recommended}
-          seeMoreHref="/circles"
-          layout="carousel"
-        />
+        <div className="reveal-on-view">
+          <HorizontalCircleStrip
+            title="おすすめのサークル・部活動"
+            circles={recommended}
+            seeMoreHref="/circles"
+            layout="carousel"
+          />
+        </div>
       )}
 
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
           新着のサークル・部活動 (홈 최하단)
-          created_at 최신순 — 큰 16:9 커버 카드 가로 캐러셀 + NEW 배지
           ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       {newCircles.length > 0 && (
-        <NewCirclesStrip
-          title="新着のサークル・部活動"
-          circles={newCircles}
-          seeMoreHref="/circles?sort=recent"
-        />
+        <div className="reveal-on-view">
+          <NewCirclesStrip
+            title="新着のサークル・部活動"
+            circles={newCircles}
+            seeMoreHref="/circles?sort=recent"
+          />
+        </div>
       )}
 
       {/* オンボーディングコーチマーク — 初回訪問時のみ自動表示 (localStorage で記憶) */}
@@ -155,8 +167,8 @@ function HomePageFallback() {
       {/* 検索バー skeleton */}
       <Skeleton className="h-12 w-full rounded-xl" />
 
-      {/* PromoTile skeleton (検索바 직하 배치) */}
-      <Skeleton className="h-20 w-full rounded-2xl" />
+      {/* PromoTile skeleton — 넓은 배너이므로 shimmer 적용 */}
+      <Skeleton className="h-20 w-full rounded-2xl" shimmer />
 
       {/* カテゴリグリッド skeleton (最上部へ移動) */}
       <div className="space-y-3">
@@ -213,12 +225,13 @@ function HomePageFallback() {
         </div>
       </div>
 
-      {/* 新着セクション skeleton — 큰 16:9 커버 카드 가로 레일 */}
+      {/* 新着セクション skeleton — 큰 16:9 커버 카드에 shimmer 적용
+          aspect-[16/9] 비율 카드는 "큰 커버"에 해당 → shimmer 로 고급감 강조 */}
       <div className="space-y-3">
         <Skeleton className="h-6 w-40" />
         <div className="flex gap-4">
-          <Skeleton className="aspect-[16/9] w-[72%] shrink-0 rounded-lg" />
-          <Skeleton className="aspect-[16/9] w-[72%] shrink-0 rounded-lg" />
+          <Skeleton className="aspect-[16/9] w-[72%] shrink-0 rounded-lg" shimmer />
+          <Skeleton className="aspect-[16/9] w-[72%] shrink-0 rounded-lg" shimmer />
         </div>
       </div>
     </div>
