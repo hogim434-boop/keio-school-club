@@ -20,16 +20,24 @@ import { ClaimReviewButtons } from "@/components/admin/claim-review-buttons";
  * RLS circle_claims_select_admin: profiles.role='admin' 인 경우만 전체 조회 가능.
  * 개인 데이터 → unstable_cache 금지.
  *
- * ── 표시 항목 ─────────────────────────────────────────────────────────────────
- * 동아리명 / 신청자 표시명 / contact_note / 신청일 / 상태 / 승인・却下 버튼
+ * ── 표시 항목 (업데이트) ──────────────────────────────────────────────────────
+ * 동아리명 / 신청자 정보 (氏名·학년·학부·역직·연락처) / 담당자 메모 / 신청일 / 상태 / 승인·거부 버튼
+ * 신규 필드가 null(구 신청 건)인 경우 「未記入」로 graceful 표시.
  */
 
-/** claim 목록 조회 결과 타입 */
+/** claim 목록 조회 결과 타입 (신규 필드 포함) */
 type CircleClaimRow = {
   id: string;
   circle_id: string;
   requester_id: string;
-  contact_note: string;
+  // 신규 필드
+  applicant_name: string | null;
+  grade: string | null;
+  faculty: string | null;
+  applicant_role: string | null;
+  contact: string | null;
+  // 의미 전환 필드 (nullable)
+  contact_note: string | null;
   status: "pending" | "approved" | "rejected";
   created_at: string;
   reviewed_at: string | null;
@@ -82,11 +90,23 @@ function StatusBadge({ status }: { status: CircleClaimRow["status"] }) {
   );
 }
 
+/** 単一ラベル+値の表示行 — null 値は「未記入」で graceful 표시 */
+function InfoRow({ label, value }: { label: string; value: string | null }) {
+  return (
+    <div className="flex gap-2 text-sm">
+      <span className="text-muted-foreground w-24 shrink-0">{label}</span>
+      <span className={value ? "text-foreground" : "text-muted-foreground italic"}>
+        {value ?? "未記入"}
+      </span>
+    </div>
+  );
+}
+
 export default async function AdminClaimsPage() {
   // ── Supabase 클라이언트 생성 (Fluid compute 대응: 매번 새로 생성) ──────────
   const supabase = await createClient();
 
-  // ── claim 목록 조회 ────────────────────────────────────────────────────────
+  // ── claim 목록 조회 (신규 필드 컬럼 포함) ─────────────────────────────────
   // pending 우선(reviewed_at IS NULL → nullsFirst), 같은 상태 내에서는 최신 신청 우선
   const { data: claims, error } = await supabase
     .from("circle_claims")
@@ -95,6 +115,11 @@ export default async function AdminClaimsPage() {
       id,
       circle_id,
       requester_id,
+      applicant_name,
+      grade,
+      faculty,
+      applicant_role,
+      contact,
       contact_note,
       status,
       created_at,
@@ -157,7 +182,7 @@ export default async function AdminClaimsPage() {
               <li
                 key={claim.id}
                 className={[
-                  "flex flex-col gap-2.5 p-4 transition-colors",
+                  "flex flex-col gap-3 p-4 transition-colors",
                   !isPending ? "opacity-60" : "",
                 ].join(" ")}
               >
@@ -182,15 +207,29 @@ export default async function AdminClaimsPage() {
                   </time>
                 </div>
 
-                {/* ── 본인 증명 정보 (contact_note) ──────────────────────── */}
-                <div className="bg-muted/50 rounded-md px-3 py-2">
-                  <p className="text-muted-foreground mb-0.5 text-[10px] font-medium tracking-wide uppercase">
-                    本人確認情報
+                {/* ── 申請者情報 ブロック ─────────────────────────────────── */}
+                <div className="bg-muted/50 space-y-1.5 rounded-md px-3 py-2.5">
+                  <p className="text-muted-foreground mb-1.5 text-[10px] font-medium tracking-wide uppercase">
+                    申請者情報
                   </p>
-                  <p className="line-clamp-4 text-sm break-words whitespace-pre-wrap">
-                    {claim.contact_note}
-                  </p>
+                  <InfoRow label="氏名" value={claim.applicant_name} />
+                  <InfoRow label="学年" value={claim.grade} />
+                  <InfoRow label="学部・研究科" value={claim.faculty} />
+                  <InfoRow label="役職" value={claim.applicant_role} />
+                  <InfoRow label="メールアドレス" value={claim.contact} />
                 </div>
+
+                {/* ── 担当者へのメモ (있을 때만 표시) ──────────────────────── */}
+                {claim.contact_note && (
+                  <div className="bg-muted/50 rounded-md px-3 py-2">
+                    <p className="text-muted-foreground mb-0.5 text-[10px] font-medium tracking-wide uppercase">
+                      担当者へのメモ
+                    </p>
+                    <p className="line-clamp-4 text-sm break-words whitespace-pre-wrap">
+                      {claim.contact_note}
+                    </p>
+                  </div>
+                )}
 
                 {/* ── 하단: 신청자 + 승인/거부 버튼 ──────────────────────── */}
                 <div className="flex items-center justify-between gap-2 pt-1">

@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
-import { Info } from "lucide-react";
 
 import { ClaimForm } from "@/app/circles/[id]/claim/claim-form";
 import { requireUser } from "@/lib/auth/require-user";
@@ -15,10 +14,18 @@ import { createClient } from "@/lib/supabase/server";
  * 3. is_claimed=true(이미 인수 완료): /circles/{id} 로 redirect
  * 4. 본인이 이미 owner: /mypage 로 redirect (자기 동아리를 다시 신청할 필요 없음)
  * 5. pending 신청이 이미 있음: 「申請中」 안내 화면 표시
- * 6. 정상 진입: ClaimForm 표시
+ * 6. 정상 진입: ClaimForm (멀티스텝, AuthScreen 풀스크린) 표시
+ *
+ * ── 레이아웃 변경점 ───────────────────────────────────────────────────────
+ * ClaimForm 가 AuthScreen(fixed inset-0) 을 내부에서 사용하므로
+ * 정상 진입 시 <main> 래퍼 없이 ClaimForm 을 직접 렌더한다.
+ * 헤더(タイトル·サブコピー)와 審査の案内ボックスは ClaimForm step 1 내부로 이동.
  *
  * ── 캐시 정책 ────────────────────────────────────────────────────────────
  * 인증 필수 + 개인 데이터 → unstable_cache 금지.
+ *
+ * useSearchParams() 를 사용하는 ClaimForm(Client Component)이 있으므로
+ * <Suspense> 로 감싼 ClaimContent 가 SSR 경계를 제공한다.
  */
 interface ClaimPageProps {
   params: Promise<{ id: string }>;
@@ -76,41 +83,17 @@ async function ClaimContent({ params }: ClaimPageProps) {
     .maybeSingle();
 
   // ── 렌더 ──────────────────────────────────────────────────────────────────
-  return (
-    <main className="container mx-auto max-w-lg px-4 py-8 pb-24">
-      {/* ── ページヘッダー ──────────────────────────────────────────────────── */}
-      <header className="mb-6 space-y-1">
-        <h1 className="text-xl font-bold tracking-tight">サークル・部活動の管理を申請する</h1>
-        <p className="text-muted-foreground text-sm">
-          <span className="text-foreground font-medium">{circle.name}</span> の運営者として
-          <br />K CLUBへの登録を申請します。
-        </p>
-      </header>
-
-      {/* ── 이미 신청 중 ─────────────────────────────────────────────────────── */}
-      {pendingClaim ? (
+  // pending 신청이 이미 있으면 안내 화면 표시 (通常レイアウト)
+  if (pendingClaim) {
+    return (
+      <main className="container mx-auto max-w-lg px-4 py-8 pb-24">
         <PendingState circleName={circle.name} circleId={circleId} />
-      ) : (
-        <>
-          {/* ── 안내 박스 ───────────────────────────────────────────────────── */}
-          <div className="mb-6 flex items-start gap-3 rounded-xl border border-dashed px-4 py-3">
-            <Info className="text-muted-foreground mt-0.5 size-4 shrink-0" aria-hidden />
-            <div className="space-y-1 text-sm">
-              <p className="font-medium">審査について</p>
-              <p className="text-muted-foreground leading-relaxed">
-                ご記入いただいた情報をもとに、K CLUB 運営が
-                公式SNS等で運営者ご本人であることを確認します。
-                確認後、登録メールアドレスにご連絡します。
-              </p>
-            </div>
-          </div>
+      </main>
+    );
+  }
 
-          {/* ── 신청 폼 ─────────────────────────────────────────────────────── */}
-          <ClaimForm circleId={circleId} circleName={circle.name} />
-        </>
-      )}
-    </main>
-  );
+  // 정상 진입: ClaimForm (AuthScreen 풀스크린, 래퍼 불필요)
+  return <ClaimForm circleId={circleId} circleName={circle.name} />;
 }
 
 /**
@@ -154,7 +137,7 @@ function ClaimPageSkeleton() {
       </div>
       <div className="bg-muted h-36 animate-pulse rounded-xl" />
       <div className="mt-6 space-y-4">
-        <div className="bg-muted h-28 animate-pulse rounded-xl" />
+        <div className="bg-muted h-12 animate-pulse rounded-xl" />
         <div className="bg-muted h-10 animate-pulse rounded-lg" />
       </div>
     </main>

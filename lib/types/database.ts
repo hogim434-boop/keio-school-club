@@ -112,7 +112,18 @@ export type Database = {
           id: string;
           circle_id: string;
           requester_id: string;
-          contact_note: string;
+          /** 申請者氏名 — 新規フィールド (nullable) */
+          applicant_name: string | null;
+          /** 学年 — 新規フィールド (nullable) */
+          grade: string | null;
+          /** 学部・研究科 — 新規フィールド (nullable, 任意) */
+          faculty: string | null;
+          /** サークル内での役職 — 新規フィールド (nullable, 任意) */
+          applicant_role: string | null;
+          /** 連絡先 (メール / SNS) — 新規フィールド (nullable) */
+          contact: string | null;
+          /** 担当者へのメモ — 意味転換: 旧「本人確認情報」→「任意メモ」(nullable) */
+          contact_note: string | null;
           status: "pending" | "approved" | "rejected";
           created_at: string;
           reviewed_at: string | null;
@@ -122,7 +133,12 @@ export type Database = {
           id?: string;
           circle_id: string;
           requester_id: string;
-          contact_note: string;
+          applicant_name?: string | null;
+          grade?: string | null;
+          faculty?: string | null;
+          applicant_role?: string | null;
+          contact?: string | null;
+          contact_note?: string | null;
           status?: "pending" | "approved" | "rejected";
           created_at?: string;
           reviewed_at?: string | null;
@@ -132,7 +148,12 @@ export type Database = {
           id?: string;
           circle_id?: string;
           requester_id?: string;
-          contact_note?: string;
+          applicant_name?: string | null;
+          grade?: string | null;
+          faculty?: string | null;
+          applicant_role?: string | null;
+          contact?: string | null;
+          contact_note?: string | null;
           status?: "pending" | "approved" | "rejected";
           created_at?: string;
           reviewed_at?: string | null;
@@ -464,7 +485,8 @@ export type Database = {
         | "monthly"
         | "daily"
         | "weekly_3_4"
-        | "weekly_5_6";
+        | "weekly_5_6"
+        | "irregular";
       activity_report_type_enum: "practice" | "camp" | "event" | "meeting" | "other";
       activity_time_band_enum:
         | "weekday_day"
@@ -626,6 +648,7 @@ export const Constants = {
         "daily",
         "weekly_3_4",
         "weekly_5_6",
+        "irregular",
       ],
       activity_report_type_enum: ["practice", "camp", "event", "meeting", "other"],
       activity_time_band_enum: [
