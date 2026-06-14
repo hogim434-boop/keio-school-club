@@ -132,7 +132,9 @@ async function HomeContent() {
           <HorizontalCircleStrip
             title="おすすめのサークル・部活動"
             circles={recommended}
-            seeMoreHref="/circles"
+            // おすすめ = 인기순 큐레이션이므로 「もっと見る」는 인기순 결과 목록으로
+            // (필터 없는 "/circles" 는 디스커버 모드 = 홈과 동일 화면이라 부적절)
+            seeMoreHref="/circles?sort=popular"
             layout="carousel"
           />
         </div>
