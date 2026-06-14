@@ -30,6 +30,9 @@ export function SlideOutLink({ href, className, children, "aria-label": ariaLabe
   const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
     // modifier 키·중간 클릭은 브라우저 기본 동작 유지 (새 탭 등)
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1) return;
+    // 컨텍스트 없음(CirclesPageShell 밖, 예: 홈 화면) → 일반 Link 이동으로 폴백.
+    // preventDefault 하지 않고 그대로 두면 <Link> 기본 클라이언트 내비게이션이 동작한다.
+    if (!exit) return;
     e.preventDefault();
     exit({ kind: "navigate", url: href });
   };

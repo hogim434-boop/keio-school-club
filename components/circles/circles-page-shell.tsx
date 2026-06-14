@@ -14,8 +14,13 @@ export type CirclesExitAction = { kind: "navigate"; url: string };
 
 /**
  * shell exit 트리거 context — HomeCategoryGrid 등 본문 내부 컴포넌트가 useContext 로 호출.
+ *
+ * 기본값 null: CirclesPageShell(Provider) 밖에서 쓰일 때(예: 홈 화면)를 구분하기 위함.
+ * 소비 측(SlideOutLink)은 null 이면 슬라이드 전환 없이 일반 Link 이동으로 폴백한다.
  */
-export const CirclesSlideOutContext = createContext<(action: CirclesExitAction) => void>(() => {});
+export const CirclesSlideOutContext = createContext<((action: CirclesExitAction) => void) | null>(
+  null
+);
 
 /**
  * /circles 페이지 본문 wrapper.

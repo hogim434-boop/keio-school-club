@@ -40,6 +40,8 @@ export function HomeCategoryGrid() {
     return (e: MouseEvent<HTMLAnchorElement>) => {
       // modifier 키·중간 클릭은 브라우저 기본 동작 유지 (새 탭 등)
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button === 1) return;
+      // 컨텍스트 없음(shell 밖) → 일반 Link 이동으로 폴백
+      if (!exit) return;
       e.preventDefault();
       exit({ kind: "navigate", url: `/circles?category=${category}` });
     };
