@@ -166,6 +166,10 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
             (심사중·승인 무관하게 본인이면 표시 — 미리 프로필을 채우고 편집 가능) */}
           {isOwner && <OwnerProfileCard circle={circle} />}
 
+          {/* 2-2. 미claim 동아리 — 운영 권한 신청 유도 배너. 운영자 발견성을 위해 상단 배치
+            (기존엔 SNS 풋터 하단에 묻혀 있었음). 소유자에겐 미노출(이미 본인 관리). */}
+          {!circle.is_claimed && !isOwner && <UnclaimedBanner circleId={circle.id} />}
+
           {/*
            * 3. 탭 구조 (2탭: ホーム / アルバム) — T-010 개편.
            * 「ホーム」 = SummaryGrid + Description + 活動レポート 미리보기 + 全レポートリスト
@@ -427,11 +431,8 @@ function SummaryGrid({ circle }: { circle: CircleDetail }) {
  */
 function SnsSnsFooter({ circle }: { circle: CircleDetail }) {
   const hasSns = circle.contact_instagram || circle.contact_x;
-  if (!hasSns && circle.is_claimed) return null;
-  if (!hasSns && !circle.is_claimed) {
-    // 未claim + SNS なし: 管理유도 배너만 표示
-    return <UnclaimedBanner circleId={circle.id} />;
-  }
+  // SNS 가 없으면 풋터 자체 숨김 — 미claim 동아리의 관리 유도는 상단 배너(2-2)가 담당.
+  if (!hasSns) return null;
 
   // SNS あり — claim 여부에 따라 섹션 헤더 문구 분기
   const sectionHeading = circle.is_claimed ? "公式SNS" : "このサークル・部活動への問い合わせ先";
@@ -481,9 +482,6 @@ function SnsSnsFooter({ circle }: { circle: CircleDetail }) {
           </a>
         )}
       </div>
-
-      {/* 미claim 動아리 관리 유도 배너 */}
-      {!circle.is_claimed && <UnclaimedBanner circleId={circle.id} />}
     </section>
   );
 }
