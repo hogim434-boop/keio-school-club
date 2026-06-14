@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Header } from "@/components/layout/header";
 import { HeaderClientGate } from "@/components/layout/header-client-gate";
 import { RegisterFloatingCTA } from "@/components/layout/register-floating-cta";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -76,6 +77,9 @@ export default function RootLayout({
         {/* 토스트 알림 — 하단 다크 알약 스타일(components/ui/sonner.tsx 에서 설정).
             richColors/closeButton 제거: 다크 통일 + 자동 fade-out. */}
         <Toaster />
+        {/* Vercel Web Analytics — 방문자·페이지뷰·유입 경로 수집(개인정보 비수집·쿠키리스).
+            Vercel 대시보드에서 Web Analytics 토글 ON 시 데이터가 쌓인다. */}
+        <Analytics />
       </body>
     </html>
   );
