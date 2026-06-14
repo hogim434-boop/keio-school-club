@@ -87,7 +87,9 @@ export function SearchPageHeader({ initial }: SearchPageHeaderProps) {
             aria-label="サークルを検索"
             enterKeyHint="search"
             autoComplete="off"
-            className="bg-muted/60 placeholder:text-muted-foreground focus-visible:ring-ring h-10 w-full rounded-full border-0 pr-4 pl-9 text-sm focus-visible:ring-2 focus-visible:outline-none"
+            // text-base sm:text-sm — 모바일은 16px 로 두어 iOS Safari 의 입력창 자동 줌인을 방지
+            //   (글자 크기 16px 미만 입력창을 탭하면 iOS 가 화면을 확대함). 데스크탑(sm+)은 기존 14px 유지.
+            className="bg-muted/60 placeholder:text-muted-foreground focus-visible:ring-ring h-10 w-full rounded-full border-0 pr-4 pl-9 text-base focus-visible:ring-2 focus-visible:outline-none sm:text-sm"
           />
         </form>
       </div>
