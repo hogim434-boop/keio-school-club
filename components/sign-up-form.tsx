@@ -629,20 +629,20 @@ export function SignUpForm() {
             始めましょう
           </m.h1>
 
-          {/* 서브카피: intent에 따라 분기. delay 0.21s */}
-          <m.p
-            className="text-muted-foreground text-sm leading-relaxed"
-            variants={FADE_UP_VARIANTS}
-            initial={initial}
-            animate="visible"
-            transition={makeFadeTransition(0.21)}
-          >
-            {isOperator
-              ? /* 운영자: 기존 카피 유지 (개방 정책 — @keio.jp 필수 문구 제거) */
-                "サークル・部活動の運営者向けの登録です"
-              : /* 일반: 탐색·참가 목적으로 라이트한 카피 */
-                "イベント参加・お気に入りにはアカウントが必要です"}
-          </m.p>
+          {/* 서브카피: 일반 가입일 때만 표시. delay 0.21s.
+              운영자 분기의 「運営者向けの登録です」 문구는 제거(요청).
+              일반 가입(GENERAL_SIGNUP_ENABLED) 이 열리면 아래 카피가 다시 노출된다. */}
+          {!isOperator && (
+            <m.p
+              className="text-muted-foreground text-sm leading-relaxed"
+              variants={FADE_UP_VARIANTS}
+              initial={initial}
+              animate="visible"
+              transition={makeFadeTransition(0.21)}
+            >
+              イベント参加・お気に入りにはアカウントが必要です
+            </m.p>
+          )}
 
           {/*
             GoogleButton을 m.div로 감싸 2가지 효과를 동시에 적용:

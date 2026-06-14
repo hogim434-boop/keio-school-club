@@ -59,20 +59,10 @@ export function LoginForm() {
           */}
           <KCircleLogo size="lg" />
 
-          {/* 서브카피: delay 0.15s — 로고 다음 자연스럽게 이어짐 */}
-          <m.p
-            className="text-muted-foreground text-center text-sm leading-relaxed"
-            variants={FADE_UP_VARIANTS}
-            initial={initial}
-            animate="visible"
-            transition={makeTransition(0.15)}
-          >
-            慶應アカウントでログイン
-          </m.p>
-
           {/*
             Google 로그인 버튼 — 유일한 로그인 수단.
-            delay 0.21s — 서브카피 다음 0.06s stagger 간격.
+            「慶應アカウントでログイン」 서브카피는 제거(요청).
+            delay 0.21s — 로고 다음 stagger 간격.
           */}
           <m.div
             className="w-full"
