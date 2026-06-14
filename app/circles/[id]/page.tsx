@@ -501,7 +501,7 @@ function UnclaimedBanner({ circleId }: { circleId: string }) {
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium">このサークル・部活動を運営していますか？</p>
         <p className="text-muted-foreground mt-0.5 text-xs">
-          登録することで、アプリ内でのお問い合わせ管理や情報更新が可能になります。
+          登録することで、サークル・部活動の情報を更新・管理できるようになります。
         </p>
         {/* claim 신청 라우트 (M-025) */}
         <a

@@ -14,6 +14,8 @@ import { CalendarCog } from "lucide-react";
 
 import { ProfileCompletion } from "@/components/mypage/profile-completion";
 import { Button } from "@/components/ui/button";
+import { PUBLIC_EVENTS_ENABLED } from "@/lib/constants/features";
+import { cn } from "@/lib/utils";
 import type { CircleDetail } from "@/lib/types/domain";
 
 export function OwnerProfileCard({ circle }: { circle: CircleDetail }) {
@@ -27,19 +29,23 @@ export function OwnerProfileCard({ circle }: { circle: CircleDetail }) {
       {/* 完成度 게이지 + 빠진 항목 칩 (마이페이지와 동일 위젯 재사용) */}
       <ProfileCompletion circle={circle} />
 
-      {/* 운영 액션 2종 — 編集(프로필 편집) / イベント管理(이벤트 허브) */}
-      <div className="grid grid-cols-2 gap-2">
+      {/* 운영 액션 — 編集(프로필 편집) / イベント管理(이벤트 허브).
+          イベント管理는 PUBLIC_EVENTS_ENABLED=false(시드 단계) 동안 숨김.
+          숨겨지면 編集する 가 단독 풀폭 버튼이 된다. */}
+      <div className={cn("grid gap-2", PUBLIC_EVENTS_ENABLED ? "grid-cols-2" : "grid-cols-1")}>
         {/* 編集する — 편집 폼(전체 항목)으로 이동 */}
         <Button asChild variant="outline" className="h-10">
           <Link href={`/circles/${circle.id}/edit`}>編集する</Link>
         </Button>
-        {/* イベント管理 — 이벤트 생성·편집·신청자 관리 허브로 이동 */}
-        <Button asChild className="h-10">
-          <Link href={`/circles/${circle.id}/events`}>
-            <CalendarCog className="size-4" aria-hidden="true" />
-            イベント管理
-          </Link>
-        </Button>
+        {/* イベント管理 — 이벤트 생성·편집·신청자 관리 허브 (플래그 ON 시에만 노출) */}
+        {PUBLIC_EVENTS_ENABLED && (
+          <Button asChild className="h-10">
+            <Link href={`/circles/${circle.id}/events`}>
+              <CalendarCog className="size-4" aria-hidden="true" />
+              イベント管理
+            </Link>
+          </Button>
+        )}
       </div>
     </section>
   );

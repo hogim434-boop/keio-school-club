@@ -17,6 +17,7 @@
 import { Eye, Mail, Users } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { MESSAGING_ENABLED } from "@/lib/constants/features";
 
 interface CircleMetricsProps {
   /** 총 조회수 */
@@ -96,11 +97,15 @@ export function CircleMetrics({
           label="閲覧"
           value={viewCount.toLocaleString()}
         />
-        <CompactStat
-          icon={<Mail className="size-3.5" />}
-          label="問合"
-          value={inquiryCount.toLocaleString()}
-        />
+        {/* 問合(문의 수) — MESSAGING_ENABLED=false(시드 단계) 동안 숨김.
+            문의를 받을 수 없는 상태이므로 지표 자체를 노출하지 않는다. */}
+        {MESSAGING_ENABLED && (
+          <CompactStat
+            icon={<Mail className="size-3.5" />}
+            label="問合"
+            value={inquiryCount.toLocaleString()}
+          />
+        )}
         {memberBandLabel && (
           <CompactStat icon={<Users className="size-3.5" />} label="部員" value={memberBandLabel} />
         )}
@@ -109,9 +114,15 @@ export function CircleMetrics({
   }
 
   return (
-    <div className={cn("grid grid-cols-2 gap-2", className)} aria-label="サークル運営指標">
+    <div
+      className={cn("grid gap-2", MESSAGING_ENABLED ? "grid-cols-2" : "grid-cols-1", className)}
+      aria-label="サークル運営指標"
+    >
       <MetricCell icon={<Eye className="size-4" />} value={viewCount} label="閲覧" />
-      <MetricCell icon={<Mail className="size-4" />} value={inquiryCount} label="問合" />
+      {/* 問合 — MESSAGING_ENABLED=false 동안 숨김 (셀이 빠지면 1열) */}
+      {MESSAGING_ENABLED && (
+        <MetricCell icon={<Mail className="size-4" />} value={inquiryCount} label="問合" />
+      )}
     </div>
   );
 }

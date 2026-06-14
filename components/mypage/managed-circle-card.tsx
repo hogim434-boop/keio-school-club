@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { CATEGORY_LABELS } from "@/lib/constants/category";
 import { CIRCLE_STATUS_LABELS } from "@/lib/constants/circle-status";
+import { PUBLIC_EVENTS_ENABLED } from "@/lib/constants/features";
 import { MEMBER_BAND_LABELS } from "@/lib/constants/member-band";
 import { getOfficialTypeDisplayLabel } from "@/lib/constants/official-type";
 import { type MyCircle } from "@/lib/supabase/queries/circles";
@@ -291,18 +292,28 @@ function ApprovedContent({ circle }: { circle: MyCircle }) {
           100% 완성 시 렌더 안 함(공간 절약). collapsible 내부에서 z-10/stopPropagation 처리. */}
       <ProfileCompletion circle={circle} collapsible />
 
-      {/* 운영 액션 2종 — 編集(프로필 편집) / イベント管理(이벤트 허브).
+      {/* 운영 액션 — 編集(프로필 편집) / イベント管理(이벤트 허브).
+          イベント管理는 PUBLIC_EVENTS_ENABLED=false(시드 단계) 동안 숨기고,
+          숨겨지면 編集する 가 단독 풀폭 버튼이 된다.
           relative z-10 + stopPropagation: stretched-link 보다 위에서 독립 동작. */}
-      <div className="relative z-10 grid grid-cols-2 gap-2" onClick={(e) => e.stopPropagation()}>
+      <div
+        className={cn(
+          "relative z-10 grid gap-2",
+          PUBLIC_EVENTS_ENABLED ? "grid-cols-2" : "grid-cols-1"
+        )}
+        onClick={(e) => e.stopPropagation()}
+      >
         <Button asChild variant="outline" className="h-10">
           <Link href={`/circles/${circle.id}/edit`}>編集する</Link>
         </Button>
-        <Button asChild className="h-10">
-          <Link href={`/circles/${circle.id}/events`}>
-            <CalendarCog className="size-4" aria-hidden="true" />
-            イベント管理
-          </Link>
-        </Button>
+        {PUBLIC_EVENTS_ENABLED && (
+          <Button asChild className="h-10">
+            <Link href={`/circles/${circle.id}/events`}>
+              <CalendarCog className="size-4" aria-hidden="true" />
+              イベント管理
+            </Link>
+          </Button>
+        )}
       </div>
     </>
   );
