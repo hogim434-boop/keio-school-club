@@ -40,6 +40,12 @@ export const TAG_SEEDS: { slug: string; label_ja: string }[] = [
   // 募集対象
   { slug: "freshman_welcome", label_ja: "新入生歓迎" },
   { slug: "all_grades", label_ja: "全学年歓迎" },
+  // キャンパス — 활동 거점 캠퍼스. tags.kind='campus' (2026-06 추가)
+  { slug: "hiyoshi", label_ja: "日吉" },
+  { slug: "mita", label_ja: "三田" },
+  { slug: "yagami", label_ja: "矢上" },
+  { slug: "sfc", label_ja: "SFC" },
+  { slug: "shinanomachi", label_ja: "信濃町" },
 ];
 
 /** slug → label_ja 빠른 조회용 record */
