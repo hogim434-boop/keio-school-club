@@ -2,7 +2,7 @@
 
 import { useContext } from "react";
 
-import { SearchSlideOutContext } from "@/app/(tabs)/search/template";
+import { SearchSlideOutContext, SearchQueryContext } from "@/app/(tabs)/search/template";
 import { Button } from "@/components/ui/button";
 import { buildCirclesUrl, type CirclesSearchParams } from "@/lib/circles/search-params";
 
@@ -23,9 +23,13 @@ interface ApplyButtonProps {
  */
 export function ApplyButton({ draft }: ApplyButtonProps) {
   const exit = useContext(SearchSlideOutContext);
+  // 입력창에 친 키워드 — 버튼으로도 함께 검색되도록 draft.q 를 이 값으로 덮어쓴다.
+  const { query } = useContext(SearchQueryContext);
 
   function handleApply() {
-    const url = buildCirclesUrl({ ...draft, page: undefined });
+    const q = query.trim();
+    // 키워드가 있으면 q 로 검색 + 선택한 필터 동시 적용. 없으면 q 생략.
+    const url = buildCirclesUrl({ ...draft, q: q || undefined, page: undefined });
     exit({ kind: "navigate", url });
   }
 

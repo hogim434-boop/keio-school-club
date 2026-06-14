@@ -1,10 +1,10 @@
 "use client";
 
-import { useContext, useEffect, useRef, useState, type FormEvent } from "react";
+import { useContext, useEffect, useRef, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Search } from "lucide-react";
 
-import { SearchSlideOutContext } from "@/app/(tabs)/search/template";
+import { SearchSlideOutContext, SearchQueryContext } from "@/app/(tabs)/search/template";
 import { RECENT_SEARCHES_KEY, RECENT_SEARCHES_MAX } from "@/components/search/recent-searches";
 import { buildCirclesUrl, type CirclesSearchParams } from "@/lib/circles/search-params";
 
@@ -31,13 +31,21 @@ interface SearchPageHeaderProps {
 export function SearchPageHeader({ initial }: SearchPageHeaderProps) {
   const router = useRouter();
   const exit = useContext(SearchSlideOutContext);
-  const [value, setValue] = useState(initial.q ?? "");
+  // 검색어는 공유 context 에서 관리 — 「サークルを見る」 버튼(ApplyButton)이 같은 값을 사용한다.
+  const { query: value, setQuery: setValue } = useContext(SearchQueryContext);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // 페이지 진입 시 input 자동 focus — 당근앱 패턴, 모바일 키보드 즉시 노출
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  // 진입 시점의 q(initial.q)를 공유 context 에 1회 시드 — 결과에서 돌아왔을 때 입력값 복원.
+  useEffect(() => {
+    if (initial.q) setValue(initial.q);
+    // initial.q 변경(URL 변경) 시에만 재동기화
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial.q]);
 
   function persistRecent(term: string) {
     try {
