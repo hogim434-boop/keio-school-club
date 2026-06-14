@@ -12,7 +12,22 @@
  * 호출측(Client Component)은 isAuthenticated===false 시 router.push('/auth/login?next=...') 처리.
  */
 
+import { revalidateTag } from "next/cache";
+
 import { createClient } from "@/lib/supabase/server";
+
+/**
+ * 동아리 공개 캐시 무효화 Server Action.
+ *
+ * 편집(updateCircle)은 브라우저 클라이언트로 실행되어 revalidateTag 를 호출할 수 없어,
+ * 상세 페이지(getApprovedCircleById, tags:["circles"], 60초)와 목록·검색
+ * (tags:["circles:public"], 300초)이 수정 후에도 최대 TTL 동안 옛 값을 보여준다.
+ * 편집 성공 직후 이 액션을 호출해 두 태그를 즉시 무효화 → 변경이 바로 반영된다.
+ */
+export async function revalidateCircleCaches(): Promise<void> {
+  revalidateTag("circles", { expire: 0 });
+  revalidateTag("circles:public", { expire: 0 });
+}
 
 /**
  * 즐겨찾기 토글 Server Action.

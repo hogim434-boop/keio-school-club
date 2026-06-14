@@ -55,6 +55,7 @@ import type { CircleImage } from "@/lib/types/domain";
 import { StepBasic } from "@/components/circles/new/step-basic";
 import { StepTags } from "@/components/circles/new/step-tags";
 import { StepContact, CIRCLE_REGISTRATION_FORM_ID } from "@/components/circles/new/step-contact";
+import { revalidateCircleCaches } from "@/app/circles/[id]/actions";
 
 // ── 단계 순서 정의 ──────────────────────────────────────────────────────────
 // 단계 시퀀스는 mode 에 따라 컴포넌트 내부에서 계산한다 (2026-05 A안):
@@ -264,8 +265,13 @@ export function CircleRegistrationForm({
   //   - rejected → pending(재신청) 시 상세 페이지(/circles/{id})는 approved 필터로 접근 불가
   //   - pending 상태의 동아리도 상세 페이지 접근이 막혀 있어 마이페이지가 안전한 착지점
   //   - router.refresh() 로 마이페이지 서클 목록을 최신화
-  const handleRegistered = useCallback(() => {
+  const handleRegistered = useCallback(async () => {
     if (isEdit) {
+      // 편집은 브라우저 클라이언트(updateCircle)라 revalidateTag 불가 →
+      // 서버 액션으로 공개 캐시(circles / circles:public)를 즉시 무효화해야
+      // 상세 페이지의 SNS·소개문 등 수정이 바로 반영된다(없으면 최대 60초 지연).
+      // 무효화 완료를 기다린 뒤 새로고침해야 갱신된 데이터가 반영됨.
+      await revalidateCircleCaches();
       router.refresh();
       router.replace("/mypage");
     } else {
