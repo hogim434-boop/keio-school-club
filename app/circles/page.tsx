@@ -7,7 +7,6 @@ import { CirclesPageShell } from "@/components/circles/circles-page-shell";
 import { FilterPanel } from "@/components/circles/filter-panel";
 import { HomeCategoryGrid } from "@/components/circles/home-category-grid";
 import { HomeSearchBar } from "@/components/circles/home-search-bar";
-import { HomeCoachmark } from "@/components/onboarding/home-coachmark";
 import { HorizontalCircleStrip } from "@/components/circles/horizontal-circle-strip";
 import { HourlyCategoryStrip } from "@/components/circles/hourly-category-strip";
 import { Pager } from "@/components/circles/pager";
@@ -108,13 +107,6 @@ async function DiscoverContent() {
 
       {/* 현재 모집중 동아리 — 세로형 포스터 가로 스크롤. 하단에 배치(요청). */}
       <RecruitingStrip circles={recruiting} />
-
-      {/*
-       * 홈 온보딩 코치마크 — 처음 방문자에게만 자동 표시 (localStorage 기억).
-       * RSC 안에서도 Client Component를 직접 임포트해 렌더 가능.
-       * position: fixed 말풍선이므로 레이아웃에 영향 없음.
-       */}
-      <HomeCoachmark />
     </div>
   );
 }

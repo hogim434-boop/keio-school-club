@@ -7,7 +7,6 @@ import { HorizontalCircleStrip } from "@/components/circles/horizontal-circle-st
 import { HourlyCategoryStrip } from "@/components/circles/hourly-category-strip";
 import { NewCirclesStrip } from "@/components/circles/new-circles-strip";
 import { PromoTileCarousel } from "@/components/circles/promo-tile-carousel";
-import { HomeCoachmark } from "@/components/onboarding/home-coachmark";
 import { UpcomingEventsStrip } from "@/components/home/upcoming-events-strip";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -166,9 +165,6 @@ async function HomeContent() {
           />
         </div>
       )}
-
-      {/* オンボーディングコーチマーク — 初回訪問時のみ自動表示 (localStorage で記憶) */}
-      <HomeCoachmark />
     </div>
   );
 }
