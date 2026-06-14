@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { Geist, Noto_Sans_JP, Kavoon } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
@@ -11,10 +11,48 @@ const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
   : "http://localhost:3000";
 
+/**
+ * viewport — Next.js 13.4+ 에서 metadata 와 분리된 별도 export.
+ * (viewport 를 metadata 에 포함하면 빌드 경고 발생)
+ *
+ * viewportFit: "cover" — iOS Safari/standalone 에서 화면 전체(노치 포함)를 덮음.
+ *   → env(safe-area-inset-*) CSS 변수가 실제 inset 값을 반환하게 됨.
+ *   → globals.css + bottom-tabs / register-floating-cta 의 safe-area 패딩이 활성화.
+ *
+ * themeColor — 브라우저 상단 UI(주소창, 상태바 배경) 를 慶應 네이비로 착색.
+ */
+export const viewport: Viewport = {
+  themeColor: "#25305a",
+  width: "device-width",
+  initialScale: 1,
+  // cover: 콘텐츠가 노치/Dynamic Island 뒤까지 확장됨.
+  // globals.css header padding-top 으로 safe zone 확보.
+  viewportFit: "cover",
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Keio Club",
-  description: "慶應義塾大学のサークルを探す",
+  // template 패턴: 개별 페이지는 "%s | K CLUB" 형태, 루트는 "K CLUB" 그대로
+  title: {
+    default: "K CLUB",
+    template: "%s | K CLUB",
+  },
+  description: "慶應義塾大学のサークル・部活動を探す",
+  // ── iOS PWA 홈 화면 설정 ────────────────────────────────────────────────────
+  appleWebApp: {
+    // capable: true → apple-mobile-web-app-capable 메타 삽입 (홈 화면 추가 시 standalone 실행 허가)
+    capable: true,
+    // default: 라이트 상태바 (흰색 배경/검정 텍스트). 네이비 헤더 앱에 어울림.
+    // "black-translucent" 는 status bar 가 반투명해져 콘텐츠가 뒤에 깔리므로 사용하지 않음.
+    statusBarStyle: "default",
+    title: "K CLUB",
+  },
+  // ── OGP (SNS 공유 미리보기) ─────────────────────────────────────────────────
+  openGraph: {
+    siteName: "K CLUB",
+    title: "K CLUB",
+    description: "慶應義塾大学のサークル・部活動を探す",
+  },
 };
 
 // 본문용 기본 라틴 폰트 — 영어/숫자/일반 기호 처리
