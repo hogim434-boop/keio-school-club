@@ -32,11 +32,12 @@ export function RegisterFloatingCTA() {
   const isScrolled = useIsScrolled(80);
   const reducedMotion = useReducedMotion();
 
-  // 화이트리스트: 서클 일람(/circles) 에서만 노출.
+  // 화이트리스트: 홈(/) 과 서클 일람(/circles) 에서 노출.
   // query string (?q=, ?category=, ?page= 등 필터 결과) 은 pathname 에 포함되지 않으므로
   // /circles · /circles?q=... · /circles?category=sports 모두 동일하게 매칭.
+  // 홈(/) 도 메인 디스커버 화면이므로 등록 진입점을 함께 노출한다.
   // 다른 모든 경로 (/circles/new, /circles/{uuid}, /shuffle, /search, /favorites, /mypage 등) 는 자동 제외.
-  if (pathname !== "/circles") return null;
+  if (pathname !== "/circles" && pathname !== "/") return null;
 
   // collapsed(스크롤 내림) = 원형 56px, expanded(최상단) = 알약 형태
   const collapsed = isScrolled;
