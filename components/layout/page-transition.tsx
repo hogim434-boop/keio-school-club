@@ -43,15 +43,22 @@ export function PageTransition({ children, mode = "fade-up" }: PageTransitionPro
   const shouldReduceMotion = useReducedMotion();
 
   // fade 모드는 transform 을 전혀 만들지 않도록 opacity 만 다룬다 (fixed 자식 안정).
-  // fade-up 은 기존대로 opacity + y 8px. 페이드를 더 살리기 위해 fade 는 더 길게(0.6s) 재생.
+  // fade-up 은 기존대로 opacity + y 8px.
   const isFade = mode === "fade";
   const initial = shouldReduceMotion ? false : isFade ? { opacity: 0 } : { opacity: 0, y: 8 };
   const animate = isFade ? { opacity: 1 } : { opacity: 1, y: 0 };
-  const duration = isFade ? 0.6 : 0.3;
+
+  // 페이드인 체감 강화(fade 모드):
+  // - duration 0.6 → 0.9s 로 더 길게 → 투명→불투명 그라데이션을 눈으로 분명히 따라가게.
+  // - 시작 직후 살짝 머무르도록 0.05s delay → 스켈레톤 사라짐과 콘텐츠 페이드가 또렷이 구분됨.
+  // - 이징을 CSS 기본 ease 류(0.25,0.1,0.25,1)로 → 균일하게 "스르르" 드러나는 느낌(팝 인 방지).
+  const duration = isFade ? 0.9 : 0.3;
+  const ease = isFade ? ([0.25, 0.1, 0.25, 1] as const) : EASE_IOS;
+  const delay = isFade && !shouldReduceMotion ? 0.05 : 0;
 
   return (
     <LazyMotion features={domAnimation}>
-      <m.div initial={initial} animate={animate} transition={{ duration, ease: EASE_IOS }}>
+      <m.div initial={initial} animate={animate} transition={{ duration, ease, delay }}>
         {children}
       </m.div>
     </LazyMotion>

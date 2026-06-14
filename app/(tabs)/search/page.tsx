@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 
+import { PageTransition } from "@/components/layout/page-transition";
 import { SearchPageBody } from "@/components/search/search-page-body";
 import { SearchPageHeader } from "@/components/search/search-page-header";
 import { CircleListCard } from "@/components/circles/circle-list-card";
@@ -52,7 +53,13 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       {/* key — searchParams 가 변경되면 Suspense 자식이 강제 리마운트되어
           새 RSC payload 로 평가됨. cacheComponents 환경에서 stale 결과 차단. */}
       <Suspense key={JSON.stringify(raw)} fallback={<SearchPageFallback />}>
-        <SearchContent raw={raw} />
+        {/* PageTransition 을 Suspense 「내부」에 배치 — SearchContent 가 suspend 중일 땐
+            fallback(스켈레톤)만 보이고, 데이터가 준비돼 SearchContent 가 마운트되는 순간
+            PageTransition 도 함께 마운트되며 페이드인이 재생된다. (mode="fade": opacity 전용,
+            하단 fixed 「サークルを見る」 버튼이 딸려 움직이지 않도록 transform 미사용) */}
+        <PageTransition mode="fade">
+          <SearchContent raw={raw} />
+        </PageTransition>
       </Suspense>
     </div>
   );
