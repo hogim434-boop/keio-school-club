@@ -191,6 +191,32 @@ export const getUpcomingEvents = unstable_cache(
 );
 
 /**
+ * 승인된 동아리 총 수 취득 — 히어로 섹션 카운트 표시용.
+ *
+ * head:true + count:"exact" 로 rows 전송 없이 COUNT(*) 만 반환 → 최경량.
+ * 캐시: 5분 TTL, tags:["circles:public"]
+ */
+export const getApprovedCircleCount = unstable_cache(
+  async (): Promise<number> => {
+    const supabase = createAnonClient();
+
+    const { count, error } = await supabase
+      .from("circles")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "approved");
+
+    if (error) {
+      console.error("[getApprovedCircleCount]", error.message);
+      return 0;
+    }
+
+    return count ?? 0;
+  },
+  ["home-curation", "approved-count"],
+  { revalidate: 300, tags: ["circles:public"] }
+);
+
+/**
  * おすすめサークル取得 — ホーム「おすすめ」セクション.
  *
  * Phase 1: view_count 降順の単純ルールベース.

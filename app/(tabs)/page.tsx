@@ -14,8 +14,10 @@ import {
   getFeaturedCircles,
   getUpcomingEvents,
   getRecommendedCircles,
+  getApprovedCircleCount,
   isShinkanSeason,
 } from "@/lib/supabase/queries/home-curation";
+import { HomeHero } from "@/components/circles/home-hero";
 import { getNewCircles } from "@/lib/supabase/queries/circles";
 import { PUBLIC_EVENTS_ENABLED } from "@/lib/constants/features";
 import { getCurrentRecruitingStatuses } from "@/lib/constants/recruitment-status";
@@ -66,17 +68,25 @@ async function HomeContent() {
 
   // 이벤트 쿼리는 PUBLIC_EVENTS_ENABLED=true 일 때만 실행 (false 이면 빈 배열로 대체)
   // → 디렉터리 우선 단계에서 불필요한 DB 왕복 제거
-  const [featured, upcomingEvents, recommended, newCircles] = await Promise.all([
+  // getApprovedCircleCount 를 병렬로 추가 (HEAD クエリなので軽量)
+  const [featured, upcomingEvents, recommended, newCircles, circleCount] = await Promise.all([
     getFeaturedCircles(8),
     PUBLIC_EVENTS_ENABLED ? getUpcomingEvents(3) : Promise.resolve([]),
     getRecommendedCircles(6),
     getNewCircles(8),
+    getApprovedCircleCount(),
   ]);
 
   return (
     <div className="container mx-auto max-w-6xl space-y-8 px-4 py-6">
-      {/* 検索バー — /search へのリンク型 (実入力なし) */}
-      <HomeSearchBar />
+      {/*
+       * HomeHero — 임팩트 히어로 섹션.
+       * RSC(HomeContent) → Client(HomeHero) 에 children 패턴으로 HomeSearchBar 전달.
+       * HomeSearchBar 는 RSC 이므로 서버에서 렌더 후 slot 으로 주입된다.
+       */}
+      <HomeHero count={circleCount}>
+        <HomeSearchBar />
+      </HomeHero>
 
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
           プロモーションタイル キャロセル (検索バー直下に配置)
@@ -166,8 +176,15 @@ async function HomeContent() {
 function HomePageFallback() {
   return (
     <div className="container mx-auto max-w-6xl space-y-8 px-4 py-6">
-      {/* 検索バー skeleton */}
-      <Skeleton className="h-12 w-full rounded-xl" />
+      {/* ヒーローセクション skeleton (옵션 A) — eyebrow 배지 + 큰 헤딩 2줄 + 검색바 */}
+      <div className="space-y-4 pt-1">
+        <Skeleton className="h-6 w-40 rounded-full" />
+        <div className="space-y-1">
+          <Skeleton className="h-9 w-[60%] rounded-md" />
+          <Skeleton className="h-9 w-[78%] rounded-md" />
+        </div>
+        <Skeleton className="h-12 w-full rounded-xl" shimmer />
+      </div>
 
       {/* PromoTile skeleton — 넓은 배너이므로 shimmer 적용 */}
       <Skeleton className="h-20 w-full rounded-2xl" shimmer />
