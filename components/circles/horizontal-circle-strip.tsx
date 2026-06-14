@@ -47,7 +47,10 @@ export function HorizontalCircleStrip({
       <header className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">{title}</h2>
         {seeMoreHref && (
-          <Link href={seeMoreHref} className="text-muted-foreground text-sm">
+          <Link
+            href={seeMoreHref}
+            className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+          >
             もっと見る
           </Link>
         )}

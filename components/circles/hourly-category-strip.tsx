@@ -39,7 +39,7 @@ export async function HourlyCategoryStrip() {
         {/* SlideOutLink — 카테고리 칩 클릭과 동일한 「슬라이드 아웃 → 페이드 인」 트랜지션 발화 */}
         <SlideOutLink
           href={`/circles?category=${currentCategory}`}
-          className="text-muted-foreground hover:text-foreground text-sm"
+          className="text-muted-foreground hover:text-foreground text-sm transition-colors"
         >
           もっと見る
         </SlideOutLink>
