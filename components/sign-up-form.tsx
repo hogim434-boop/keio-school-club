@@ -624,9 +624,9 @@ export function SignUpForm() {
             animate="visible"
             transition={makeFadeTransition(0.15)}
           >
-            慶應アカウントで
+            アカウントを作成して
             <br />
-            始めましょう
+            はじめましょう
           </m.h1>
 
           {/* 서브카피: 일반 가입일 때만 표시. delay 0.21s.
