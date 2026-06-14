@@ -509,8 +509,8 @@ export function FavoritesPageBody() {
             </m.div>
             {/* 문구 1줄로 축소 (기존 2줄 → 1줄). 액션 안내는 아래 버튼이 담당. */}
             <p className="font-semibold">お気に入りはまだありません</p>
-            {/* 서클 목록 페이지로 이동 */}
-            <Button asChild className="h-12">
+            {/* 서클 목록 페이지로 이동 — 앱 공통 라운드 언어(rounded-full 알약형)에 맞춤 */}
+            <Button asChild className="h-12 rounded-full px-8">
               <Link href="/circles">サークルを探す</Link>
             </Button>
           </m.div>
@@ -551,7 +551,12 @@ export function FavoritesPageBody() {
                     transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
                   >
                     <p className="text-muted-foreground text-sm">条件に合うサークルがありません</p>
-                    <Button variant="outline" size="sm" onClick={resetFilters}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full"
+                      onClick={resetFilters}
+                    >
                       すべて表示
                     </Button>
                   </m.div>
@@ -707,8 +712,8 @@ export function FavoritesPageBody() {
             >
               <p className="text-sm font-semibold">他にも気になるサークルは?</p>
 
-              {/* 셔플 탐색 버튼 */}
-              <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
+              {/* 셔플 탐색 버튼 — 알약형(rounded-full)으로 통일 */}
+              <Button asChild variant="outline" size="sm" className="w-full rounded-full sm:w-auto">
                 <Link href="/shuffle">シャッフルで探す</Link>
               </Button>
 

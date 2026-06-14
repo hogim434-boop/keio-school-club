@@ -52,8 +52,8 @@ export function ManagedCirclesEmpty() {
           <p className="text-muted-foreground text-sm">サークルを登録して運営を始めましょう</p>
         </div>
 
-        {/* 登録 CTA 버튼 */}
-        <Button asChild className="h-12">
+        {/* 登録 CTA 버튼 — 앱 공통 라운드 언어(rounded-full 알약형)에 맞춤 */}
+        <Button asChild className="h-12 rounded-full px-8">
           <Link href="/circles/new">＋ 最初のサークルを登録</Link>
         </Button>
       </m.div>
