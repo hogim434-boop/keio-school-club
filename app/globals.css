@@ -103,22 +103,6 @@
   }
 }
 
-/* ─── PWA safe-area: 헤더 상단 노치 / Dynamic Island 대응 ──────────────────
-   viewport-fit: cover (layout.tsx viewport export) 를 사용하면
-   콘텐츠가 화면 전체를 덮게 되어 iOS status bar(safe-area-inset-top) 와 겹칠 수 있음.
-   헤더(sticky top-0)에 padding-top 을 주입해 K 로고가 노치·Dynamic Island 에 가리지 않게 함.
-
-   env(safe-area-inset-top, 0px):
-     - 노치가 없는 기기나 브라우저 탭 모드: 0px 폴백으로 무영향.
-     - iPhone X 이후 standalone 모드: 실제 상단 inset(44pt 등)이 주입됨.
-
-   header 선택자: Header 컴포넌트가 렌더하는 <header> 태그를 직접 타겟.
-   bottom-tabs / register-floating-cta 의 하단 safe-area 는 각 컴포넌트 내에서 처리됨.
-   좌우(safe-area-inset-left/right)는 세로(portrait) 고정 앱이므로 생략. */
-header {
-  padding-top: env(safe-area-inset-top, 0px);
-}
-
 /* ── Sonner 토스트(하단 다크 알약) — center 위치에서 내용폭 + 화면 중앙 ──
    sonner 의 center 정렬(ol 에 left:50% + translateX(-50%))은 환경에 따라 미세하게
    어긋나므로 그 계산에 의존하지 않는다.
