@@ -69,8 +69,12 @@ async function HomeContent() {
   // 이벤트 쿼리는 PUBLIC_EVENTS_ENABLED=true 일 때만 실행 (false 이면 빈 배열로 대체)
   // → 디렉터리 우선 단계에서 불필요한 DB 왕복 제거
   // getApprovedCircleCount 를 병렬로 추가 (HEAD クエリなので軽量)
+  // 「募集中のサークル」 1시간 단위 회전용 시드 — 매시간 값이 바뀌어 다른 8개가 노출됨.
+  // (cacheComponents OFF 이므로 Date.now() 는 요청 시점에 평가됨)
+  const hourSeed = Math.floor(Date.now() / 3_600_000);
+
   const [featured, upcomingEvents, recommended, newCircles, circleCount] = await Promise.all([
-    getFeaturedCircles(8),
+    getFeaturedCircles(8, hourSeed),
     PUBLIC_EVENTS_ENABLED ? getUpcomingEvents(3) : Promise.resolve([]),
     getRecommendedCircles(6),
     getNewCircles(8),

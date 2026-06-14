@@ -75,11 +75,39 @@ function toCircleSummary(row: Record<string, unknown>): CircleSummary {
  * 시즌 중: newcomer_only + year_round (両方)
  * 시즌 외: year_round のみ (通年募集)
  *
- * 정렬: newcomer_only 우선 → view_count 내림차순
- * 캐시: 5분 TTL, tags:["circles:public"]
+ * 정렬: newcomer_only 우선 → 1시간마다 랜덤 회전(hour 시드 셔플)
+ * 캐시: 5분 TTL, tags:["circles:public"] (단, hourSeed 인자별로 매시간 새 항목)
  */
+
+/**
+ * seededShuffle — 시드 기반 결정적 Fisher-Yates 셔플.
+ *
+ * 같은 시드면 항상 같은 순서를 반환(결정적)하되, 시드가 바뀌면 순서가 달라진다.
+ * 홈 「募集中」 섹션을 1시간마다 회전시키기 위해 hour 값을 시드로 넘긴다.
+ * (mulberry32 PRNG — 작고 빠르며 시드 분포가 균일)
+ */
+function seededShuffle<T>(arr: T[], seed: number): T[] {
+  let a = seed >>> 0;
+  const rand = () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const out = [...arr];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
 export const getFeaturedCircles = unstable_cache(
-  async (limit = 8): Promise<CircleSummary[]> => {
+  // hourSeed: 호출측에서 Math.floor(Date.now()/3_600_000) 를 넘긴다.
+  //   → unstable_cache 가 인자별로 캐시하므로 매시간 새 항목으로 갱신(시간당 1회 DB 조회).
+  //   기본값 0: 시드 미전달 호출 호환(고정 셔플).
+  async (limit = 8, hourSeed = 0): Promise<CircleSummary[]> => {
     const supabase = createAnonClient();
 
     // 시즌 판별 — 시즌 중이면 newcomer_only 포함
@@ -88,29 +116,34 @@ export const getFeaturedCircles = unstable_cache(
       ? ["newcomer_only", "year_round"]
       : ["year_round"];
 
+    // 회전 풀을 넉넉히 취득(최대 100) — 이 풀 안에서 매시간 다른 8개를 뽑는다.
     const { data, error } = await supabase
       .from("circles")
       .select("*, circle_tags(tags(slug))")
       .eq("status", "approved")
       .in("recruitment_status", recruitStatuses)
       .order("view_count", { ascending: false })
-      .limit(24); // 정렬 후 slice하기 위해 여유 있게 취득
+      .limit(100);
 
     if (error) {
       console.error("[getFeaturedCircles]", error.message);
       return [];
     }
 
-    // newcomer_only를 year_round보다 앞에 배치 (신환 시즌 긴급도 반영)
-    const priority: Record<string, number> = { newcomer_only: 0, year_round: 1 };
-    return (data ?? [])
-      .map((row) => toCircleSummary(row as Record<string, unknown>))
-      .sort(
-        (a, b) =>
-          (priority[a.recruitment_status ?? "year_round"] ?? 1) -
-          (priority[b.recruitment_status ?? "year_round"] ?? 1)
-      )
-      .slice(0, limit);
+    const pool = (data ?? []).map((row) => toCircleSummary(row as Record<string, unknown>));
+
+    // 우선순위 그룹(newcomer_only / 그 외)을 분리해 각 그룹을 hour 시드로 셔플 후 결합.
+    // → 매시간 노출 순서가 바뀌면서도, 新歓 시즌엔 newcomer_only 가 앞에 유지된다.
+    const newcomers = seededShuffle(
+      pool.filter((c) => c.recruitment_status === "newcomer_only"),
+      hourSeed
+    );
+    const yearRound = seededShuffle(
+      pool.filter((c) => c.recruitment_status !== "newcomer_only"),
+      hourSeed + 1
+    );
+
+    return [...newcomers, ...yearRound].slice(0, limit);
   },
   ["home-curation", "featured"],
   { revalidate: 300, tags: ["circles:public"] }
