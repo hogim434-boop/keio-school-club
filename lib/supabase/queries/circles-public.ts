@@ -68,6 +68,7 @@ function toCircleSummary(row: Record<string, unknown>): CircleSummary {
 
   return {
     id: row.id as string,
+    slug: (row.slug as string) ?? undefined,
     name: row.name as string,
     category: row.category as CircleSummary["category"],
     official_type: row.official_type as CircleSummary["official_type"],

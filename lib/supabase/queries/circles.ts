@@ -31,6 +31,20 @@ import type { CircleStatus } from "@/lib/constants/circle-status";
 /** 페이지당 서클 수 */
 const PAGE_SIZE = 12;
 
+/** UUID v4 형식 판정용 정규식 — slug 와 UUID 를 구분한다. */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * 상세 페이지 식별자(handle)가 UUID 면 "id", 아니면 "slug" 컬럼을 반환한다.
+ *
+ * /circles/[id] 라우트는 이제 UUID(/circles/20f8...)와 slug(/circles/keio-baseball)를
+ * 모두 받는다. UUID 컬럼에 slug 문자열을 .eq() 하면 Postgres 가 "invalid input syntax
+ * for type uuid" 에러를 내므로, 형식을 보고 조회 컬럼을 분기한다.
+ */
+function circleHandleColumn(handle: string): "id" | "slug" {
+  return UUID_RE.test(handle) ? "id" : "slug";
+}
+
 // ============================================================
 // 내부 필터 헬퍼 — filterCircles / countFilteredCircles 공유
 // ============================================================
@@ -152,6 +166,7 @@ function toCircleSummary(row: Record<string, unknown>): CircleSummary {
 
   return {
     id: row.id as string,
+    slug: (row.slug as string) ?? undefined,
     name: row.name as string,
     category: row.category as CircleSummary["category"],
     official_type: row.official_type as CircleSummary["official_type"],
@@ -365,6 +380,7 @@ export const getCirclesByCategory = unstable_cache(
  * (오너 미리보기, 어드민 확인 케이스)
  */
 export const getApprovedCircleById = unstable_cache(
+  // handle: UUID 또는 slug (예: "keio-baseball"). 형식에 따라 조회 컬럼이 분기된다.
   async (id: string): Promise<CircleDetail | null> => {
     const supabase = createAnonClient();
     const { data, error } = await supabase
@@ -372,7 +388,7 @@ export const getApprovedCircleById = unstable_cache(
       .select("*, circle_tags(tags(slug)), circle_images(*)")
       // anon RLS 와 명시 필터를 일치시켜 의도를 코드에 드러냄
       .eq("status", "approved")
-      .eq("id", id)
+      .eq(circleHandleColumn(id), id)
       .maybeSingle();
 
     if (error) {
@@ -400,7 +416,8 @@ export async function getCircleById(id: string): Promise<CircleDetail | null> {
   const { data, error } = await supabase
     .from("circles")
     .select("*, circle_tags(tags(slug)), circle_images(*)")
-    .eq("id", id)
+    // id 는 UUID 또는 slug — 형식에 따라 조회 컬럼 분기 (slug URL 지원)
+    .eq(circleHandleColumn(id), id)
     .maybeSingle();
 
   if (error) {

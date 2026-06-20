@@ -26,6 +26,20 @@
  * @param name - 서클 이름 (한국어·일본어 포함 가능)
  * @returns "{slugified-name}-{8자리 UUID}" 형식의 고유 slug
  */
+/**
+ * 서클 상세 페이지 경로를 만듭니다.
+ *
+ * slug 가 있으면 사람이 읽기 좋은 URL(/circles/keio-baseball)을,
+ * 없으면 UUID(/circles/{id})로 자동 fallback 합니다.
+ * 모든 서클 카드/링크는 이 헬퍼를 통해 href 를 생성해 일관성을 유지합니다.
+ *
+ * @param circle slug(任意) + id(필수) 를 가진 객체
+ * @returns "/circles/{slug 또는 id}" 경로
+ */
+export function circleHref(circle: { slug?: string | null; id: string }): string {
+  return `/circles/${circle.slug ?? circle.id}`;
+}
+
 export function makeCircleSlug(name: string): string {
   // 1. 영문자·숫자·공백만 남기기 (일본어, 한국어, 특수문자 제거)
   const cleaned = name

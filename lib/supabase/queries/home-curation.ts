@@ -52,6 +52,7 @@ function toCircleSummary(row: Record<string, unknown>): CircleSummary {
 
   return {
     id: row.id as string,
+    slug: (row.slug as string) ?? undefined,
     name: row.name as string,
     category: row.category as CircleSummary["category"],
     official_type: row.official_type as CircleSummary["official_type"],
@@ -168,8 +169,10 @@ export type UpcomingEvent = {
   is_all_day: boolean;
   /** 主催サークル名 — circles JOIN */
   circle_name: string;
-  /** 主催サークル ID — 詳細ページリンク用 */
+  /** 主催サークル ID — 詳細ページリンク用 (slug 없을 때 fallback) */
   circle_id: string;
+  /** 主催サークル slug — 詳細ページの「예쁜 URL」用 (circles JOIN). 없으면 circle_id 로 fallback */
+  circle_slug: string | null;
 };
 
 /**
@@ -188,7 +191,7 @@ export const getUpcomingEvents = unstable_cache(
     const { data, error } = await supabase
       .from("events")
       .select(
-        "id, title, description, starts_at, ends_at, location, cover_image_url, is_all_day, circle_id, circles(name)"
+        "id, title, description, starts_at, ends_at, location, cover_image_url, is_all_day, circle_id, circles(name, slug)"
       )
       .gt("starts_at", new Date().toISOString())
       .eq("visibility", "public")
@@ -204,7 +207,7 @@ export const getUpcomingEvents = unstable_cache(
     return (data ?? []).map((row) => {
       const r = row as Record<string, unknown>;
       // circles JOIN は to-one FK なので単一オブジェクト
-      const circle = r.circles as { name: string } | null;
+      const circle = r.circles as { name: string; slug: string | null } | null;
       return {
         id: r.id as string,
         title: r.title as string,
@@ -216,6 +219,7 @@ export const getUpcomingEvents = unstable_cache(
         is_all_day: Boolean(r.is_all_day),
         circle_name: circle?.name ?? "",
         circle_id: r.circle_id as string,
+        circle_slug: circle?.slug ?? null,
       };
     });
   },

@@ -16,6 +16,12 @@ import type { ActivityReportType } from "@/lib/constants/activity-report-type";
  */
 export interface CircleSummary {
   id: string;
+  /**
+   * URL-safe 식별자 (circles.slug, UNIQUE NOT NULL). 상세 페이지의 「예쁜 URL」용.
+   * 예: /circles/keio-baseball. DB 행에는 항상 존재하지만, 더미/테스트 데이터 호환을 위해 optional.
+   * 링크 생성은 circleHref(circle) 헬퍼 사용 — slug 없으면 id(UUID)로 자동 fallback.
+   */
+  slug?: string;
   name: string;
   category: Category;
   official_type: OfficialType;
