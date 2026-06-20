@@ -51,7 +51,7 @@ export function ActivityReportsPreview({
     <section className="space-y-3">
       {/* 헤더 — 좌측 타이틀 + 우측 「もっと見る」 button (리포트 있을 때만) */}
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">活動レポート</h2>
+        <h2 className="text-lg font-semibold">みんなの活動</h2>
         {hasReports && (
           <button
             type="button"

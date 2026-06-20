@@ -253,7 +253,7 @@ export function ManagedCircleCard({ circle, onRequestDelete, className }: Manage
             {/* 서클명을 따옴표로 감싸 어떤 서클인지 명확히 표시 */}「{circle.name}」を削除しますか?
           </>
         }
-        description="この操作は取り消せません。活動レポートなどの関連データもすべて削除されます。"
+        description="この操作は取り消せません。みんなの活動などの関連データもすべて削除されます。"
         onConfirm={() => {
           setDialogOpen(false);
           onRequestDelete();

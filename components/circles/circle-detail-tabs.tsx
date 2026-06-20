@@ -309,7 +309,7 @@ export function CircleDetailTabs({
                  * 소유자(isOwner=true) 인 경우 소유자 투고 박스 + 각 row ⋯ 수정·삭제 메뉴 표시.
                  */}
                 <section className="border-t pt-6">
-                  <h2 className="mb-4 text-lg font-semibold">活動レポート</h2>
+                  <h2 className="mb-4 text-lg font-semibold">みんなの活動</h2>
                   {isOwner && reports.length > 0 && (
                     <div className="mb-4">
                       <ReportComposeSheet circleId={circleId} />

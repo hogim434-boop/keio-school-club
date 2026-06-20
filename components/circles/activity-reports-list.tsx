@@ -76,7 +76,7 @@ export function ActivityReportsList({
       return (
         <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 px-4 py-12 text-center">
           <MessageSquareText className="text-keio-navy/40 size-16" aria-hidden="true" />
-          <h3 className="text-base font-semibold">最初の活動レポートを投稿しよう</h3>
+          <h3 className="text-base font-semibold">最初の活動を投稿しよう</h3>
           <p className="text-muted-foreground max-w-md text-sm">
             写真付きで活動を紹介すると、新入生にサークルの魅力が伝わります。
           </p>
@@ -90,7 +90,7 @@ export function ActivityReportsList({
     return (
       <div className="border-border bg-muted/30 flex min-h-[40vh] flex-col items-center justify-center gap-3 rounded-lg border border-dashed px-4 py-12 text-center">
         <MessageSquareText className="text-muted-foreground/60 size-16" aria-hidden="true" />
-        <h3 className="text-base font-semibold">まだレポートがありません</h3>
+        <h3 className="text-base font-semibold">まだ活動がありません</h3>
         <p className="text-muted-foreground max-w-md text-sm">
           サークルメンバーが活動の様子を投稿すると、ここに表示されます。
         </p>

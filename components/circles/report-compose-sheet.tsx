@@ -498,7 +498,7 @@ export function ReportComposeSheet({
             <m.button
               type="button"
               whileTap={prefersReducedMotion ? undefined : { scale: 0.97 }}
-              aria-label="活動レポートを投稿する"
+              aria-label="活動を投稿する"
               className={cn(
                 "w-36 shrink-0 snap-start md:w-44",
                 "flex aspect-square flex-col items-center justify-center gap-1.5 rounded-lg",
@@ -516,7 +516,7 @@ export function ReportComposeSheet({
             <m.button
               type="button"
               whileTap={prefersReducedMotion ? undefined : { scale: 0.99 }}
-              aria-label="活動レポートを投稿する"
+              aria-label="活動を投稿する"
               className={cn(
                 "flex w-full items-center justify-center gap-2 rounded-xl py-3.5",
                 "border-keio-navy/30 text-keio-navy border-2 border-dashed text-sm font-medium",
@@ -524,7 +524,7 @@ export function ReportComposeSheet({
               )}
             >
               <Plus className="size-4" aria-hidden="true" />
-              活動レポートを投稿
+              活動を投稿
             </m.button>
           </SheetTrigger>
         ))}
@@ -561,9 +561,7 @@ export function ReportComposeSheet({
                   <ArrowLeft className="size-5" aria-hidden="true" />
                 </button>
               </SheetClose>
-              <SheetTitle className="text-lg">
-                {isEdit ? "活動レポートを編集" : "活動レポートを投稿"}
-              </SheetTitle>
+              <SheetTitle className="text-lg">{isEdit ? "活動を編集" : "活動を投稿"}</SheetTitle>
             </div>
           </SheetHeader>
 

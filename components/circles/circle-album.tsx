@@ -59,9 +59,7 @@ export function CircleAlbum({ images, circleId }: CircleAlbumProps) {
         />
         <div className="space-y-1">
           <p className="text-muted-foreground text-sm font-medium">まだ写真がありません</p>
-          <p className="text-muted-foreground/60 text-xs">
-            活動レポートを投稿すると写真が追加されます
-          </p>
+          <p className="text-muted-foreground/60 text-xs">活動を投稿すると写真が追加されます</p>
         </div>
       </div>
     );
