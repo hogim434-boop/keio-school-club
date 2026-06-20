@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import {
   Calendar,
   Clock,
+  History,
   Instagram,
   RefreshCw,
   Twitter,
@@ -246,7 +247,7 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
                 isOwner={isOwner}
                 homeContent={
                   <>
-                    <SummaryGrid circle={circle} />
+                    <SummaryGrid circle={circle} lastReportAt={reports[0]?.created_at} />
                     {/*
                      * T-034: 평균 응답 시간 배지 — SummaryGrid 아래, 소개글 위.
                      * 「DM で質問する」CTA(CircleActions)와 연계해 반응속도를 미리 안내.
@@ -347,7 +348,30 @@ function Header({ circle }: { circle: CircleDetail }) {
  * 아이콘: w-6 고정 너비, text-muted-foreground (값과 구분)
  * 募集状況 값만 text-keio-navy 강조 (기존 emphasis 유지)
  */
-function SummaryGrid({ circle }: { circle: CircleDetail }) {
+/**
+ * 활동 리포트 최신 작성일 → 「N日前」 류의 상대 표기.
+ * 최근일수록 「살아있는」 느낌을 주기 위해 절대 날짜 대신 상대 시간으로 표시한다.
+ * iso 가 없으면(리포트 0건) null 반환 → 호출부에서 「最終更新」 행 자체를 생략한다.
+ */
+function formatLastUpdate(iso?: string): string | null {
+  if (!iso) return null;
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  if (days <= 0) return "今日";
+  if (days === 1) return "昨日";
+  if (days < 7) return `${days}日前`;
+  if (days < 30) return `${Math.floor(days / 7)}週間前`;
+  if (days < 365) return `${Math.floor(days / 30)}ヶ月前`;
+  return `${Math.floor(days / 365)}年前`;
+}
+
+function SummaryGrid({
+  circle,
+  lastReportAt,
+}: {
+  circle: CircleDetail;
+  /** 최신 활동 리포트 작성일(ISO) — reports[0]?.created_at. 없으면 「最終更新」 행 생략 */
+  lastReportAt?: string;
+}) {
   // 모집 상태 라벨 — optional 필드이므로 없으면 「—」
   const recruitmentLabel = circle.recruitment_status
     ? RECRUITMENT_STATUS_LABELS[circle.recruitment_status]
@@ -361,6 +385,9 @@ function SummaryGrid({ circle }: { circle: CircleDetail }) {
 
   // 부원 수 범위 라벨 — member_band 없으면 「—」
   const memberBandLabel = circle.member_band ? MEMBER_BAND_LABELS[circle.member_band] : "—";
+
+  // 最終更新 라벨 — 최신 활동 리포트 작성일 기준 상대 표기. 리포트 0건이면 null → 행 생략.
+  const lastUpdateLabel = formatLastUpdate(lastReportAt);
 
   const items: { label: string; value: string; icon: LucideIcon; emphasis?: boolean }[] = [
     {
@@ -389,6 +416,8 @@ function SummaryGrid({ circle }: { circle: CircleDetail }) {
       value: memberBandLabel,
       icon: Users,
     },
+    // 最終更新 — 활동 리포트가 있을 때만 노출 (0건이면 「活動なし」 오해를 막기 위해 행 생략)
+    ...(lastUpdateLabel ? [{ label: "最終更新", value: lastUpdateLabel, icon: History }] : []),
   ];
 
   return (
