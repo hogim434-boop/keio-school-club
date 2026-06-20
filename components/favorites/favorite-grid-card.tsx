@@ -24,6 +24,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CATEGORY_LABELS } from "@/lib/constants/category";
 import { RECRUITMENT_STATUS_LABELS } from "@/lib/constants/recruitment-status";
+import { circleHref } from "@/lib/circles/slug";
 import type { CircleSummary } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
 
@@ -41,7 +42,7 @@ export function FavoriteGridCard({ circle, onUnsave }: FavoriteGridCardProps) {
   const { id, name, category, cover_image_url, recruitment_status } = circle;
 
   return (
-    <CircleCardLink href={`/circles/${id}`} className="group block">
+    <CircleCardLink href={circleHref(circle)} className="group block">
       <Card className="overflow-hidden transition-shadow hover:shadow-md">
         {/* ── 커버 이미지 영역 ── */}
         <div className="bg-muted relative aspect-[4/3]">

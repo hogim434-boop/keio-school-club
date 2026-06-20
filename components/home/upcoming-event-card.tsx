@@ -30,6 +30,7 @@ export function UpcomingEventCard({ event }: UpcomingEventCardProps) {
     is_all_day,
     circle_name,
     circle_id,
+    circle_slug,
   } = event;
 
   // 日付・時刻フォーマット (日本語ロケール)
@@ -55,19 +56,13 @@ export function UpcomingEventCard({ event }: UpcomingEventCardProps) {
 
   return (
     <Link
-      href={`/circles/${circle_id}`}
+      href={`/circles/${circle_slug ?? circle_id}`}
       className="focus-visible:ring-ring group flex items-start gap-3 rounded-xl p-3 transition-colors hover:bg-neutral-50 focus-visible:ring-2 focus-visible:outline-none dark:hover:bg-neutral-900"
     >
       {/* サムネイル */}
       <div className="bg-muted relative size-16 shrink-0 overflow-hidden rounded-lg">
         {cover_image_url ? (
-          <Image
-            src={cover_image_url}
-            alt={title}
-            fill
-            sizes="64px"
-            className="object-cover"
-          />
+          <Image src={cover_image_url} alt={title} fill sizes="64px" className="object-cover" />
         ) : (
           /* プレースホルダー — カレンダーアイコン中央配置 */
           <div className="text-muted-foreground flex h-full w-full items-center justify-center">
@@ -79,7 +74,7 @@ export function UpcomingEventCard({ event }: UpcomingEventCardProps) {
       {/* テキスト領域 */}
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         {/* タイトル */}
-        <p className="line-clamp-2 text-sm font-semibold leading-snug">{title}</p>
+        <p className="line-clamp-2 text-sm leading-snug font-semibold">{title}</p>
 
         {/* 日時 */}
         <div className="text-muted-foreground flex items-center gap-1 text-xs">
@@ -99,9 +94,7 @@ export function UpcomingEventCard({ event }: UpcomingEventCardProps) {
         )}
 
         {/* 主催サークル */}
-        <p className="text-muted-foreground mt-0.5 truncate text-xs">
-          主催: {circle_name}
-        </p>
+        <p className="text-muted-foreground mt-0.5 truncate text-xs">主催: {circle_name}</p>
       </div>
     </Link>
   );

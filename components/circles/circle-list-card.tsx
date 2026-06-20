@@ -8,6 +8,7 @@ import { TAG_LABELS } from "@/lib/circles/filter-labels";
 import { ACTIVITY_FREQUENCY_LABELS } from "@/lib/constants/activity-frequency";
 import { CATEGORY_LABELS } from "@/lib/constants/category";
 import { getOfficialTypeDisplayLabel } from "@/lib/constants/official-type";
+import { circleHref } from "@/lib/circles/slug";
 import type { CircleSummary } from "@/lib/types/domain";
 
 interface CircleListCardProps {
@@ -51,7 +52,7 @@ export function CircleListCard({
 
   return (
     <CircleCardLink
-      href={`/circles/${id}`}
+      href={circleHref(circle)}
       className="group focus-visible:ring-ring block rounded-lg focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
     >
       <div className="flex items-start gap-3 px-1 py-3">

@@ -9,6 +9,7 @@ import { TAG_LABELS } from "@/lib/circles/filter-labels";
 import { ACTIVITY_FREQUENCY_LABELS } from "@/lib/constants/activity-frequency";
 import { CATEGORY_LABELS } from "@/lib/constants/category";
 import { getOfficialTypeDisplayLabel } from "@/lib/constants/official-type";
+import { circleHref } from "@/lib/circles/slug";
 import type { CircleSummary } from "@/lib/types/domain";
 
 interface CircleCardProps {
@@ -37,7 +38,7 @@ export function CircleCard({ circle, isNew = false }: CircleCardProps) {
 
   return (
     <CircleCardLink
-      href={`/circles/${id}`}
+      href={circleHref(circle)}
       className="group focus-visible:ring-ring block rounded-lg focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
     >
       {/* transition-all duration-300: shadow + lift(-translate-y-0.5=−2px) 을 함께 전환

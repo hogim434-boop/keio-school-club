@@ -2,6 +2,7 @@ import Image from "next/image";
 import { Construction } from "lucide-react";
 
 import { CircleCardLink } from "@/components/circles/circle-card-link";
+import { circleHref } from "@/lib/circles/slug";
 import type { CircleSummary } from "@/lib/types/domain";
 
 interface CircleAvatarCardProps {
@@ -20,11 +21,11 @@ interface CircleAvatarCardProps {
  * favorite 토글은 작은 원형에 어울리지 않아 생략. 카드 탭 → 상세 페이지로 이동 후 토글.
  */
 export function CircleAvatarCard({ circle }: CircleAvatarCardProps) {
-  const { id, name, cover_image_url } = circle;
+  const { name, cover_image_url } = circle;
 
   return (
     <CircleCardLink
-      href={`/circles/${id}`}
+      href={circleHref(circle)}
       className="group focus-visible:ring-ring block w-20 shrink-0 rounded-2xl text-center focus-visible:ring-2 focus-visible:outline-none"
     >
       <div

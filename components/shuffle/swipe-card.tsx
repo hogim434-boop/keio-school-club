@@ -14,6 +14,7 @@ import { CATEGORY_LABELS } from "@/lib/constants/category";
 import { getOfficialTypeDisplayLabel } from "@/lib/constants/official-type";
 import { ACTIVITY_FREQUENCY_LABELS } from "@/lib/constants/activity-frequency";
 import { TAG_LABELS } from "@/lib/circles/filter-labels";
+import { circleHref } from "@/lib/circles/slug";
 import { Emoji, type EmojiName } from "@/components/ui/emoji";
 import { cn } from "@/lib/utils";
 
@@ -296,7 +297,7 @@ export const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function Sw
 
         {/* もっと詳しく リンク — drag 중 motion 이 click 자동 차단 */}
         <Link
-          href={`/circles/${circle.id}`}
+          href={circleHref(circle)}
           className="mt-3 self-start text-sm font-medium underline-offset-4 hover:underline"
           tabIndex={stackPosition === 0 ? 0 : -1}
         >

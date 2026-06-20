@@ -8,6 +8,7 @@ import {
   RECRUITMENT_STATUS_LABELS,
   type RecruitmentStatus,
 } from "@/lib/constants/recruitment-status";
+import { circleHref } from "@/lib/circles/slug";
 import type { CircleSummary } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
 
@@ -40,7 +41,7 @@ export function RecruitingPosterCard({ circle }: RecruitingPosterCardProps) {
 
   return (
     <CircleCardLink
-      href={`/circles/${id}`}
+      href={circleHref(circle)}
       className="group focus-visible:ring-ring block w-32 shrink-0 rounded-xl focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
     >
       {/* 세로 3:4 커버 — 포스터 비율 */}
