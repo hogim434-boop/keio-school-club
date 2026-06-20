@@ -14,7 +14,6 @@ import {
 
 import { CircleActions } from "@/components/circles/circle-actions";
 import { CircleAlbum } from "@/components/circles/circle-album";
-import { CircleGalleryTab } from "@/components/circles/circle-gallery-tab";
 import { CoverCarousel } from "@/components/circles/cover-carousel";
 import { CircleDetailFadeIn } from "@/components/circles/circle-detail-fade-in";
 import { CircleDetailSkeleton } from "@/components/circles/circle-detail-skeleton";
@@ -77,25 +76,30 @@ async function fetchCircleWithFallback(id: string): Promise<CircleDetail | null>
 }
 
 async function CircleDetailContent({ params }: CircleDetailPageProps) {
-  const { id } = await params;
+  // handle 은 UUID(/circles/20f8...) 또는 slug(/circles/keio-baseball) 둘 다 가능.
+  const { id: handle } = await params;
+
   /**
-   * circle 조회 + 활동 리포트 조회를 병렬 실행 (성능 개선 Phase 1).
+   * circle 을 먼저 해석한다 — slug 로 접속한 경우 handle 이 UUID 가 아니므로,
+   * reports/galleries/평균응답시간(모두 circle_id=UUID 기준)을 handle 로 바로 조회하면
+   * 매칭이 깨진다. 따라서 circle 해석 → 실제 circle.id 확보 후 나머지를 조회한다.
    *
    * circle 취득은 "캐시 우선 + 폴백" 패턴(fetchCircleWithFallback):
    *   - approved 서클: getApprovedCircleById(캐시 60초, anon) → 빠름.
    *   - 미승인/unknown: getCircleById(쿠키/RLS) 폴백 → 오너 미리보기 유지.
-   * reports 취득은 getReportsByCircle(캐시 30초, anon).
-   *
-   * - circle가 null(존재하지 않는 서클)인 경우엔 reports 조회는 빈 배열로 무해하게 끝남.
    */
-  const [circle, reports, galleries, avgResponseTime] = await Promise.all([
-    fetchCircleWithFallback(id),
-    getReportsByCircle(id),
-    listGalleries(id),
-    // T-034: 평균 응답 시간 — 공개 집계 수치, unstable_cache(tags:["circles"]) 적용됨
-    getAvgResponseTime(id),
-  ]);
+  const circle = await fetchCircleWithFallback(handle);
   if (!circle) notFound();
+
+  /**
+   * 활동 리포트·갤러리·평균 응답 시간은 circle.id(UUID) 기준으로 병렬 조회.
+   * (getReportsByCircle 캐시 30초 / getAvgResponseTime 는 unstable_cache tags:["circles"])
+   */
+  const [reports, galleries, avgResponseTime] = await Promise.all([
+    getReportsByCircle(circle.id),
+    listGalleries(circle.id),
+    getAvgResponseTime(circle.id),
+  ]);
 
   // 승인 여부 — pending 상태이면 関連サークル 조회 생략 + 審査中 배너 표시
   const isApproved = circle.status === "approved";
@@ -128,7 +132,7 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
    * 에러 시 콘솔 출력만, UX에 영향 없음.
    */
   if (circle.status === "approved" && !isOwner) {
-    supabase.rpc("increment_view_count", { p_circle_id: id }).then(({ error }) => {
+    supabase.rpc("increment_view_count", { p_circle_id: circle.id }).then(({ error }) => {
       if (error) console.warn("[increment_view_count]", error.message);
     });
   }
@@ -183,56 +187,57 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
            */}
           {(() => {
             /**
-             * アルバム 탭 구성 (T-011 개편):
+             * アルバム 탭 구성 (통합 개편):
              *
-             * 섹션 1 — 활동 리포트 사진 자동 집계 (CircleAlbum)
-             *   커버 이미지(circle.images) + 활동 리포트(activity_reports) 사진을
-             *   추가 쿼리 없이 자동으로 합쳐서 표시.
+             * 커버 사진 + 활동 리포트 사진 + 갤러리(circle_galleries) 사진을
+             * 구분 헤더 없이 하나의 그리드(CircleAlbum)로 합쳐서 표시한다.
+             * (기존엔 「活動レポートの写真」 / 「ギャラリー」 두 구역으로 분리돼 있었고
+             *  갤러리에는 봄/가을 학기 필터가 있었으나, 모두 제거하고 단일 앨범으로 통합.)
              *
-             * 섹션 2 — 갤러리 (CircleGalleryTab)
-             *   circle_galleries 테이블의 사진. 운영진이 직접 업로드한 활동 아카이브.
-             *   학기 필터(봄학기 / 가을학기)로 기간 좁히기 가능.
-             *   0건이면 빈 상태 메시지만 표시.
+             * 정렬 규칙:
+             *  1) 커버 사진을 맨 앞에 (circle.images, sort_order 순 — 대표 사진 우선)
+             *  2) 그 뒤로 활동 리포트 사진 + 갤러리 사진을 시간 내림차순(최신순)으로 섞음
+             *     - 리포트 사진: 해당 리포트의 created_at 기준
+             *     - 갤러리 사진: taken_at(촬영일) 우선, 없으면 created_at 기준
+             *
+             * 데이터는 모두 이미 로드돼 있어 추가 쿼리가 없다(reports, galleries).
              */
-            const albumImages = [
-              ...circle.images.map((img) => ({
+
+            // 커버 — 항상 맨 앞. sort_order 정렬은 쿼리에서 이미 적용됨.
+            const coverImages = circle.images.map((img) => ({
+              url: img.image_url,
+              isCover: true as const,
+            }));
+
+            // 리포트 사진 + 갤러리 사진 — timestamp 를 부여해 한데 모은 뒤 최신순 정렬.
+            // AlbumImage 형태(url / reportId / reportTitle)로 변환하되, 정렬용 _ts 를 임시로 부착.
+            const reportPhotos = reports.flatMap((r) =>
+              r.images.map((img) => ({
                 url: img.image_url,
-                isCover: true as const,
-              })),
-              ...reports.flatMap((r) =>
-                r.images.map((img) => ({
-                  url: img.image_url,
-                  reportId: r.id,
-                  reportTitle: r.title,
-                }))
-              ),
-            ];
-
-            // アルバム 탭 전체 콘텐츠
-            const albumContent = (
-              <div className="space-y-8">
-                {/* 섹션 1: 커버 + 리포트 자동 집계 — 기존 CircleAlbum 재사용 */}
-                {albumImages.length > 0 && (
-                  <section className="space-y-3">
-                    <h3 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                      活動レポートの写真
-                    </h3>
-                    <CircleAlbum images={albumImages} circleId={circle.id} />
-                  </section>
-                )}
-
-                {/* 섹션 2: circle_galleries — 운영진 업로드 아카이브 */}
-                <section className="space-y-3">
-                  {/* albumImages가 있을 때만 구분 헤더 표시 */}
-                  {albumImages.length > 0 && (
-                    <h3 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                      ギャラリー
-                    </h3>
-                  )}
-                  <CircleGalleryTab circleId={circle.id} galleries={galleries} />
-                </section>
-              </div>
+                reportId: r.id,
+                reportTitle: r.title,
+                _ts: r.created_at,
+              }))
             );
+            const galleryPhotos = galleries.map((g) => ({
+              url: g.image_url,
+              // 갤러리는 reportId 가 없어 라이트박스에서 「投稿を見る」 링크가 표시되지 않음.
+              // caption 이 있으면 alt/제목 용도로 활용.
+              reportTitle: g.caption || undefined,
+              _ts: g.taken_at ?? g.created_at,
+            }));
+
+            // 리포트 + 갤러리를 최신순으로 섞고, 정렬용 _ts 는 제거해 AlbumImage 형태로 환원.
+            const mixedPhotos = [...reportPhotos, ...galleryPhotos]
+              .sort((a, b) => b._ts.localeCompare(a._ts))
+              .map(({ _ts, ...rest }) => rest); // eslint-disable-line @typescript-eslint/no-unused-vars
+
+            // 커버(맨 앞) + 최신순으로 섞인 나머지 사진들 → 단일 앨범 그리드.
+            const albumImages = [...coverImages, ...mixedPhotos];
+
+            // アルバム 탭 전체 콘텐츠 — 헤더/구역 구분 없이 하나의 CircleAlbum.
+            // 사진이 0장이면 CircleAlbum 이 빈 상태 메시지를 표시한다.
+            const albumContent = <CircleAlbum images={albumImages} circleId={circle.id} />;
 
             return (
               <CircleDetailTabs
