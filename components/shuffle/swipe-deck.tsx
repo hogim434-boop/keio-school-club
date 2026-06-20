@@ -12,6 +12,7 @@ import { addFavoriteLocal } from "@/lib/circles/use-favorites";
 import { ShuffleSlideOutContext } from "@/app/shuffle/template";
 import { SwipeCard, type SwipeCardHandle } from "@/components/shuffle/swipe-card";
 import { Emoji } from "@/components/ui/emoji";
+import { Pressable } from "@/components/ui/pressable";
 import { fisherYates } from "@/lib/utils/shuffle";
 import type { CircleSummary } from "@/lib/types/domain";
 
@@ -94,14 +95,14 @@ export function SwipeDeck({ circles }: SwipeDeckProps) {
             paddingBottom: "0.75rem",
           }}
         >
-          <button
-            type="button"
+          <Pressable
+            intensity="strong"
             onClick={slideOutToCircles}
             aria-label="シャッフルを終了"
             className="bg-background/80 ring-border hover:bg-muted focus-visible:ring-ring inline-flex size-10 items-center justify-center rounded-full shadow-sm ring-1 backdrop-blur transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
             <ArrowLeft className="size-5" aria-hidden="true" />
-          </button>
+          </Pressable>
         </header>
 
         {/* 본문 영역 — FinishedView 또는 카드 스택 */}
@@ -113,23 +114,23 @@ export function SwipeDeck({ circles }: SwipeDeckProps) {
             triggerSwipe → topCardRef.swipe() → fly-out 후 handleSwipe 호출 (drag 와 동일 경로) */}
         {!isFinished && (
           <div className="fixed inset-x-0 bottom-8 z-10 flex items-center justify-center gap-8">
-            <button
-              type="button"
+            <Pressable
+              intensity="strong"
               onClick={() => triggerSwipe("left")}
               aria-label="次へ"
               className="bg-background ring-border hover:bg-muted focus-visible:ring-ring inline-flex size-16 items-center justify-center rounded-full shadow-lg ring-1 transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
               <X className="size-7 text-red-500" aria-hidden="true" />
-            </button>
+            </Pressable>
 
-            <button
-              type="button"
+            <Pressable
+              intensity="strong"
               onClick={() => triggerSwipe("right")}
               aria-label="気になるに追加"
               className="bg-background ring-border hover:bg-muted focus-visible:ring-ring inline-flex size-16 items-center justify-center rounded-full shadow-lg ring-1 transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
               <Heart className="size-7 text-green-500" aria-hidden="true" />
-            </button>
+            </Pressable>
           </div>
         )}
       </div>
@@ -177,13 +178,13 @@ function FinishedView({ onReshuffle }: { onReshuffle: () => void }) {
         気になるサークルは「お気に入り」で確認できます
       </p>
       <div className="flex w-full max-w-xs flex-col gap-3">
-        <button
-          type="button"
+        <Pressable
+          intensity="strong"
           onClick={onReshuffle}
           className="bg-foreground text-background hover:bg-foreground/90 focus-visible:ring-ring inline-flex h-12 w-full items-center justify-center rounded-full text-sm font-semibold shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
           もう一度シャッフル
-        </button>
+        </Pressable>
         <Link
           href="/circles"
           className="text-muted-foreground hover:text-foreground inline-flex h-12 w-full items-center justify-center rounded-full text-sm font-medium transition-colors"
