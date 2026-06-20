@@ -23,22 +23,18 @@ import { unstable_cache } from "next/cache";
 
 import { createAnonClient } from "@/lib/supabase/anon";
 import type { CircleSummary } from "@/lib/types/domain";
-import type { RecruitmentStatus } from "@/lib/constants/recruitment-status";
+import { isShinkanSeason, type RecruitmentStatus } from "@/lib/constants/recruitment-status";
 
 // ============================================================
 // シーズン判定ヘルパー
 // ============================================================
 
 /**
- * 新歓シーズン判定 — 4・5・10・11 月が活性.
- *
- * 春新歓: 4〜5月 / 秋新歓: 10〜11月
- * Phase 3 で cron + DB フラグに格上げ予定.
+ * 新歓シーズン判定 — 단일 소스(recruitment-status.ts)에서 re-export.
+ * 기존 import 경로(@/lib/supabase/queries/home-curation) 호환을 위해 유지한다.
+ * 판정 기준: 春(4・5月)・秋(10・11月).
  */
-export function isShinkanSeason(now: Date = new Date()): boolean {
-  const m = now.getMonth() + 1; // 1〜12
-  return [4, 5, 10, 11].includes(m);
-}
+export { isShinkanSeason };
 
 // ============================================================
 // 내부 매핑 헬퍼
