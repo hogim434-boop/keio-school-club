@@ -14,8 +14,12 @@
 /**
  * iOS 스프링 느낌의 easing — 빠르게 치솟고 부드럽게 착지.
  * [0.32, 0.72, 0, 1] : cubic-bezier
+ *
+ * 타입을 mutable 튜플로 명시 — motion/react 의 ease prop 및 animate() 인자가
+ * `[number, number, number, number]` 를 요구하므로, readonly(as const) 대신 이 타입으로
+ * 두어 모든 사용처(variants·transition·animate)에서 캐스팅 없이 바로 쓰도록 한다.
  */
-export const EASE_IOS = [0.32, 0.72, 0, 1] as const;
+export const EASE_IOS: [number, number, number, number] = [0.32, 0.72, 0, 1];
 
 /**
  * expo out easing — 빠른 시작, 천천히 멈춤.

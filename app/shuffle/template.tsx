@@ -4,6 +4,8 @@ import { createContext, useEffect, useRef, useState, type ReactNode } from "reac
 import { useRouter } from "next/navigation";
 import { LazyMotion, domAnimation, m } from "motion/react";
 
+import { EASE_IOS } from "@/lib/motion/tokens";
+
 /**
  * 셔플 페이지 「戻る」 슬라이드 아웃 트리거 — SwipeDeck 의 戻る 버튼이 useContext 로 호출.
  * 호출되면 우측으로 슬라이드 아웃 → 직전 페이지로 복귀 (router.back).
@@ -75,7 +77,7 @@ export default function ShuffleTemplate({ children }: { children: ReactNode }) {
         animate={exiting ? { x: "100%", opacity: 0 } : { x: 0, opacity: 1 }}
         // iOS UINavigationController push easing — cubic-bezier(0.32, 0.72, 0, 1).
         // 300ms — search·detail template 과 동일한 톤
-        transition={{ type: "tween", duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+        transition={{ type: "tween", duration: 0.3, ease: EASE_IOS }}
         onAnimationComplete={() => {
           if (exiting && !navigatedRef.current) {
             navigatedRef.current = true;

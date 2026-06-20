@@ -4,6 +4,8 @@
 // m.div = motion.div 의 경량 버전 (LazyMotion + domAnimation 조합 시 번들 최소화)
 import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { useReducedMotion, useMotionValue, useTransform, animate, m } from "motion/react";
+
+import { EASE_IOS } from "@/lib/motion/tokens";
 import Image from "next/image";
 import Link from "next/link";
 import { Construction } from "lucide-react";
@@ -125,7 +127,7 @@ export const SwipeCard = forwardRef<SwipeCardHandle, SwipeCardProps>(function Sw
     // → 스탬프가 또렷이 '찍힌 상태' 를 보여준 다음, 그 상태 그대로 카드가 함께 날아감.
     const flyDelay = isLike && holdStamp && !reducedMotion ? 0.5 : 0;
     // iOS easing [0.32, 0.72, 0, 1] — 프로젝트 전체 톤 통일
-    animate(x, targetX, { duration, delay: flyDelay, ease: [0.32, 0.72, 0, 1] }).then(() => {
+    animate(x, targetX, { duration, delay: flyDelay, ease: EASE_IOS }).then(() => {
       onSwipe?.(dir);
       // 카드는 보통 unmount 되지만, 재마운트 시 가드 해제 보호용
       isAnimatingRef.current = false;

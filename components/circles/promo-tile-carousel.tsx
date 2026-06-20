@@ -5,6 +5,8 @@ import Link from "next/link";
 import { AnimatePresence, LazyMotion, domAnimation, m, type PanInfo } from "motion/react";
 import { ChevronRight } from "lucide-react";
 
+import { EASE_IOS } from "@/lib/motion/tokens";
+
 import { Emoji, type EmojiName } from "@/components/ui/emoji";
 import { cn } from "@/lib/utils";
 
@@ -148,71 +150,71 @@ export function PromoTileCarousel() {
         onBlur={() => setIsFocused(false)}
         className="space-y-2.5"
       >
-      {/* 슬라이드 뷰포트 — overflow-hidden 으로 슬라이드 클리핑, touch-pan-y 로 수직 스크롤 위임 */}
-      <div className="relative touch-pan-y overflow-hidden rounded-2xl">
-        <AnimatePresence mode="wait" custom={direction}>
-          <m.div
-            key={activeIndex}
-            custom={direction}
-            variants={variants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
-            role="group"
-            aria-roledescription="slide"
-            aria-label={`${PROMO_TILES.length} のうち ${activeIndex + 1}`}
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.2}
-            dragDirectionLock
-            onDragStart={() => setIsDragging(true)}
-            onDragEnd={handleDragEnd}
-          >
-            <Link
-              href={activeTile.href}
-              className={cn(
-                "group focus-visible:ring-ring flex items-center gap-4 rounded-2xl p-5 shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
-                activeTile.tileClassName
-              )}
+        {/* 슬라이드 뷰포트 — overflow-hidden 으로 슬라이드 클리핑, touch-pan-y 로 수직 스크롤 위임 */}
+        <div className="relative touch-pan-y overflow-hidden rounded-2xl">
+          <AnimatePresence mode="wait" custom={direction}>
+            <m.div
+              key={activeIndex}
+              custom={direction}
+              variants={variants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.28, ease: EASE_IOS }}
+              role="group"
+              aria-roledescription="slide"
+              aria-label={`${PROMO_TILES.length} のうち ${activeIndex + 1}`}
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.2}
+              dragDirectionLock
+              onDragStart={() => setIsDragging(true)}
+              onDragEnd={handleDragEnd}
             >
-              <Emoji name={activeTile.emoji} size={40} />
-              <div className="flex-1">
-                <h2 className="text-lg font-semibold">{activeTile.title}</h2>
-                <p className="text-sm opacity-80">{activeTile.subtitle}</p>
-              </div>
-              <ChevronRight
-                className="size-5 transition-transform group-hover:translate-x-0.5"
-                aria-hidden="true"
-              />
-            </Link>
-          </m.div>
-        </AnimatePresence>
-      </div>
+              <Link
+                href={activeTile.href}
+                className={cn(
+                  "group focus-visible:ring-ring flex items-center gap-4 rounded-2xl p-5 shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+                  activeTile.tileClassName
+                )}
+              >
+                <Emoji name={activeTile.emoji} size={40} />
+                <div className="flex-1">
+                  <h2 className="text-lg font-semibold">{activeTile.title}</h2>
+                  <p className="text-sm opacity-80">{activeTile.subtitle}</p>
+                </div>
+                <ChevronRight
+                  className="size-5 transition-transform group-hover:translate-x-0.5"
+                  aria-hidden="true"
+                />
+              </Link>
+            </m.div>
+          </AnimatePresence>
+        </div>
 
-      {/* 하단 dots — 중앙 정렬, 클릭 시 해당 슬라이드로 점프.
+        {/* 하단 dots — 중앙 정렬, 클릭 시 해당 슬라이드로 점프.
           hover/focus/drag 인터랙션 시 자동 회전이 멈추므로 명시적 ⏸ 버튼은 미제공. */}
-      <div
-        role="tablist"
-        aria-label="スライドナビゲーション"
-        className="flex items-center justify-center gap-1.5 px-1"
-      >
-        {PROMO_TILES.map((tile, i) => (
-          <button
-            key={tile.id}
-            type="button"
-            role="tab"
-            aria-selected={i === activeIndex}
-            aria-current={i === activeIndex ? "true" : undefined}
-            aria-label={`スライド ${i + 1}`}
-            onClick={() => jumpTo(i)}
-            className={cn(
-              "focus-visible:ring-ring h-1.5 rounded-full transition-all duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
-              i === activeIndex ? "bg-foreground w-4" : "bg-muted-foreground/40 w-1.5"
-            )}
-          />
-        ))}
-      </div>
+        <div
+          role="tablist"
+          aria-label="スライドナビゲーション"
+          className="flex items-center justify-center gap-1.5 px-1"
+        >
+          {PROMO_TILES.map((tile, i) => (
+            <button
+              key={tile.id}
+              type="button"
+              role="tab"
+              aria-selected={i === activeIndex}
+              aria-current={i === activeIndex ? "true" : undefined}
+              aria-label={`スライド ${i + 1}`}
+              onClick={() => jumpTo(i)}
+              className={cn(
+                "focus-visible:ring-ring h-1.5 rounded-full transition-all duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+                i === activeIndex ? "bg-foreground w-4" : "bg-muted-foreground/40 w-1.5"
+              )}
+            />
+          ))}
+        </div>
       </section>
     </LazyMotion>
   );

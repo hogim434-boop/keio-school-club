@@ -4,6 +4,7 @@ import { createContext, useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, LazyMotion, domAnimation, m } from "motion/react";
 
+import { EASE_IOS } from "@/lib/motion/tokens";
 import { useIsInternalNavigation } from "@/lib/utils/use-is-internal-navigation";
 
 /**
@@ -102,7 +103,7 @@ export function CirclesPageShell({ children }: { children: ReactNode }) {
         transition: {
           type: "tween" as const,
           duration: 0.3,
-          ease: [0.32, 0.72, 0, 1] as const,
+          ease: EASE_IOS,
         },
       }
     : { opacity: 0, transition: { duration: 0 } };

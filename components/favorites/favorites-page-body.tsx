@@ -32,6 +32,8 @@ import Link from "next/link";
 import { Plus, ArrowUpDown, Undo2 } from "lucide-react";
 // motion/react: LazyMotion으로 필요한 애니메이션 기능만 번들에 포함
 import { LazyMotion, domAnimation, AnimatePresence, useReducedMotion } from "motion/react";
+
+import { EASE_IOS } from "@/lib/motion/tokens";
 import * as m from "motion/react-m";
 
 import { getFavoriteIds, removeFavoriteLocal } from "@/lib/circles/use-favorites";
@@ -609,7 +611,7 @@ export function FavoritesPageBody() {
                           // layout 이동(재배치)은 별도 transition 지정
                           layout: {
                             duration: shouldReduceMotion ? 0 : 0.32,
-                            ease: [0.32, 0.72, 0, 1], // iOS spring 느낌의 ease
+                            ease: EASE_IOS, // iOS spring 느낌의 ease
                           },
                         }}
                       >
@@ -658,7 +660,7 @@ export function FavoritesPageBody() {
                           : Math.min(visibleCircles.length, 8) * 0.04 + 0.06,
                         layout: {
                           duration: shouldReduceMotion ? 0 : 0.32,
-                          ease: [0.32, 0.72, 0, 1],
+                          ease: EASE_IOS,
                         },
                       }}
                     >

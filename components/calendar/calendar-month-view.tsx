@@ -37,6 +37,8 @@ import type { DayButton as DayButtonProps } from "react-day-picker";
 // useReducedMotion: 사용자가 "모션 줄이기" 설정을 켰는지 감지
 import { LazyMotion, domAnimation, m, AnimatePresence, useReducedMotion } from "motion/react";
 
+import { EASE_IOS } from "@/lib/motion/tokens";
+
 import { Calendar } from "@/components/ui/calendar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -234,7 +236,7 @@ export function CalendarMonthView({ currentMonth, events }: CalendarMonthViewPro
           }
           transition={{
             duration: 0.18,
-            ease: [0.32, 0.72, 0, 1] as [number, number, number, number],
+            ease: EASE_IOS,
           }}
           className={cn(
             // shadcn CalendarDayButton 과 동일한 기본 스타일 유지
@@ -492,7 +494,7 @@ export function CalendarMonthView({ currentMonth, events }: CalendarMonthViewPro
                   : {
                       // 320ms tween + iOS easing — 풀 슬라이드라 약간 길게
                       duration: 0.32,
-                      ease: [0.32, 0.72, 0, 1] as [number, number, number, number],
+                      ease: EASE_IOS,
                     }
               }
             >

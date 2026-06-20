@@ -45,6 +45,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ActivityReportsList } from "@/components/circles/activity-reports-list";
 import { ReportComposeSheet } from "@/components/circles/report-compose-sheet";
 import type { ActivityReport } from "@/lib/types/domain";
+import { EASE_IOS } from "@/lib/motion/tokens";
 import { cn } from "@/lib/utils";
 
 interface CircleDetailTabsProps {
@@ -72,9 +73,6 @@ interface CircleDetailTabsProps {
 const TAB_ORDER = ["home", "album"] as const;
 
 type TabValue = (typeof TAB_ORDER)[number];
-
-/** iOS 캐러셀 스타일 easing — 프로젝트 전체 통일 (swipe-card.tsx, template.tsx 와 동일) */
-const IOS_EASE: [number, number, number, number] = [0.32, 0.72, 0, 1];
 
 export function CircleDetailTabs({
   circleId,
@@ -161,7 +159,7 @@ export function CircleDetailTabs({
       x.set(target);
       isFirstSync.current = false;
     } else {
-      animate(x, target, { ease: IOS_EASE, duration: 0.35 });
+      animate(x, target, { ease: EASE_IOS, duration: 0.35 });
     }
     // animate 와 x 는 stable 참조라 dependency 에서 생략해도 안전.
     // eslint-disable-next-line react-hooks/exhaustive-deps

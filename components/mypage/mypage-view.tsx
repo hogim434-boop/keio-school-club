@@ -37,7 +37,7 @@ import { toast } from "sonner";
 import { deleteCircle } from "@/app/(tabs)/mypage/actions";
 import { LogoutButton } from "@/components/logout-button";
 import { type MyCircle, type MyPendingClaim } from "@/lib/supabase/queries/circles";
-import { enterContainer, enterItem } from "@/lib/motion/tokens";
+import { enterContainer, enterItem, EASE_IOS } from "@/lib/motion/tokens";
 import { MESSAGING_ENABLED } from "@/lib/constants/features";
 import { CATEGORY_LABELS } from "@/lib/constants/category";
 
@@ -247,7 +247,7 @@ export function MyPageView({
                     transition={{
                       layout: {
                         duration: shouldReduceMotion ? 0 : 0.28,
-                        ease: [0.32, 0.72, 0, 1],
+                        ease: EASE_IOS,
                       },
                     }}
                   >

@@ -4,6 +4,8 @@ import { createContext, useEffect, useRef, useState, type ReactNode } from "reac
 import { useRouter } from "next/navigation";
 import { LazyMotion, domAnimation, m } from "motion/react";
 
+import { EASE_IOS } from "@/lib/motion/tokens";
+
 /**
  * 이벤트 상세 페이지 전환 애니메이션 — iOS Push 패턴 (우측 슬라이드 인 + opacity fade) + 슬라이드 아웃.
  *
@@ -75,7 +77,7 @@ export default function EventDetailTemplate({ children }: { children: ReactNode 
         animate={exiting ? { x: "100%", opacity: 0 } : { x: 0, opacity: 1 }}
         // iOS UINavigationController push easing — cubic-bezier(0.32, 0.72, 0, 1)
         // spring 의 underdamped 진동(떨림) 회피 + 애플 native navigation 과 동일한 감속 곡선
-        transition={{ type: "tween", duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+        transition={{ type: "tween", duration: 0.35, ease: EASE_IOS }}
         onAnimationComplete={() => {
           // 슬라이드 아웃 완료 후 router.back() 호출 — 중복 호출 방지 ref 로 가드
           if (exiting && !backCalledRef.current) {

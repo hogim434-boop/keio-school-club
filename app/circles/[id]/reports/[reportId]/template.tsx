@@ -4,6 +4,8 @@ import { createContext, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LazyMotion, domAnimation, m } from "motion/react";
 
+import { EASE_IOS } from "@/lib/motion/tokens";
+
 /**
  * 활동 리포트 상세 페이지 슬라이드 아웃 트리거.
  * 이 페이지에서는 back 만 지원 (단순 () => void).
@@ -58,7 +60,7 @@ export default function ReportTemplate({ children }: { children: React.ReactNode
         animate={exiting ? { x: "100%", opacity: 0 } : { x: 0, opacity: 1 }}
         transition={{
           duration: exiting ? 0.35 : 0.3,
-          ease: exiting ? [0.32, 0.72, 0, 1] : "easeOut",
+          ease: exiting ? EASE_IOS : "easeOut",
         }}
         onAnimationComplete={() => {
           if (exiting && !backCalledRef.current) {
