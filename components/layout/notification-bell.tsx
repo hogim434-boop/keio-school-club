@@ -8,7 +8,8 @@
  * - 종 클릭 → 우측 슬라이드 드로어(Sheet) 열림/닫힘. 드로어 밖(오버레이=종 위치 포함) 클릭 시 닫힘.
  * - 드로어가 열릴 때 getFeedAction()으로 통합 피드를 가져와 NotificationFeedView 로 렌더.
  * - 안읽음 뱃지: getBadgeInfoAction() + localStorage("kc:notif-seen") 비교.
- *   갱신 타이밍: 최초 마운트 1회 / 드로어 닫힘 / "kc:notif-read" 이벤트 / 60초 주기 폴링.
+ *   갱신 타이밍: 최초 마운트 1회 / 드로어 닫힘 / "kc:notif-read" 이벤트 / 탭 복귀 /
+ *   5분 주기 폴링(탭이 hidden 이면 건너뜀).
  *   (페이지 이동마다 DB 호출하던 pathname 의존 useEffect 는 제거됨)
  * - 하이드레이션 안전: 초기 점 false → 마운트 후 갱신.
  */
@@ -28,8 +29,8 @@ const iconButton =
 
 const SEEN_KEY = "kc:notif-seen";
 
-/** 뱃지 폴링 간격 (ms) — 60초 */
-const BADGE_POLL_INTERVAL = 60_000;
+/** 뱃지 폴링 간격 (ms) — 5분 (공지 시각은 서버에서 5분 캐시되므로 그보다 자주 물어볼 이유가 없음) */
+const BADGE_POLL_INTERVAL = 5 * 60_000;
 
 export function NotificationBell() {
   const [hasUnread, setHasUnread] = useState(false);
@@ -56,12 +57,26 @@ export function NotificationBell() {
     }
   }, []);
 
-  // 마운트 시 1회 호출 + 60초 주기 폴링 (pathname 의존 제거 → 페이지 이동마다 DB 호출 방지)
+  // 마운트 시 1회 호출 + 5분 주기 폴링 (pathname 의존 제거 → 페이지 이동마다 DB 호출 방지)
+  // - 탭이 백그라운드(hidden)면 폴링을 건너뛴다 → 안 보는 탭이 서버를 계속 두드리지 않음
+  // - 탭이 다시 보이면(visible) 즉시 1회 갱신 → 오래 비운 뒤 돌아와도 최신 상태
   useEffect(() => {
     refreshBadge();
 
-    const timerId = setInterval(refreshBadge, BADGE_POLL_INTERVAL);
-    return () => clearInterval(timerId);
+    const timerId = setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      refreshBadge();
+    }, BADGE_POLL_INTERVAL);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") refreshBadge();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      clearInterval(timerId);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
