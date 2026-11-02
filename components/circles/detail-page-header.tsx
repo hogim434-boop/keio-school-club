@@ -29,7 +29,7 @@ export function DetailPageHeader({ circleName }: DetailPageHeaderProps) {
   async function handleShare() {
     if (typeof window === "undefined") return;
     const url = window.location.href;
-    const text = `${circleName} | KCircle`;
+    const text = `${circleName}｜K CLUB`;
     try {
       if (typeof navigator !== "undefined" && navigator.share) {
         await navigator.share({ title: text, text, url });
