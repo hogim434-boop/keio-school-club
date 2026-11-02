@@ -13,6 +13,9 @@
  * 주의: createClient()는 호출마다 새로 생성(Fluid compute 전역 변수 금지).
  */
 
+import { unstable_cache } from "next/cache";
+
+import { createAnonClient } from "@/lib/supabase/anon";
 import { createClient } from "@/lib/supabase/server";
 
 export type NotificationType = "circle_approved" | "circle_rejected";
@@ -147,17 +150,44 @@ export async function getBadgeInfo(): Promise<{
 }> {
   const supabase = await createClient();
 
-  const [{ count }, latest] = await Promise.all([
-    supabase.from("notifications").select("id", { count: "exact", head: true }).is("read_at", null),
-    supabase
+  // getClaims() 는 JWT 를 로컬에서 검증만 하므로 네트워크 왕복이 없다.
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const isLoggedIn = !!claimsData?.claims;
+
+  const [personalUnread, latestAnnouncementAt] = await Promise.all([
+    // 개인 알림은 로그인 사용자(운영자)만 조회 — 비로그인 방문자는 항상 0 이므로 쿼리 생략
+    isLoggedIn
+      ? supabase
+          .from("notifications")
+          .select("id", { count: "exact", head: true })
+          .is("read_at", null)
+          .then(({ count }) => count ?? 0)
+      : Promise.resolve(0),
+    getLatestAnnouncementAt(),
+  ]);
+
+  return { personalUnread, latestAnnouncementAt };
+}
+
+/**
+ * 가장 최근 공개 알림(announcements) 시각 — 모든 방문자에게 같은 값이므로 캐시한다.
+ * - 쿠키 없는 anon 클라이언트 사용 (unstable_cache 안에서는 cookies() 금지).
+ * - 5분 캐시 + tags:["announcements"] — 관리자가 공지를 작성·삭제하면 revalidateTag 로 즉시 무효화.
+ */
+const getLatestAnnouncementAt = unstable_cache(
+  async (): Promise<string | null> => {
+    const supabase = createAnonClient();
+    const { data, error } = await supabase
       .from("announcements")
       .select("created_at")
       .order("created_at", { ascending: false })
-      .limit(1),
-  ]);
-
-  return {
-    personalUnread: count ?? 0,
-    latestAnnouncementAt: latest.data?.[0]?.created_at ?? null,
-  };
-}
+      .limit(1);
+    if (error) {
+      console.error("[getLatestAnnouncementAt]", error.message);
+      return null;
+    }
+    return data?.[0]?.created_at ?? null;
+  },
+  ["announcements", "latest"],
+  { revalidate: 300, tags: ["announcements"] }
+);

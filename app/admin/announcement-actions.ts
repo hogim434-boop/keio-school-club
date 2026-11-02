@@ -15,7 +15,7 @@
  * 'new_circle' 은 approveCircle 액션에서 자동 발행되므로 이 파일에서는 차단한다.
  */
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 
@@ -78,6 +78,8 @@ export async function createAnnouncement(input: {
   // 성공 시 관리자 목록 + 사용자 알림 페이지 양쪽 재검증
   revalidatePath("/admin/announcements");
   revalidatePath("/notifications");
+  // 헤더 종 뱃지의 「최신 공지 시각」 캐시(getLatestAnnouncementAt) 즉시 무효화
+  revalidateTag("announcements", { expire: 0 });
 
   return { ok: true };
 }
@@ -106,6 +108,8 @@ export async function deleteAnnouncement(id: string): Promise<ActionResult> {
   // 성공 시 관리자 목록 + 사용자 알림 페이지 양쪽 재검증
   revalidatePath("/admin/announcements");
   revalidatePath("/notifications");
+  // 헤더 종 뱃지의 「최신 공지 시각」 캐시(getLatestAnnouncementAt) 즉시 무효화
+  revalidateTag("announcements", { expire: 0 });
 
   return { ok: true };
 }

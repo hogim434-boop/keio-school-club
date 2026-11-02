@@ -117,6 +117,8 @@ export async function approveCircle(circleId: string): Promise<ActionResult> {
   revalidateTag("circles", { expire: 0 });
   // 검색 페이지(/search)·홈 큐레이션은 별도 태그라 함께 무효화해야 즉시 반영됨
   revalidateTag("circles:public", { expire: 0 });
+  // 「新しいサークル」 공지가 추가됐으므로 헤더 종 뱃지 캐시도 무효화
+  revalidateTag("announcements", { expire: 0 });
   return { ok: true };
 }
 
