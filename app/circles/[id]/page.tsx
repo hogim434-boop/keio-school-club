@@ -41,9 +41,48 @@ import { ExpandableDescription } from "@/components/circles/expandable-descripti
 import { createClient } from "@/lib/supabase/server";
 import { MESSAGING_ENABLED } from "@/lib/constants/features";
 import type { CircleDetail, CircleSummary } from "@/lib/types/domain";
+import type { Metadata } from "next";
 
 interface CircleDetailPageProps {
   params: Promise<{ id: string }>;
+}
+
+/**
+ * 링크 공유 미리보기(OGP)용 메타데이터.
+ * - LINE·X·Instagram 등에 상세 URL 을 공유하면 동아리명·소개·커버 이미지가 카드로 표시된다.
+ * - getApprovedCircleById 는 unstable_cache(60초)라 본문 렌더와 같은 캐시를 공유 → 추가 DB 비용 거의 없음.
+ * - 미승인/존재하지 않는 동아리는 검색엔진 색인 대상에서 제외(noindex).
+ */
+export async function generateMetadata({ params }: CircleDetailPageProps): Promise<Metadata> {
+  const { id: handle } = await params;
+  const circle = await getApprovedCircleById(handle);
+
+  if (!circle) {
+    return { title: "サークル・部活動", robots: { index: false } };
+  }
+
+  // 소개글 앞부분을 한 줄로 요약 (줄바꿈·연속 공백 제거 후 약 100자)
+  const flat = circle.description.replace(/\s+/g, " ").trim();
+  const description = flat.length > 100 ? `${flat.slice(0, 100)}…` : flat;
+  const shareTitle = `${circle.name}｜K CLUB`;
+  // 커버가 없으면 images 키 자체를 넣지 않는다 → 루트 app/opengraph-image.png 가 자동으로 이어 쓰임.
+  // (images: undefined 를 넣으면 "지정함"으로 취급돼 기본 이미지가 사라짐)
+  const imageField = circle.cover_image_url ? { images: [circle.cover_image_url] } : {};
+
+  return {
+    title: circle.name,
+    description,
+    // openGraph 는 상위(layout)와 얕게 병합(통째로 교체)되므로 siteName·locale 도 다시 지정한다.
+    openGraph: {
+      title: shareTitle,
+      description,
+      siteName: "K CLUB",
+      locale: "ja_JP",
+      type: "website",
+      ...imageField,
+    },
+    twitter: { card: "summary_large_image", title: shareTitle, description, ...imageField },
+  };
 }
 
 // 서클 상세 페이지 (RSC) — Phase 1.1 T-012 본 디자인
