@@ -39,6 +39,7 @@ import { AvgResponseTimeBadge } from "@/components/dm/avg-response-time";
 import { CircleCard } from "@/components/circles/circle-card";
 import { ExpandableDescription } from "@/components/circles/expandable-description";
 import { createClient } from "@/lib/supabase/server";
+import { MESSAGING_ENABLED } from "@/lib/constants/features";
 import type { CircleDetail, CircleSummary } from "@/lib/types/domain";
 
 interface CircleDetailPageProps {
@@ -99,7 +100,8 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
   const [reports, galleries, avgResponseTime] = await Promise.all([
     getReportsByCircle(circle.id),
     listGalleries(circle.id),
-    getAvgResponseTime(circle.id),
+    // DM 기능이 꺼져 있으면 평균 응답 시간은 의미가 없으므로 조회 자체를 생략한다.
+    MESSAGING_ENABLED ? getAvgResponseTime(circle.id) : Promise.resolve(null),
   ]);
 
   // 승인 여부 — pending 상태이면 関連サークル 조회 생략 + 審査中 배너 표시
@@ -253,9 +255,12 @@ async function CircleDetailContent({ params }: CircleDetailPageProps) {
                      * 「DM で質問する」CTA(CircleActions)와 연계해 반응속도를 미리 안내.
                      * 강제·약속 표현 금지, 어디까지나 「平均的に」 톤.
                      */}
-                    <div className="flex items-center gap-2 pt-1">
-                      <AvgResponseTimeBadge value={avgResponseTime} />
-                    </div>
+                    {/* DM 기능(MESSAGING_ENABLED)이 켜졌을 때만 표시 — 꺼진 상태에선 방문자에게 혼란만 줌 */}
+                    {MESSAGING_ENABLED && (
+                      <div className="flex items-center gap-2 pt-1">
+                        <AvgResponseTimeBadge value={avgResponseTime} />
+                      </div>
+                    )}
                     <ExpandableDescription text={circle.description} />
                   </>
                 }
