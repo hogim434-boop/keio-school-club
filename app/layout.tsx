@@ -8,14 +8,38 @@ import { RegisterFloatingCTA } from "@/components/layout/register-floating-cta";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
-const defaultUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : "http://localhost:3000";
+/**
+ * 사이트 기준 URL — OG 이미지 등 절대 URL 생성에 사용.
+ * 우선순위: 직접 지정(NEXT_PUBLIC_SITE_URL) → Vercel 운영 도메인(VERCEL_PROJECT_PRODUCTION_URL)
+ *          → 배포 단위 URL(VERCEL_URL, 프리뷰용) → 로컬.
+ * VERCEL_URL 만 쓰면 해시가 붙은 *.vercel.app 주소가 공유 카드에 들어가므로 운영 도메인을 우선한다.
+ */
+const siteHost = process.env.VERCEL_PROJECT_PRODUCTION_URL ?? process.env.VERCEL_URL;
+const defaultUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ?? (siteHost ? `https://${siteHost}` : "http://localhost:3000");
+
+const SITE_DESCRIPTION = "慶應のサークル・部活動を、ジャンルや活動頻度から探せる。";
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Keio Club",
-  description: "慶應義塾大学のサークルを探す",
+  // template: 하위 페이지가 title 을 지정하면 「동아리명｜K CLUB」 형태로 자동 조합된다.
+  title: {
+    default: "K CLUB｜慶應のサークル・部活動探し",
+    template: "%s｜K CLUB",
+  },
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    title: "K CLUB｜慶應のサークル・部活動探し",
+    description: SITE_DESCRIPTION,
+    siteName: "K CLUB",
+    locale: "ja_JP",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "K CLUB｜慶應のサークル・部活動探し",
+    description: SITE_DESCRIPTION,
+  },
 };
 
 // 본문용 기본 라틴 폰트 — 영어/숫자/일반 기호 처리
