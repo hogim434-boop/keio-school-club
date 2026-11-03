@@ -32,7 +32,7 @@ import { isShinkanSeason, type RecruitmentStatus } from "@/lib/constants/recruit
 /**
  * 新歓シーズン判定 — 단일 소스(recruitment-status.ts)에서 re-export.
  * 기존 import 경로(@/lib/supabase/queries/home-curation) 호환을 위해 유지한다.
- * 판정 기준: 春(4・5月)・秋(10・11月).
+ * 판정 기준: 春(4月)・秋(10月).
  */
 export { isShinkanSeason };
 
@@ -67,7 +67,7 @@ function toCircleSummary(row: Record<string, unknown>): CircleSummary {
 // ============================================================
 
 /**
- * 今週新歓キュレーション — 신환 시즌(4·5·10·11월) 활성 모집 중 동아리.
+ * 今週新歓キュレーション — 신환 시즌(4·10월) 활성 모집 중 동아리.
  *
  * 시즌 중: newcomer_only + year_round (両方)
  * 시즌 외: year_round のみ (通年募集)

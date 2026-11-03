@@ -25,7 +25,7 @@ import { getCurrentRecruitingStatuses } from "@/lib/constants/recruitment-status
  * ホーム画面 (RSC) — T-009 キュレーション 3セクション.
  *
  * セクション構成:
- *   1. 今週新歓キュレーション — シーズン判定 (4·5·10·11月) で活性/非活性
+ *   1. 今週新歓キュレーション — シーズン判定 (4·10月) で活性/非活性
  *   2. 直近のイベント 3件 — starts_at ASC, public, 未キャンセル
  *   3. おすすめサークル — シンプルカテゴリグリッド + 人気順
  *
