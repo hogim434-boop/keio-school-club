@@ -26,13 +26,13 @@ export const RECRUITMENT_STATUS_LABELS: Record<RecruitmentStatus, string> = {
 export const RECRUITMENT_FILTER_STATUSES = ["newcomer_only", "year_round"] as const;
 
 /**
- * 新歓シーズンの月 — 春(4・5月)・秋(10・11月).
+ * 新歓シーズンの月 — 春(4月)・秋(10月).
  * Phase 3 で cron + DB フラグへ格上げ予定.
  */
-export const SHINKAN_MONTHS = [4, 5, 10, 11] as const;
+export const SHINKAN_MONTHS = [4, 10] as const;
 
 /**
- * 新歓シーズン判定 — 春(4・5月)・秋(10・11月)が活性.
+ * 新歓シーズン判定 — 春(4月)・秋(10月)が活性.
  *
  * 신환 판정의 **단일 소스**. 홈 「今週の新歓」 섹션과 getCurrentRecruitingStatuses 가
  * 동일 기준을 쓰도록 이 함수를 공유한다.
@@ -48,7 +48,7 @@ export function isShinkanSeason(now: Date = new Date()): boolean {
  * 「現在募集中」(지금 가입 가능) 으로 간주할 모집 상태 목록을 현재 시기 기준으로 반환.
  *
  * - year_round(通年募集): 언제든 모집 → 항상 포함.
- * - newcomer_only(新歓シーズン): 新歓 시즌(春4・5月 / 秋10・11月)에만 포함.
+ * - newcomer_only(新歓シーズン): 新歓 시즌(春4月 / 秋10月)에만 포함.
  *   예) 6월이면 新歓 종료 → ["year_round"] 만 반환.
  * - not_recruiting(募集していない): 항상 제외.
  *
